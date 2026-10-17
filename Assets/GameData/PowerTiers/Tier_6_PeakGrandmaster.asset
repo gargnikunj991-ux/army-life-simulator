@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ff36e0e26dac554d847a89a82945eb6, type: 3}
+  m_Name: Tier_6_PeakGrandmaster
+  m_EditorClassIdentifier: Assembly-CSharp::ArmyLife.Data.PowerTierSO
+  tierLevel: 6
+  designation: Peak Grandmaster
+  stratum: 1
+  maxLifespanYears: 140
+  monthlySalaryBonus: 4500
+  monthlyCashBurn: 4500
+  monthlyCMPBurn: 1800
+  breakthroughDifficulty: 0.5
+  isHiddenFromPublic: 0
+  isHiddenFromTopHouses: 0

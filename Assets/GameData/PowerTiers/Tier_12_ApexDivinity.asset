@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ff36e0e26dac554d847a89a82945eb6, type: 3}
+  m_Name: Tier_12_ApexDivinity
+  m_EditorClassIdentifier: Assembly-CSharp::ArmyLife.Data.PowerTierSO
+  tierLevel: 12
+  designation: Apex Divinity
+  stratum: 3
+  maxLifespanYears: 1000
+  monthlySalaryBonus: 9000
+  monthlyCashBurn: 100000
+  monthlyCMPBurn: 50000
+  breakthroughDifficulty: 1
+  isHiddenFromPublic: 1
+  isHiddenFromTopHouses: 1
