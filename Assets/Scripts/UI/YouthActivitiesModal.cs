@@ -83,15 +83,15 @@ namespace ArmyLife.UI
             if (youthStatsSummaryText != null)
             {
                 string examLine = s.tookMockExam
-                    ? $"\n<color=#FFD700>Mock Exam (Age 17.5): <b>{s.mockExamScore}/100</b> ({s.mockExamProjectedAcademy}) | Prep Boost: <b>+{s.examPreparationBonus} pts</b></color>"
+                    ? $"\n<color=#FFD700><b>National Mock Exam (Age 17.5):</b> {s.mockExamScore}/100 ({s.mockExamProjectedAcademy}) | Prep Boost: +{s.examPreparationBonus} pts</color>"
                     : (s.age >= 16.0f 
-                        ? $"\n<color=#00D4FF>National Mock Exam: Slated for Age 17.5 | Current Prep Bonus: <b>+{s.examPreparationBonus} pts</b></color>" 
+                        ? $"\n<color=#00D4FF><b>National Mock Exam:</b> Slated for Age 17.5 | Current Prep Bonus: +{s.examPreparationBonus} pts</color>" 
                         : "");
 
                 youthStatsSummaryText.text = 
-                    $"Fitness: <b>{s.fitness:F0}/100</b>  |  Combat Skill: <b>{s.combatSkill:F0}/100</b>\n" +
-                    $"Tactical Intellect: <b>{s.intellect:F0}/100</b>  |  Foundational Tempering: <b>{s.foundationalTempering:F0}/100</b>\n" +
-                    $"Parent Relation: <b>{s.parentRelationship:F0}/100</b>  |  Sibling Rivalry Standing: <b>+{s.clanSuccessionScore}</b>" +
+                    $"<b>❤️ Health:</b> {s.health:F0}%   |   <b>🏃 Fitness:</b> {s.fitness:F0}%   |   <b>⚔️ Combat:</b> {s.combatSkill:F0}%\n" +
+                    $"<b>🧠 Intellect:</b> {s.intellect:F0}%   |   <b>🏡 Family Favor:</b> {s.parentRelationship:F0}%   |   <b>💰 Pocket Money:</b> ${s.cashBalance:N0}\n" +
+                    $"<b>🥋 Foundational Tempering:</b> {s.foundationalTempering:F0}/100   |   <b>⚔️ Lucian Standing:</b> +{s.clanSuccessionScore} Favor" +
                     examLine;
             }
         }

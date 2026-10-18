@@ -27,8 +27,13 @@ namespace ArmyLife.UI
 
         [Header("Stat Gauges (Sliders 0-100)")]
         public Slider healthSlider;
+        public TextMeshProUGUI healthBarText;
         public Slider fitnessSlider;
+        public TextMeshProUGUI fitnessBarText;
         public Slider combatSkillSlider;
+        public TextMeshProUGUI combatBarText;
+        public Slider intellectSlider;
+        public TextMeshProUGUI intellectBarText;
         public Slider meritSlider;
         public Slider influenceSlider;
 
@@ -251,10 +256,19 @@ namespace ArmyLife.UI
                 }
             }
 
-            // Stat Sliders
+            // Stat Sliders & Percentage Texts
             if (healthSlider != null) healthSlider.value = soldier.health / 100f;
+            if (healthBarText != null) healthBarText.text = $"❤️ Health: {soldier.health:F0}%";
+
             if (fitnessSlider != null) fitnessSlider.value = soldier.fitness / 100f;
+            if (fitnessBarText != null) fitnessBarText.text = $"🏃 Fitness: {soldier.fitness:F0}%";
+
             if (combatSkillSlider != null) combatSkillSlider.value = soldier.combatSkill / 100f;
+            if (combatBarText != null) combatBarText.text = $"⚔️ Combat: {soldier.combatSkill:F0}%";
+
+            if (intellectSlider != null) intellectSlider.value = soldier.intellect / 100f;
+            if (intellectBarText != null) intellectBarText.text = $"🧠 Intellect: {soldier.intellect:F0}%";
+
             if (meritSlider != null) meritSlider.value = soldier.meritRating / 100f;
             if (influenceSlider != null) influenceSlider.value = soldier.politicalInfluence / 100f;
         }

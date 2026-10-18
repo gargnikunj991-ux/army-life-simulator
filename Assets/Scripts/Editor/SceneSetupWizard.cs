@@ -144,10 +144,10 @@ namespace ArmyLife.Editor
             // --- BITLIFE FEED CONTAINER ---
             var feedContainer = CreateUIElement("FeedContainer", mainHUDPanel.transform);
             var feedRect = feedContainer.GetComponent<RectTransform>();
-            feedRect.anchorMin = new Vector2(0, 0.18f);
+            feedRect.anchorMin = new Vector2(0, 0.23f);
             feedRect.anchorMax = new Vector2(1, 0.67f);
-            feedRect.offsetMin = new Vector2(40, 10);
-            feedRect.offsetMax = new Vector2(-40, -10);
+            feedRect.offsetMin = new Vector2(40, 8);
+            feedRect.offsetMax = new Vector2(-40, -8);
             var feedBg = feedContainer.AddComponent<Image>();
             feedBg.color = new Color(0.10f, 0.12f, 0.14f);
 
@@ -165,24 +165,58 @@ namespace ArmyLife.Editor
             feedView.feedContentText = feedTextObj;
             feedView.feedScrollRect = scrollRect;
 
+            // --- BITLIFE 4-GAUGE STATS BAR PANEL ---
+            var statsPanel = CreateUIElement("StatsBarPanel", mainHUDPanel.transform);
+            var statsPanelRect = statsPanel.GetComponent<RectTransform>();
+            statsPanelRect.anchorMin = new Vector2(0, 0.115f);
+            statsPanelRect.anchorMax = new Vector2(1, 0.22f);
+            statsPanelRect.offsetMin = new Vector2(40, 4);
+            statsPanelRect.offsetMax = new Vector2(-40, -4);
+            var statsBg = statsPanel.AddComponent<Image>();
+            statsBg.color = new Color(0.10f, 0.13f, 0.17f);
+
+            // 1. Health Bar (Top Left)
+            var healthBar = CreateStatBar("HealthBar", statsPanel.transform, "❤️ Health: 100%", new Color(0.85f, 0.25f, 0.30f), out var healthText);
+            SetRect(healthBar.GetComponent<RectTransform>(), 0.02f, 0.54f, 0.48f, 0.94f);
+            hudView.healthSlider = healthBar;
+            hudView.healthBarText = healthText;
+
+            // 2. Fitness Bar (Top Right)
+            var fitnessBar = CreateStatBar("FitnessBar", statsPanel.transform, "🏃 Fitness: 50%", new Color(0.18f, 0.70f, 0.35f), out var fitnessText);
+            SetRect(fitnessBar.GetComponent<RectTransform>(), 0.52f, 0.54f, 0.98f, 0.94f);
+            hudView.fitnessSlider = fitnessBar;
+            hudView.fitnessBarText = fitnessText;
+
+            // 3. Combat Skill Bar (Bottom Left)
+            var combatBar = CreateStatBar("CombatBar", statsPanel.transform, "⚔️ Combat: 30%", new Color(0.90f, 0.55f, 0.15f), out var combatText);
+            SetRect(combatBar.GetComponent<RectTransform>(), 0.02f, 0.06f, 0.48f, 0.46f);
+            hudView.combatSkillSlider = combatBar;
+            hudView.combatBarText = combatText;
+
+            // 4. Intellect Bar (Bottom Right)
+            var intellectBar = CreateStatBar("IntellectBar", statsPanel.transform, "🧠 Intellect: 50%", new Color(0.20f, 0.60f, 0.95f), out var intellectText);
+            SetRect(intellectBar.GetComponent<RectTransform>(), 0.52f, 0.06f, 0.98f, 0.46f);
+            hudView.intellectSlider = intellectBar;
+            hudView.intellectBarText = intellectText;
+
             // --- BOTTOM ACTION BUTTONS ---
             var bottomBar = CreateUIElement("BottomBar", mainHUDPanel.transform);
             var bottomRect = bottomBar.GetComponent<RectTransform>();
             bottomRect.anchorMin = new Vector2(0, 0.02f);
-            bottomRect.anchorMax = new Vector2(1, 0.16f);
-            bottomRect.offsetMin = new Vector2(40, 10);
-            bottomRect.offsetMax = new Vector2(-40, -10);
+            bottomRect.anchorMax = new Vector2(1, 0.105f);
+            bottomRect.offsetMin = new Vector2(40, 4);
+            bottomRect.offsetMax = new Vector2(-40, -4);
 
             var advanceBtnObj = CreateButton("AdvanceSemesterButton", bottomBar.transform, "ADVANCE (+)", new Color(0.18f, 0.65f, 0.35f));
-            SetRect(advanceBtnObj.GetComponent<RectTransform>(), 0.04f, 0.15f, 0.42f, 0.85f);
+            SetRect(advanceBtnObj.GetComponent<RectTransform>(), 0.02f, 0.10f, 0.48f, 0.90f);
             hudView.advanceSemesterButton = advanceBtnObj.GetComponent<Button>();
 
-            var sendBtnObj = CreateButton("SendMoneyHomeButton", bottomBar.transform, "SEND $400 HOME", new Color(0.85f, 0.55f, 0.20f));
-            SetRect(sendBtnObj.GetComponent<RectTransform>(), 0.45f, 0.15f, 0.72f, 0.85f);
+            var sendBtnObj = CreateButton("SendMoneyHomeButton", bottomBar.transform, "ACTIVITIES", new Color(0.20f, 0.45f, 0.75f));
+            SetRect(sendBtnObj.GetComponent<RectTransform>(), 0.52f, 0.10f, 0.98f, 0.90f);
             hudView.sendMoneyHomeButton = sendBtnObj.GetComponent<Button>();
 
             var testBtnObj = CreateButton("TestTalentButton", bottomBar.transform, "TEST (E-4)", new Color(0.25f, 0.50f, 0.85f));
-            SetRect(testBtnObj.GetComponent<RectTransform>(), 0.75f, 0.15f, 0.96f, 0.85f);
+            SetRect(testBtnObj.GetComponent<RectTransform>(), 0.75f, 0.10f, 0.98f, 0.90f);
             hudView.testTalentButton = testBtnObj.GetComponent<Button>();
 
             // ==========================================
@@ -846,6 +880,45 @@ namespace ArmyLife.Editor
             inputField.customCaretColor = true;
 
             return inputField;
+        }
+
+        private static Slider CreateStatBar(string name, Transform parent, string labelText, Color fillColor, out TextMeshProUGUI valText)
+        {
+            var barObj = CreateUIElement(name, parent);
+            var bgImg = barObj.AddComponent<Image>();
+            bgImg.color = new Color(0.12f, 0.15f, 0.20f);
+
+            var fillArea = CreateUIElement("Fill Area", barObj.transform);
+            var faRect = fillArea.GetComponent<RectTransform>();
+            faRect.anchorMin = Vector2.zero;
+            faRect.anchorMax = Vector2.one;
+            faRect.offsetMin = Vector2.zero;
+            faRect.offsetMax = Vector2.zero;
+
+            var fill = CreateUIElement("Fill", fillArea.transform);
+            var fillRect = fill.GetComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = new Vector2(0f, 1f);
+            fillRect.offsetMin = Vector2.zero;
+            fillRect.offsetMax = Vector2.zero;
+            var fillImg = fill.AddComponent<Image>();
+            fillImg.color = fillColor;
+
+            var slider = barObj.AddComponent<Slider>();
+            slider.fillRect = fillRect;
+            slider.targetGraphic = fillImg;
+            slider.direction = Slider.Direction.LeftToRight;
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.value = 0.5f;
+            slider.interactable = false;
+
+            var text = CreateText("Label", barObj.transform, labelText, 20, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+            SetFullScreen(text.GetComponent<RectTransform>());
+            text.raycastTarget = false;
+            valText = text;
+
+            return slider;
         }
 
         private static void SetFullScreen(RectTransform rt)
