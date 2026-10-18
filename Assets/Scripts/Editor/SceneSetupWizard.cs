@@ -617,41 +617,92 @@ namespace ArmyLife.Editor
             var youthModalObj = CreateUIElement("YouthActivitiesModal", rootPanel.transform);
             SetFullScreen(youthModalObj.GetComponent<RectTransform>());
             var youthDimBg = youthModalObj.AddComponent<Image>();
-            youthDimBg.color = new Color(0f, 0f, 0f, 0.88f);
+            youthDimBg.color = new Color(0f, 0f, 0f, 0.92f);
             var youthCtrl = youthModalObj.AddComponent<YouthActivitiesModal>();
             youthCtrl.modalRoot = youthModalObj;
 
             var youthBox = CreateUIElement("YouthBox", youthModalObj.transform);
-            SetRect(youthBox.GetComponent<RectTransform>(), 0.08f, 0.18f, 0.92f, 0.82f);
+            var ybRect = youthBox.GetComponent<RectTransform>();
+            ybRect.anchorMin = new Vector2(0.04f, 0.05f);
+            ybRect.anchorMax = new Vector2(0.96f, 0.95f);
+            ybRect.offsetMin = Vector2.zero;
+            ybRect.offsetMax = Vector2.zero;
             var youthBoxBg = youthBox.AddComponent<Image>();
-            youthBoxBg.color = new Color(0.12f, 0.15f, 0.20f);
+            youthBoxBg.color = new Color(0.10f, 0.13f, 0.18f);
 
-            var yTitle = CreateText("YouthTitle", youthBox.transform, "YOUTH DEVELOPMENT (AGES 0-18)", 38, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0f, 0.85f, 1f));
-            SetRect(yTitle.GetComponent<RectTransform>(), 0.05f, 0.88f, 0.95f, 0.96f);
+            var yTitle = CreateText("YouthTitle", youthBox.transform, "YOUTH ACTIVITIES (AGES 0-18)", 36, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0f, 0.85f, 1f));
+            SetRect(yTitle.GetComponent<RectTransform>(), 0.05f, 0.93f, 0.95f, 0.99f);
             youthCtrl.titleText = yTitle;
 
-            var ySummary = CreateText("YouthSummary", youthBox.transform, "Stats...", 24, TextAlignmentOptions.Center, FontStyles.Normal, new Color(0.85f, 0.90f, 0.95f));
-            SetRect(ySummary.GetComponent<RectTransform>(), 0.05f, 0.72f, 0.95f, 0.86f);
+            var ySummary = CreateText("YouthSummary", youthBox.transform, "Stats...", 22, TextAlignmentOptions.Center, FontStyles.Normal, new Color(0.85f, 0.90f, 0.95f));
+            SetRect(ySummary.GetComponent<RectTransform>(), 0.05f, 0.82f, 0.95f, 0.92f);
             youthCtrl.youthStatsSummaryText = ySummary;
 
-            var yBtn1 = CreateButton("TemperingBtn", youthBox.transform, "🏃 BODY TEMPERING (+Fitness & Marrow)", new Color(0.18f, 0.60f, 0.35f));
-            SetRect(yBtn1.GetComponent<RectTransform>(), 0.08f, 0.55f, 0.92f, 0.68f);
+            // Scroll container for Activities
+            var yScrollObj = CreateUIElement("ActivitiesScroll", youthBox.transform);
+            SetRect(yScrollObj.GetComponent<RectTransform>(), 0.04f, 0.09f, 0.96f, 0.81f);
+            var yScroll = yScrollObj.AddComponent<ScrollRect>();
+            yScroll.horizontal = false;
+            yScroll.vertical = true;
+            yScroll.scrollSensitivity = 35f;
+
+            var yViewport = CreateUIElement("Viewport", yScrollObj.transform);
+            SetFullScreen(yViewport.GetComponent<RectTransform>());
+            yViewport.AddComponent<RectMask2D>();
+            yScroll.viewport = yViewport.GetComponent<RectTransform>();
+
+            var yContent = CreateUIElement("Content", yViewport.transform);
+            var yContentRect = yContent.GetComponent<RectTransform>();
+            yContentRect.anchorMin = new Vector2(0f, 1f);
+            yContentRect.anchorMax = new Vector2(1f, 1f);
+            yContentRect.pivot = new Vector2(0.5f, 1f);
+            yContentRect.offsetMin = Vector2.zero;
+            yContentRect.offsetMax = Vector2.zero;
+            yScroll.content = yContentRect;
+
+            var yLayout = yContent.AddComponent<VerticalLayoutGroup>();
+            yLayout.padding = new RectOffset(10, 10, 10, 10);
+            yLayout.spacing = 12f;
+            yLayout.childControlHeight = true;
+            yLayout.childControlWidth = true;
+            yLayout.childForceExpandHeight = false;
+            yLayout.childForceExpandWidth = true;
+
+            var yFitter = yContent.AddComponent<ContentSizeFitter>();
+            yFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            // Activity Buttons (7 Interactive Choices)
+            var yBtn1 = CreateButton("TemperingBtn", yContent.transform, "🏃 BODY TEMPERING (+Fitness & Marrow)", new Color(0.18f, 0.60f, 0.35f));
+            SetLayoutHeight(yBtn1, 62);
             youthCtrl.bodyTemperingButton = yBtn1.GetComponent<Button>();
 
-            var yBtn2 = CreateButton("StudyBtn", youthBox.transform, "📚 STUDY STRATEGY & TACTICS (+Intellect)", new Color(0.20f, 0.45f, 0.75f));
-            SetRect(yBtn2.GetComponent<RectTransform>(), 0.08f, 0.40f, 0.92f, 0.53f);
+            var yBtn2 = CreateButton("StudyBtn", yContent.transform, "📚 STUDY STRATEGY & TACTICS (+Intellect)", new Color(0.20f, 0.45f, 0.75f));
+            SetLayoutHeight(yBtn2, 62);
             youthCtrl.studyTacticsButton = yBtn2.GetComponent<Button>();
 
-            var yBtn3 = CreateButton("FamilyBtn", youthBox.transform, "🏡 SPEND TIME WITH PARENTS (+Clan Favor)", new Color(0.75f, 0.55f, 0.20f));
-            SetRect(yBtn3.GetComponent<RectTransform>(), 0.08f, 0.25f, 0.92f, 0.38f);
+            var yBtn3 = CreateButton("FamilyBtn", yContent.transform, "🏡 SPEND TIME WITH PARENTS (+Clan Favor)", new Color(0.75f, 0.55f, 0.20f));
+            SetLayoutHeight(yBtn3, 62);
             youthCtrl.familyTimeButton = yBtn3.GetComponent<Button>();
 
-            var yBtn4 = CreateButton("SiblingBtn", youthBox.transform, "⚔️ SPAR WITH SIBLING LUCIAN (+Combat Skill)", new Color(0.65f, 0.25f, 0.30f));
-            SetRect(yBtn4.GetComponent<RectTransform>(), 0.08f, 0.10f, 0.92f, 0.23f);
+            var yBtn4 = CreateButton("SiblingBtn", yContent.transform, "⚔️ SPAR WITH SIBLING LUCIAN (+Combat Skill)", new Color(0.65f, 0.25f, 0.30f));
+            SetLayoutHeight(yBtn4, 62);
             youthCtrl.siblingSparButton = yBtn4.GetComponent<Button>();
 
-            var yCloseBtn = CreateButton("CloseBtn", youthBox.transform, "CLOSE", new Color(0.35f, 0.40f, 0.45f));
-            SetRect(yCloseBtn.GetComponent<RectTransform>(), 0.30f, 0.02f, 0.70f, 0.08f);
+            var yBtn5 = CreateButton("AllowanceBtn", yContent.transform, "💰 ASK PARENTS FOR ALLOWANCE (+Pocket Money)", new Color(0.85f, 0.60f, 0.15f));
+            SetLayoutHeight(yBtn5, 62);
+            youthCtrl.askAllowanceButton = yBtn5.GetComponent<Button>();
+
+            var yBtn6 = CreateButton("MockExamBtn", yContent.transform, "📝 TAKE MOCK MILITARY EXAM (Age 17.5 Check)", new Color(0.25f, 0.55f, 0.85f));
+            SetLayoutHeight(yBtn6, 62);
+            youthCtrl.takeMockExamButton = yBtn6.GetComponent<Button>();
+
+            var yBtn7 = CreateButton("FatherHelpBtn", yContent.transform, "👑 ASK FATHER FOR EXAM TUTORS & CLAN INFLUENCE", new Color(0.55f, 0.30f, 0.65f));
+            SetLayoutHeight(yBtn7, 62);
+            youthCtrl.askFatherExamHelpButton = yBtn7.GetComponent<Button>();
+
+            // Close Button
+            var yCloseBtn = CreateButton("CloseBtn", youthBox.transform, "◄ CLOSE", new Color(0.35f, 0.40f, 0.45f));
+            SetRect(yCloseBtn.GetComponent<RectTransform>(), 0.30f, 0.02f, 0.70f, 0.075f);
             youthCtrl.closeButton = yCloseBtn.GetComponent<Button>();
 
             youthModalObj.SetActive(false);

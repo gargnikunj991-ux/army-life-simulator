@@ -21,6 +21,9 @@ namespace ArmyLife.UI
         public Button studyTacticsButton;
         public Button familyTimeButton;
         public Button siblingSparButton;
+        public Button askAllowanceButton;
+        public Button takeMockExamButton;
+        public Button askFatherExamHelpButton;
         public Button closeButton;
 
         private void Awake()
@@ -37,6 +40,9 @@ namespace ArmyLife.UI
             if (studyTacticsButton != null) studyTacticsButton.onClick.AddListener(OnStudyTacticsClicked);
             if (familyTimeButton != null) familyTimeButton.onClick.AddListener(OnFamilyTimeClicked);
             if (siblingSparButton != null) siblingSparButton.onClick.AddListener(OnSiblingSparClicked);
+            if (askAllowanceButton != null) askAllowanceButton.onClick.AddListener(OnAskAllowanceClicked);
+            if (takeMockExamButton != null) takeMockExamButton.onClick.AddListener(OnTakeMockExamClicked);
+            if (askFatherExamHelpButton != null) askFatherExamHelpButton.onClick.AddListener(OnAskFatherExamHelpClicked);
             if (closeButton != null) closeButton.onClick.AddListener(CloseModal);
         }
 
@@ -46,6 +52,9 @@ namespace ArmyLife.UI
             if (studyTacticsButton != null) studyTacticsButton.onClick.RemoveListener(OnStudyTacticsClicked);
             if (familyTimeButton != null) familyTimeButton.onClick.RemoveListener(OnFamilyTimeClicked);
             if (siblingSparButton != null) siblingSparButton.onClick.RemoveListener(OnSiblingSparClicked);
+            if (askAllowanceButton != null) askAllowanceButton.onClick.RemoveListener(OnAskAllowanceClicked);
+            if (takeMockExamButton != null) takeMockExamButton.onClick.RemoveListener(OnTakeMockExamClicked);
+            if (askFatherExamHelpButton != null) askFatherExamHelpButton.onClick.RemoveListener(OnAskFatherExamHelpClicked);
             if (closeButton != null) closeButton.onClick.RemoveListener(CloseModal);
         }
 
@@ -123,6 +132,51 @@ namespace ArmyLife.UI
             if (s != null)
             {
                 ChildhoodLifeEngine.PerformSiblingSparring(s);
+                RefreshStatsDisplay();
+            }
+        }
+
+        private void OnAskAllowanceClicked()
+        {
+            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
+            if (s != null)
+            {
+                s.parentRelationship = Mathf.Min(100f, s.parentRelationship + 4f);
+                int allowance = (s.nobleTitle > NobleRank.Commoner) ? 100 : 35;
+                s.cashBalance += allowance;
+                GameEvents.OnFeedEventLogged?.Invoke("FAMILY",
+                    $"<color=#FFD700>[ALLOWANCE RECEIVED]</color> You asked your parents for pocket money. Father smiles and hands you <b>+${allowance}</b>! (Parent Relationship: {s.parentRelationship:F0}/100, Pocket Money: ${s.cashBalance:N0})");
+                GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                RefreshStatsDisplay();
+            }
+        }
+
+        private void OnTakeMockExamClicked()
+        {
+            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
+            if (s != null)
+            {
+                if (s.age < 17.5f)
+                {
+                    GameEvents.OnFeedEventLogged?.Invoke("ACADEMY", 
+                        $"[MOCK EXAM] The National Vanguard Mock Exam is officially administered at Age 17.5. You are currently Age {s.age:F1}. Continue studying tactics and tempering your body!");
+                }
+                else
+                {
+                    ChildhoodLifeEngine.ConductMockExam(s);
+                }
+                GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                RefreshStatsDisplay();
+            }
+        }
+
+        private void OnAskFatherExamHelpClicked()
+        {
+            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
+            if (s != null)
+            {
+                ChildhoodLifeEngine.RequestFatherExamIntervention(s);
+                GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                 RefreshStatsDisplay();
             }
         }

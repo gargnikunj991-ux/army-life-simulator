@@ -148,14 +148,6 @@ namespace ArmyLife.UI
                 nobleTitleLabel.text = $"{soldier.nobleTitle}{clanStatus}";
             }
 
-            // Monthly Pay / Allowance
-            if (monthlyPayLabel != null)
-            {
-                monthlyPayLabel.text = soldier.isYouthPhase 
-                    ? "<color=#888888>Family Dependent</color>" 
-                    : $"+${SalaryCalculator.CalculateNetMonthlyPay(soldier):N0} / mo";
-            }
-
             // Finances (Reflecting 50% Imperial War Tax)
             if (cashBalanceLabel != null) cashBalanceLabel.text = $"${soldier.cashBalance:N0}";
             if (cmpBalanceLabel != null) cmpBalanceLabel.text = $"{soldier.combatMeritPoints:N0} CMP";
@@ -164,6 +156,10 @@ namespace ArmyLife.UI
                 if (soldier.isDead)
                 {
                     monthlyPayLabel.text = "$0 / mo";
+                }
+                else if (soldier.isYouthPhase)
+                {
+                    monthlyPayLabel.text = "<color=#888888>Family Dependent ($0/mo)</color>";
                 }
                 else if (soldier.isRetired)
                 {
@@ -229,29 +225,28 @@ namespace ArmyLife.UI
                 }
             }
 
-            // Send Money / Ask Allowance Button
+            // Action 2: "ACTIVITIES" during youth; "SEND $400 HOME" during military duty
             if (sendMoneyHomeButton != null)
             {
                 var sendText = sendMoneyHomeButton.GetComponentInChildren<TextMeshProUGUI>();
                 if (sendText != null)
                 {
-                    sendText.text = soldier.isYouthPhase ? "ASK ALLOWANCE" : "SEND $400 HOME";
+                    sendText.text = soldier.isYouthPhase ? "📋 ACTIVITIES" : "💸 SEND $400 HOME";
                 }
             }
 
-            // Test Talent / Youth Activities Button
+            // Action 3: "TEST TALENT (E-4)" (Hidden during youth phase!)
             if (testTalentButton != null)
             {
-                var testText = testTalentButton.GetComponentInChildren<TextMeshProUGUI>();
                 if (soldier.isYouthPhase)
                 {
-                    testTalentButton.gameObject.SetActive(true);
-                    if (testText != null) testText.text = "YOUTH ACTIONS";
+                    testTalentButton.gameObject.SetActive(false);
                 }
                 else
                 {
                     bool canTest = TalentTestingApparatus.CanTestSelf(soldier) && !soldier.isPersonalTalentRevealed;
                     testTalentButton.gameObject.SetActive(canTest);
+                    var testText = testTalentButton.GetComponentInChildren<TextMeshProUGUI>();
                     if (testText != null) testText.text = "TEST (E-4)";
                 }
             }
@@ -277,14 +272,7 @@ namespace ArmyLife.UI
             if (GameManager.Instance != null && GameManager.Instance.currentSoldier != null)
             {
                 var soldier = GameManager.Instance.currentSoldier;
-                if (soldier.isYouthPhase)
-                {
-                    if (YouthActivitiesModal.Instance != null)
-                    {
-                        YouthActivitiesModal.Instance.OpenModal();
-                    }
-                }
-                else
+                if (!soldier.isYouthPhase)
                 {
                     TalentTestingApparatus.PerformSelfApparatusTest(soldier);
                 }
@@ -298,13 +286,11 @@ namespace ArmyLife.UI
                 var soldier = GameManager.Instance.currentSoldier;
                 if (soldier.isYouthPhase)
                 {
-                    // Youth asking parents for allowance
-                    soldier.parentRelationship = Mathf.Min(100f, soldier.parentRelationship + 4f);
-                    int allowance = (soldier.nobleTitle > NobleRank.Commoner) ? 100 : 35;
-                    soldier.cashBalance += allowance;
-                    GameEvents.OnFeedEventLogged?.Invoke("FAMILY",
-                        $"<color=#FFD700>[ALLOWANCE RECEIVED]</color> You asked your parents for pocket money. Father smiles and gives you <b>+${allowance}</b>! (Parent Relationship: {soldier.parentRelationship:F0}/100)");
-                    GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
+                    // During Youth Phase, this button opens the BitLife-style Activities Menu!
+                    if (YouthActivitiesModal.Instance != null)
+                    {
+                        YouthActivitiesModal.Instance.OpenModal();
+                    }
                 }
                 else
                 {

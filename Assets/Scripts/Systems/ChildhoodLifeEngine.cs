@@ -348,6 +348,65 @@ namespace ArmyLife.Systems
             return score;
         }
 
+        public static void ConductMockExam(SoldierProfile soldier)
+        {
+            if (soldier == null) return;
+            soldier.mockExamScore = CalculateProjectedExamScore(soldier, out string projectedAcademy);
+            soldier.tookMockExam = true;
+            soldier.mockExamProjectedAcademy = projectedAcademy;
+
+            GameEvents.OnFeedEventLogged?.Invoke("MOCK EXAM",
+                $"<color=#00FFAA><b>[NATIONAL MOCK EXAM RESULT]</b></color>\n" +
+                $"Preliminary Score: <b>{soldier.mockExamScore} / 100</b>\n" +
+                $"Projected Placement: <b>{projectedAcademy}</b>\n" +
+                $"Current Prep Bonus: <b>+{soldier.examPreparationBonus} pts</b>. Run to father or study before the final exam at Age 18!");
+        }
+
+        public static void RequestFatherExamIntervention(SoldierProfile soldier)
+        {
+            if (soldier == null) return;
+
+            bool isNoble = soldier.nobleTitle > NobleRank.Commoner;
+            bool isWealthyCommoner = !isNoble && soldier.cashBalance >= 300;
+
+            if (isNoble)
+            {
+                int nobleBoost = (int)soldier.nobleTitle * 6 + 6;
+                soldier.examPreparationBonus += nobleBoost;
+                soldier.parentRelationship = Mathf.Min(100f, soldier.parentRelationship + 10f);
+                soldier.intellect = Mathf.Min(100f, soldier.intellect + 8f);
+                soldier.combatSkill = Mathf.Min(100f, soldier.combatSkill + 6f);
+
+                GameEvents.OnFeedEventLogged?.Invoke("FAMILY BACKING",
+                    $"<color=#FFD700><b>[FATHER DEPLOYS NOBLE RESOURCES]</b></color> Father nods proudly upon seeing your mock score: " +
+                    $"<i>'A son of our House must graduate at the pinnacle.'</i> He summons imperial tutors and ancient exam manuscripts! " +
+                    $"Exam Score Boost: <b>+{nobleBoost} points</b>! (Intellect +8, Combat +6, Parent Relation +10).");
+            }
+            else if (isWealthyCommoner)
+            {
+                soldier.cashBalance -= 300;
+                soldier.examPreparationBonus += 12;
+                soldier.intellect = Mathf.Min(100f, soldier.intellect + 6f);
+                soldier.parentRelationship = Mathf.Min(100f, soldier.parentRelationship + 6f);
+
+                GameEvents.OnFeedEventLogged?.Invoke("FAMILY SACRIFICE",
+                    $"<color=#00D4FF><b>[FATHER INVESTS SAVINGS]</b></color> Father breaks open the family ceramic vault ($300): " +
+                    $"<i>'Take this. Hire the retired academy sergeant for private coaching.'</i> " +
+                    $"Exam Score Boost: <b>+12 points</b>! (Intellect +6, -$300 Family Savings).");
+            }
+            else
+            {
+                soldier.examPreparationBonus += 6;
+                soldier.parentRelationship = Mathf.Min(100f, soldier.parentRelationship + 12f);
+                soldier.fitness = Mathf.Min(100f, soldier.fitness + 4f);
+
+                GameEvents.OnFeedEventLogged?.Invoke("FAMILY BLESSING",
+                    $"<color=#00FFAA><b>[FATHER'S HAND ON YOUR SHOULDER]</b></color> Father sighs warmly: " +
+                    $"<i>'We don't have gold or noble seals, son. But you have our blood and endurance. Stand tall.'</i> " +
+                    $"Exam Score Boost: <b>+6 points</b>! (Parent Relation +12, Fitness +4).");
+            }
+        }
+
         /// <summary>
         /// Conducts the National Military Ranking Exam at Age 18.
         /// Evaluates physical fitness, combat aptitude, intellect, noble privileges, and prep bonus.
