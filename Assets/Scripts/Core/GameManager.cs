@@ -41,10 +41,18 @@ namespace ArmyLife.Core
             if (loaded != null)
             {
                 currentSoldier = loaded;
+
+                // Sync simulation calendar to character's age!
+                if (TimeCycleManager.Instance != null)
+                {
+                    TimeCycleManager.Instance.currentYear = 2008 + Mathf.FloorToInt(currentSoldier.age);
+                    TimeCycleManager.Instance.currentSemester = ((currentSoldier.age - Mathf.Floor(currentSoldier.age)) >= 0.25f) ? 2 : 1;
+                }
+
                 GameEvents.OnFeedEventLogged?.Invoke("RESUME",
-                    $"<color=#00D4FF><b>[SERVICE RECORD RESUMED]</b></color> Welcome back to active duty, <b>{currentSoldier.characterName}</b>! " +
-                    $"Rank: <b>{(currentSoldier.currentRank != null ? currentSoldier.currentRank.rankName : "Private")} ({(currentSoldier.currentRank != null ? currentSoldier.currentRank.paygrade : "E-1")})</b> | " +
-                    $"Age: <b>{currentSoldier.age:F1}</b> | Cultivation: <b>Tier {currentSoldier.powerTier}/12</b>.");
+                    $"<color=#00D4FF><b>[SERVICE RECORD RESUMED]</b></color> Welcome back, <b>{currentSoldier.characterName}</b>! " +
+                    $"{(currentSoldier.isYouthPhase ? "[Youth Phase]" : $"Rank: {(currentSoldier.currentRank != null ? currentSoldier.currentRank.rankName : "Private")}")} | " +
+                    $"Age: <b>{currentSoldier.age:F1}</b> | Year: <b>{(TimeCycleManager.Instance != null ? TimeCycleManager.Instance.currentYear : 2026)}</b>.");
 
                 GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
             }
@@ -126,8 +134,16 @@ namespace ArmyLife.Core
                 TimeCycleManager.Instance.ResetClockForNewborn(2008);
             }
 
-            // Newborn starts with no military rank (enlists at age 18)
+            // Newborn starts at age 0.0 with no military rank (enlists at age 18)
+            currentSoldier.age = 0.0f;
             currentSoldier.currentRank = null;
+
+            // Clear any lingering feed from prior lives
+            var feed = Object.FindAnyObjectByType<ArmyLife.UI.BitLifeFeedView>(FindObjectsInactive.Include);
+            if (feed != null)
+            {
+                feed.ClearFeed();
+            }
 
             // Save new life into persistent storage
             LifePersistenceManager.SaveSoldierLife(currentSoldier);

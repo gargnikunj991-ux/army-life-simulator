@@ -396,6 +396,12 @@ namespace ArmyLife.UI
             if (characterCreationModal != null) characterCreationModal.SetActive(false);
             if (manageLivesModal != null) manageLivesModal.SetActive(false);
             if (mainHUDPanel != null) mainHUDPanel.SetActive(true);
+
+            if (GameManager.Instance != null && GameManager.Instance.currentSoldier != null)
+            {
+                var hud = mainHUDPanel != null ? mainHUDPanel.GetComponent<MainHUDView>() : null;
+                if (hud != null) hud.UpdateHUD(GameManager.Instance.currentSoldier);
+            }
         }
 
         private void OnContinueOrManageClicked()
@@ -417,10 +423,11 @@ namespace ArmyLife.UI
 
         private void ResumeLifeById(string lifeId)
         {
+            ShowMainHUD();
+
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.ResumeLife(lifeId);
-                ShowMainHUD();
             }
         }
 
@@ -633,6 +640,9 @@ namespace ArmyLife.UI
             string eyeColor = EyeColors[selectedEyeColorIndex];
             string skinTone = SkinTones[selectedSkinToneIndex];
 
+            // Activate Main HUD first so all event listeners (BitLifeFeedView, MainHUDView) are registered!
+            ShowMainHUD();
+
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.StartNewLife(
@@ -646,8 +656,6 @@ namespace ArmyLife.UI
                     skinTone, 
                     looks: 85f);
             }
-
-            ShowMainHUD();
         }
 
         private void OnCancelCreationClicked()

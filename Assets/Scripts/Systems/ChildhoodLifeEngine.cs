@@ -42,23 +42,30 @@ namespace ArmyLife.Systems
 
         private static void LogAgeMilestone(SoldierProfile soldier, float age)
         {
-            int ageInt = Mathf.FloorToInt(age);
-            bool isFirstHalf = (age - ageInt) < 0.25f;
-
-            if (age <= 1.0f && isFirstHalf)
+            if (Mathf.Approximately(age, 0.5f))
             {
                 GameEvents.OnFeedEventLogged?.Invoke("INFANCY",
                     $"<color=#00FFAA><b>[INFANCY • AGE 0.5]</b></color> You spoke your first words: <i>\"Ma-ma\"</i> and <i>\"Sword\"</i>! Your parents embrace you with pride.");
             }
-            else if (age <= 1.5f && !isFirstHalf)
+            else if (Mathf.Approximately(age, 1.0f))
             {
                 GameEvents.OnFeedEventLogged?.Invoke("GROWTH",
                     $"<b>[TODDLER • AGE 1.0]</b> You took your first independent steps across the courtyard, balancing steadily on your own two feet.");
+            }
+            else if (Mathf.Approximately(age, 1.5f))
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("GROWTH",
+                    $"<b>[TODDLER • AGE 1.5]</b> You are babbling curious questions and running around the courtyard with joyful energy.");
             }
             else if (Mathf.Approximately(age, 2.0f))
             {
                 GameEvents.OnFeedEventLogged?.Invoke("GROWTH",
                     $"<b>[CHILDHOOD • AGE 2.0]</b> You survived a seasonal fever with high vitality. Your body's natural constitution is growing resilient.");
+            }
+            else if (Mathf.Approximately(age, 3.0f))
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("GROWTH",
+                    $"<b>[CHILDHOOD • AGE 3.0]</b> Your curiosity for martial arts begins to shine. You mimic the imperial soldiers drilling beyond the courtyard gate.");
             }
             else if (Mathf.Approximately(age, 4.0f))
             {
@@ -122,19 +129,19 @@ namespace ArmyLife.Systems
         private static void TriggerYouthDilemmaIfEligible(SoldierProfile soldier, float age)
         {
             // Trigger interactive dilemma events at key developmental crossroads
-            if (Mathf.Approximately(age, 0.5f))
+            if (Mathf.Approximately(age, 1.0f))
             {
-                // Age 0.5: The Grasping Ritual
+                // Age 1.0: The Grasping Ritual (1st Birthday Tradition)
                 GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
-                    "INFANCY MILESTONE",
+                    "1ST BIRTHDAY TRADITION",
                     "The Grasping Ceremony (One-Year Milestone)",
                     "On your first birthday ritual, your family places traditional symbolic items before you. Which one do your tiny hands reach for?",
                     "A Wooden Toy Dagger (+8 Fitness, +5 Tempering)",
                     "An Ancient Military Scroll (+10 Intellect)",
                     "A Family Gold Sovereign (+Clan Favor, +$200 Vault)",
-                    () => { soldier.fitness += 8f; soldier.foundationalTempering += 5f; },
-                    () => { soldier.intellect += 10f; },
-                    () => { soldier.clanFavor += 8f; soldier.cashBalance += 200; }
+                    () => { soldier.fitness += 8f; soldier.foundationalTempering += 5f; GameEvents.OnSoldierStatsUpdated?.Invoke(soldier); },
+                    () => { soldier.intellect += 10f; GameEvents.OnSoldierStatsUpdated?.Invoke(soldier); },
+                    () => { soldier.clanFavor += 8f; soldier.cashBalance += 200; GameEvents.OnSoldierStatsUpdated?.Invoke(soldier); }
                 );
             }
             else if (Mathf.Approximately(age, 6.0f))

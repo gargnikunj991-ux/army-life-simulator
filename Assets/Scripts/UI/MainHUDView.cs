@@ -37,6 +37,10 @@ namespace ArmyLife.UI
         public Slider meritSlider;
         public Slider influenceSlider;
 
+        [Header("Modals")]
+        public YouthActivitiesModal youthActivitiesModal;
+        public DilemmaModal dilemmaModal;
+
         [Header("Action Buttons")]
         public Button advanceSemesterButton;
         public Button testTalentButton;
@@ -46,6 +50,11 @@ namespace ArmyLife.UI
         private void OnEnable()
         {
             GameEvents.OnSoldierStatsUpdated += UpdateHUD;
+            if (GameManager.Instance != null && GameManager.Instance.currentSoldier != null)
+            {
+                UpdateHUD(GameManager.Instance.currentSoldier);
+            }
+
             if (advanceSemesterButton != null)
             {
                 advanceSemesterButton.onClick.AddListener(OnAdvanceSemesterClicked);
@@ -107,7 +116,7 @@ namespace ArmyLife.UI
 
             if (ageAndCalendarLabel != null)
             {
-                int year = TimeCycleManager.Instance != null ? TimeCycleManager.Instance.currentYear : 2026;
+                int year = TimeCycleManager.Instance != null ? TimeCycleManager.Instance.currentYear : 2008;
                 int sem = TimeCycleManager.Instance != null ? TimeCycleManager.Instance.currentSemester : 1;
                 
                 string status;
@@ -301,9 +310,21 @@ namespace ArmyLife.UI
                 if (soldier.isYouthPhase)
                 {
                     // During Youth Phase, this button opens the BitLife-style Activities Menu!
-                    if (YouthActivitiesModal.Instance != null)
+                    if (youthActivitiesModal != null)
+                    {
+                        youthActivitiesModal.OpenModal();
+                    }
+                    else if (YouthActivitiesModal.Instance != null)
                     {
                         YouthActivitiesModal.Instance.OpenModal();
+                    }
+                    else
+                    {
+                        var found = FindAnyObjectByType<YouthActivitiesModal>(FindObjectsInactive.Include);
+                        if (found != null)
+                        {
+                            found.OpenModal();
+                        }
                     }
                 }
                 else

@@ -103,15 +103,15 @@ namespace ArmyLife.Editor
             SetRect(nobleText.GetComponent<RectTransform>(), 0.50f, 0.65f, 0.78f, 0.95f);
             hudView.nobleTitleLabel = nobleText;
 
-            var ageDateText = CreateText("AgeDateLabel", headerPanel.transform, "Age 18.0 | Year 2026 S1", 32, TextAlignmentOptions.Left, FontStyles.Normal, new Color(0.8f, 0.85f, 0.9f));
+            var ageDateText = CreateText("AgeDateLabel", headerPanel.transform, "Age 0.0 | Year 2008 S1 [YOUTH PHASE]", 32, TextAlignmentOptions.Left, FontStyles.Normal, new Color(0.8f, 0.85f, 0.9f));
             SetRect(ageDateText.GetComponent<RectTransform>(), 0.05f, 0.35f, 0.55f, 0.65f);
             hudView.ageAndCalendarLabel = ageDateText;
 
-            var rankText = CreateText("RankLabel", headerPanel.transform, "Private Recruit (E-1)", 34, TextAlignmentOptions.Left, FontStyles.Bold, new Color(0.4f, 0.8f, 1f));
+            var rankText = CreateText("RankLabel", headerPanel.transform, "Infant", 34, TextAlignmentOptions.Left, FontStyles.Bold, new Color(0.4f, 0.8f, 1f));
             SetRect(rankText.GetComponent<RectTransform>(), 0.05f, 0.05f, 0.55f, 0.35f);
             hudView.rankLabel = rankText;
 
-            var payText = CreateText("PayLabel", headerPanel.transform, "+$1,950 / mo", 32, TextAlignmentOptions.Right, FontStyles.Bold, new Color(0.3f, 1f, 0.5f));
+            var payText = CreateText("PayLabel", headerPanel.transform, "Family Dependent ($0/mo)", 32, TextAlignmentOptions.Right, FontStyles.Bold, new Color(0.6f, 0.65f, 0.7f));
             SetRect(payText.GetComponent<RectTransform>(), 0.55f, 0.05f, 0.95f, 0.35f);
             hudView.monthlyPayLabel = payText;
 
@@ -207,17 +207,18 @@ namespace ArmyLife.Editor
             bottomRect.offsetMin = new Vector2(40, 4);
             bottomRect.offsetMax = new Vector2(-40, -4);
 
-            var advanceBtnObj = CreateButton("AdvanceSemesterButton", bottomBar.transform, "ADVANCE (+)", new Color(0.18f, 0.65f, 0.35f));
+            var advanceBtnObj = CreateButton("AdvanceSemesterButton", bottomBar.transform, "GROW UP (+)", new Color(0.18f, 0.65f, 0.35f));
             SetRect(advanceBtnObj.GetComponent<RectTransform>(), 0.02f, 0.10f, 0.48f, 0.90f);
             hudView.advanceSemesterButton = advanceBtnObj.GetComponent<Button>();
 
-            var sendBtnObj = CreateButton("SendMoneyHomeButton", bottomBar.transform, "ACTIVITIES", new Color(0.20f, 0.45f, 0.75f));
+            var sendBtnObj = CreateButton("SendMoneyHomeButton", bottomBar.transform, "📋 ACTIVITIES", new Color(0.20f, 0.45f, 0.75f));
             SetRect(sendBtnObj.GetComponent<RectTransform>(), 0.52f, 0.10f, 0.98f, 0.90f);
             hudView.sendMoneyHomeButton = sendBtnObj.GetComponent<Button>();
 
             var testBtnObj = CreateButton("TestTalentButton", bottomBar.transform, "TEST (E-4)", new Color(0.25f, 0.50f, 0.85f));
             SetRect(testBtnObj.GetComponent<RectTransform>(), 0.75f, 0.10f, 0.98f, 0.90f);
             hudView.testTalentButton = testBtnObj.GetComponent<Button>();
+            testBtnObj.SetActive(false); // Hidden during youth phase
 
             // ==========================================
             // 6. OPENING SCREEN PANEL (Title / Main Menu)
@@ -606,12 +607,16 @@ namespace ArmyLife.Editor
             // ==========================================
             var dilemmaModalObj = CreateUIElement("DilemmaModal", rootPanel.transform);
             SetFullScreen(dilemmaModalObj.GetComponent<RectTransform>());
-            var dilemmaDimBg = dilemmaModalObj.AddComponent<Image>();
-            dilemmaDimBg.color = new Color(0f, 0f, 0f, 0.88f);
             var dilemmaCtrl = dilemmaModalObj.AddComponent<DilemmaModal>();
-            dilemmaCtrl.modalRoot = dilemmaModalObj;
+            hudView.dilemmaModal = dilemmaCtrl;
 
-            var dilemmaBox = CreateUIElement("DilemmaBox", dilemmaModalObj.transform);
+            var dilemmaOverlay = CreateUIElement("DilemmaOverlay", dilemmaModalObj.transform);
+            SetFullScreen(dilemmaOverlay.GetComponent<RectTransform>());
+            var dilemmaDimBg = dilemmaOverlay.AddComponent<Image>();
+            dilemmaDimBg.color = new Color(0f, 0f, 0f, 0.88f);
+            dilemmaCtrl.modalRoot = dilemmaOverlay;
+
+            var dilemmaBox = CreateUIElement("DilemmaBox", dilemmaOverlay.transform);
             SetRect(dilemmaBox.GetComponent<RectTransform>(), 0.08f, 0.20f, 0.92f, 0.80f);
             var dilemmaBoxBg = dilemmaBox.AddComponent<Image>();
             dilemmaBoxBg.color = new Color(0.12f, 0.15f, 0.19f);
@@ -643,19 +648,24 @@ namespace ArmyLife.Editor
             dilemmaCtrl.choiceCButton = btnC.GetComponent<Button>();
             dilemmaCtrl.choiceCText = btnC.GetComponentInChildren<TextMeshProUGUI>();
 
-            dilemmaModalObj.SetActive(false);
+            dilemmaOverlay.SetActive(false);
+            dilemmaModalObj.SetActive(true);
 
             // ==========================================
             // 10. YOUTH ACTIVITIES MODAL
             // ==========================================
             var youthModalObj = CreateUIElement("YouthActivitiesModal", rootPanel.transform);
             SetFullScreen(youthModalObj.GetComponent<RectTransform>());
-            var youthDimBg = youthModalObj.AddComponent<Image>();
-            youthDimBg.color = new Color(0f, 0f, 0f, 0.92f);
             var youthCtrl = youthModalObj.AddComponent<YouthActivitiesModal>();
-            youthCtrl.modalRoot = youthModalObj;
+            hudView.youthActivitiesModal = youthCtrl;
 
-            var youthBox = CreateUIElement("YouthBox", youthModalObj.transform);
+            var youthOverlay = CreateUIElement("YouthOverlay", youthModalObj.transform);
+            SetFullScreen(youthOverlay.GetComponent<RectTransform>());
+            var youthDimBg = youthOverlay.AddComponent<Image>();
+            youthDimBg.color = new Color(0f, 0f, 0f, 0.92f);
+            youthCtrl.modalRoot = youthOverlay;
+
+            var youthBox = CreateUIElement("YouthBox", youthOverlay.transform);
             var ybRect = youthBox.GetComponent<RectTransform>();
             ybRect.anchorMin = new Vector2(0.04f, 0.05f);
             ybRect.anchorMax = new Vector2(0.96f, 0.95f);
@@ -739,7 +749,8 @@ namespace ArmyLife.Editor
             SetRect(yCloseBtn.GetComponent<RectTransform>(), 0.30f, 0.02f, 0.70f, 0.075f);
             youthCtrl.closeButton = yCloseBtn.GetComponent<Button>();
 
-            youthModalObj.SetActive(false);
+            youthOverlay.SetActive(false);
+            youthModalObj.SetActive(true);
 
             // Initial view states: Opening screen active, HUD hidden
             openingPanel.SetActive(true);

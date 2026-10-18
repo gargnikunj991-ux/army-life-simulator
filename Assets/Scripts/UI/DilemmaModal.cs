@@ -105,6 +105,10 @@ namespace ArmyLife.UI
             {
                 modalRoot.SetActive(true);
             }
+            else
+            {
+                gameObject.SetActive(true);
+            }
         }
 
         private void OnChoiceAClicked()
@@ -130,6 +134,10 @@ namespace ArmyLife.UI
             if (modalRoot != null)
             {
                 modalRoot.SetActive(false);
+            }
+            else
+            {
+                gameObject.SetActive(false);
             }
 
             if (GameManager.Instance != null && GameManager.Instance.currentSoldier != null)

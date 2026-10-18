@@ -60,18 +60,23 @@ namespace ArmyLife.UI
 
         public void OpenModal()
         {
+            gameObject.SetActive(true);
             if (modalRoot != null)
             {
                 modalRoot.SetActive(true);
-                RefreshStatsDisplay();
             }
+            RefreshStatsDisplay();
         }
 
         public void CloseModal()
         {
-            if (modalRoot != null)
+            if (modalRoot != null && modalRoot != gameObject)
             {
                 modalRoot.SetActive(false);
+            }
+            else
+            {
+                gameObject.SetActive(false);
             }
         }
 
@@ -101,7 +106,18 @@ namespace ArmyLife.UI
             var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
             if (s != null)
             {
-                ChildhoodLifeEngine.PerformBodyTempering(s);
+                if (s.age < 3.0f)
+                {
+                    s.fitness = Mathf.Min(100f, s.fitness + 2f);
+                    s.health = Mathf.Min(100f, s.health + 2f);
+                    GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
+                        $"<color=#00FFAA>[EARLY ACTIVITY]</color> You crawl and wobble vigorously across the courtyard tiles! (+2 Fitness, +2 Health).");
+                    GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                }
+                else
+                {
+                    ChildhoodLifeEngine.PerformBodyTempering(s);
+                }
                 RefreshStatsDisplay();
             }
         }
@@ -111,7 +127,17 @@ namespace ArmyLife.UI
             var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
             if (s != null)
             {
-                ChildhoodLifeEngine.PerformStudyTactics(s);
+                if (s.age < 2.0f)
+                {
+                    s.intellect = Mathf.Min(100f, s.intellect + 2f);
+                    GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
+                        $"<color=#00AAFF>[EARLY ACTIVITY]</color> You stare intently and chew on the corner of a brightly illustrated military picture book! (+2 Intellect).");
+                    GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                }
+                else
+                {
+                    ChildhoodLifeEngine.PerformStudyTactics(s);
+                }
                 RefreshStatsDisplay();
             }
         }
@@ -131,7 +157,17 @@ namespace ArmyLife.UI
             var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
             if (s != null)
             {
-                ChildhoodLifeEngine.PerformSiblingSparring(s);
+                if (s.age < 4.0f)
+                {
+                    s.siblingRelationship = Mathf.Min(100f, s.siblingRelationship + 5f);
+                    GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
+                        $"<color=#FF8844>[FAMILY PLAY]</color> You and your brother {s.siblingRivalName} playfully roll around on the rug with wooden toy swords (+5 Sibling Bond).");
+                    GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                }
+                else
+                {
+                    ChildhoodLifeEngine.PerformSiblingSparring(s);
+                }
                 RefreshStatsDisplay();
             }
         }
@@ -175,7 +211,15 @@ namespace ArmyLife.UI
             var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
             if (s != null)
             {
-                ChildhoodLifeEngine.RequestFatherExamIntervention(s);
+                if (s.age < 16.0f)
+                {
+                    GameEvents.OnFeedEventLogged?.Invoke("FAMILY",
+                        $"[FAMILY] Father gently ruffles your hair: <i>'Focus on your school lessons and growing healthy, child. When you turn 16, our family will prepare for the National Military Exam.'</i>");
+                }
+                else
+                {
+                    ChildhoodLifeEngine.RequestFatherExamIntervention(s);
+                }
                 GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                 RefreshStatsDisplay();
             }

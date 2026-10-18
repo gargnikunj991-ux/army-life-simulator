@@ -26,6 +26,16 @@ namespace ArmyLife.UI
             GameEvents.OnFeedEventLogged -= AddFeedEntry;
         }
 
+        public void ClearFeed()
+        {
+            feedBuilder.Clear();
+            entryCount = 0;
+            if (feedContentText != null)
+            {
+                feedContentText.text = "";
+            }
+        }
+
         public void AddFeedEntry(string category, string message)
         {
             string categoryBadge = FormatCategoryBadge(category);
