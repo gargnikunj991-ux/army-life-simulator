@@ -31,25 +31,110 @@ namespace ArmyLife.Core
 
         private void Start()
         {
-            if (currentSoldier == null)
+            // Do not force-spawn Ethan Vance if no soldier is loaded.
+            // OpeningSceneController will handle showing the menu or character creation.
+        }
+
+        public void ResumeLife(string lifeId)
+        {
+            SoldierProfile loaded = LifePersistenceManager.LoadSoldierLife(lifeId, this);
+            if (loaded != null)
             {
-                StartNewLife("Ethan Vance", GetDefaultLineage());
+                currentSoldier = loaded;
+                GameEvents.OnFeedEventLogged?.Invoke("RESUME",
+                    $"<color=#00D4FF><b>[SERVICE RECORD RESUMED]</b></color> Welcome back to active duty, <b>{currentSoldier.characterName}</b>! " +
+                    $"Rank: <b>{(currentSoldier.currentRank != null ? currentSoldier.currentRank.rankName : "Private")} ({(currentSoldier.currentRank != null ? currentSoldier.currentRank.paygrade : "E-1")})</b> | " +
+                    $"Age: <b>{currentSoldier.age:F1}</b> | Cultivation: <b>Tier {currentSoldier.powerTier}/12</b>.");
+
+                GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
             }
         }
 
-        public void StartNewLife(string soldierName, FamilyLineageSO lineage, int? explicitTalent = null)
+        public FamilyLineageSO RollBirthLineage()
         {
-            int talent = explicitTalent ?? Random.Range(40, 185);
+            if (familyLineageDatabase == null || familyLineageDatabase.Length == 0) return null;
 
-            currentSoldier = new SoldierProfile(soldierName, lineage, talent);
-            
-            if (militaryRankDatabase != null && militaryRankDatabase.Length > 0)
+            int roll = Random.Range(1, 101); // 1 to 100
+
+            string targetArchetype;
+            if (roll <= 80) // 80% Commoner (8 out of 10)
             {
-                currentSoldier.currentRank = militaryRankDatabase[0]; // E-1 Recruit default
+                targetArchetype = "Civilian Clean Slate";
+            }
+            else if (roll <= 94) // 14% Military Baron House
+            {
+                targetArchetype = "Command Sgt Major Backbone";
+            }
+            else if (roll <= 99) // 5% Special Forces Viscount House
+            {
+                targetArchetype = "Special Forces Legend";
+            }
+            else // 1% Grand Duke Dynasty (Ultra-Rare!)
+            {
+                targetArchetype = "4-Star General Dynasty";
             }
 
+            foreach (var lin in familyLineageDatabase)
+            {
+                if (lin != null && lin.archetypeName == targetArchetype)
+                {
+                    return lin;
+                }
+            }
+
+            return familyLineageDatabase[0];
+        }
+
+        public void StartNewLife(
+            string soldierName, 
+            FamilyLineageSO lineage = null, 
+            string gender = "Male", 
+            string birthCountry = "The Valerian Empire", 
+            string hairStyle = "Military Buzzcut",
+            string hairColor = "Jet Black",
+            string eyeColor = "Steel Grey",
+            string skinTone = "Tan",
+            float looks = 80f,
+            int? explicitTalent = null)
+        {
+            if (lineage == null)
+            {
+                lineage = RollBirthLineage();
+            }
+
+            int talent = explicitTalent ?? Random.Range(40, 185);
+
+            currentSoldier = new SoldierProfile(soldierName, lineage, talent)
+            {
+                gender = gender,
+                birthCountry = birthCountry,
+                hairStyle = hairStyle,
+                hairColor = hairColor,
+                eyeColor = eyeColor,
+                skinTone = skinTone,
+                looks = looks
+            };
+
+            // Split first and last name
+            string[] parts = soldierName.Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length > 0) currentSoldier.firstName = parts[0];
+            if (parts.Length > 1) currentSoldier.lastName = parts[parts.Length - 1];
+            
+            // Clock starts at Year 2008 for newborn baby (turns 18 in 2026!)
+            if (TimeCycleManager.Instance != null)
+            {
+                TimeCycleManager.Instance.ResetClockForNewborn(2008);
+            }
+
+            // Newborn starts with no military rank (enlists at age 18)
+            currentSoldier.currentRank = null;
+
+            // Save new life into persistent storage
+            LifePersistenceManager.SaveSoldierLife(currentSoldier);
+
             GameEvents.OnFeedEventLogged?.Invoke("BIRTH",
-                $"<color=#00FFAA><b>[A NEW LIFE BEGINS]</b></color> You were born into the world as <b>{soldierName}</b>. " +
+                $"<color=#00FFAA><b>[A NEW LIFE BEGINS]</b></color> You were born in <b>{birthCountry}</b> as <b>{soldierName}</b> ({gender}). " +
+                $"Appearance: <i>{hairStyle}, {hairColor} hair, {eyeColor} eyes, {skinTone} complexion ({looks:F0}% Looks)</i>. " +
                 $"Lineage: <b>{(lineage != null ? lineage.archetypeName : "Civilian Grunt")}</b>. " +
                 $"Hereditary Noble Rank: <b>{currentSoldier.nobleTitle}</b>.");
 
@@ -108,24 +193,35 @@ namespace ArmyLife.Core
                 return;
             }
 
-            // 3. Mandatory Military Retirement Evaluation ("Up or Out" policy)
-            MilitaryCareerEngine.EvaluateCareerRetirement(currentSoldier);
-
-            // 4. Frontline Combat Tour Processing (Real mortality & casualty risk!)
-            if (!currentSoldier.isRetired && currentSoldier.isInCombatDeployment)
+            // 3. Phase Splitting: Youth Childhood (Ages 0 to 18) vs Active Duty Military
+            if (currentSoldier.isYouthPhase)
             {
-                MilitaryCareerEngine.ProcessCombatDeploymentTour(currentSoldier);
-
-                // If killed in action, stop further processing this turn
-                if (currentSoldier.isDead) return;
-
-                // Check Secret Ancient Sect Cave anomaly (1 in 100 chance for Tier 10+)
-                PowerCultivationEngine.CheckSecretCaveAnomaly(currentSoldier);
+                ChildhoodLifeEngine.ProcessYouthSemester(currentSoldier, this);
             }
-
-            // 5. Payday: 6 months of compensation with 50% Imperial War Tax
-            if (!currentSoldier.isYouthPhase)
+            else
             {
+                // Turning Point: Age 18.0 Enlistment & National Military Ranking Exam!
+                if (currentSoldier.currentRank == null)
+                {
+                    ChildhoodLifeEngine.ConductNationalMilitaryExam(currentSoldier, this);
+                }
+
+                // Mandatory Military Retirement Evaluation ("Up or Out" policy)
+                MilitaryCareerEngine.EvaluateCareerRetirement(currentSoldier);
+
+                // Frontline Combat Tour Processing (Real mortality & casualty risk!)
+                if (!currentSoldier.isRetired && currentSoldier.isInCombatDeployment)
+                {
+                    MilitaryCareerEngine.ProcessCombatDeploymentTour(currentSoldier);
+
+                    // If killed in action, stop further processing this turn
+                    if (currentSoldier.isDead) return;
+
+                    // Check Secret Ancient Sect Cave anomaly (1 in 100 chance for Tier 10+)
+                    PowerCultivationEngine.CheckSecretCaveAnomaly(currentSoldier);
+                }
+
+                // Payday: 6 months of compensation with 50% Imperial War Tax
                 if (currentSoldier.isRetired)
                 {
                     long pension = 1500L * 6;
@@ -154,16 +250,19 @@ namespace ArmyLife.Core
                     GameEvents.OnFeedEventLogged?.Invoke("EXPENSES",
                         $"[LIVING EXPENSES] Deducted <b>-${basicExpenses}</b> for 6 months of mess hall rations, uniform upkeep, and basic bone-tempering ointments.");
 
-                    // 6. Cultivation Energy Burn (Only if soldier is noble or has learned about cultivation)
+                    // Cultivation Energy Burn (Only if soldier is noble or has learned about cultivation)
                     if (currentSoldier.knowsAboutCultivation || currentSoldier.nobleTitle > NobleRank.Commoner)
                     {
                         PowerCultivationEngine.ProcessSemesterCultivation(currentSoldier, currentTierSO);
                     }
 
-                    // 7. Military Promotion Board Evaluation (Climbs through PT tests, merit, and service!)
+                    // Military Promotion Board Evaluation (Climbs through PT tests, merit, and service!)
                     PromotionBoardEngine.EvaluatePromotionBoard(currentSoldier, militaryRankDatabase);
                 }
             }
+
+            // Auto-save soldier profile to persistent storage
+            LifePersistenceManager.SaveSoldierLife(currentSoldier);
 
             GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
         }
@@ -240,7 +339,7 @@ namespace ArmyLife.Core
             return null;
         }
 
-        private FamilyLineageSO GetDefaultLineage()
+        public FamilyLineageSO GetDefaultLineage()
         {
             if (familyLineageDatabase != null && familyLineageDatabase.Length > 0)
             {

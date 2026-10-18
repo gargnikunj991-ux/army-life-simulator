@@ -6,14 +6,26 @@ namespace ArmyLife.Data
     [Serializable]
     public class SoldierProfile
     {
-        [Header("Identity & Time")]
+        [Header("Identity & Background")]
+        public string lifeId;
         public string characterName;
+        public string firstName;
+        public string lastName;
+        public string gender = "Male";
+        public string birthCountry = "The Valerian Empire";
         public float age;                       // e.g. 18.0, 18.5, 19.0
         public int totalSemestersLived;         // Number of 6-month turns survived
         public bool isYouthPhase => age < 18.0f;
         public bool isRetired;                  // True if honorably discharged / retired to veteran life
         public bool isDead;                     // True if KIA, executed, or killed by breakthrough backlash
         public string deathReason;
+
+        [Header("Appearance & Customization (BitLife style)")]
+        public string hairStyle = "Military Buzzcut";
+        public string hairColor = "Jet Black";
+        public string eyeColor = "Steel Grey";
+        public string skinTone = "Tan";
+        [Range(0f, 100f)] public float looks = 80f;
 
         [Header("Lineage & Aristocracy")]
         public FamilyLineageSO lineage;
@@ -75,17 +87,48 @@ namespace ArmyLife.Data
         public int childrenCount;
         public bool hasRejectedChildSoulTransfer; // If true, locked until death -> reincarnate as youngest descendant
 
+        public SoldierProfile()
+        {
+            health = 100f;
+            fitness = 50f;
+            combatSkill = 30f;
+            meritRating = 50f;
+            politicalInfluence = 10f;
+            clanFavor = 50f;
+            squadRespect = 50f;
+            coFavor = 50f;
+        }
+
+        [Header("Childhood & Youth Development (Ages 0 to 18)")]
+        [Range(0f, 100f)] public float intellect = 50f;
+        [Range(0f, 100f)] public float foundationalTempering = 10f;
+        public int examScore;
+        public string siblingRivalName = "Lucian";
+        public float parentRelationship = 80f;
+        public float siblingRelationship = 50f;
+
+        [Header("Mock Exam & Exam Preparation (Age 17.5)")]
+        public bool tookMockExam;
+        public int mockExamScore;
+        public string mockExamProjectedAcademy = "Recruit Depot";
+        public bool receivedFatherExamBoost;
+        public int examPreparationBonus;
+
         public SoldierProfile(string name, FamilyLineageSO initialLineage, int rolledTalent)
         {
             characterName = name;
             lineage = initialLineage;
-            age = 18.0f; // Adult enlistment start (or 0 for infant succession)
+            age = 0.0f; // Born as a baby into the world!
             totalSemestersLived = 0;
             talentScore = rolledTalent;
             isRetired = false;
             isDead = false;
             failedBreakthroughCount = 0;
             meridianDamage = 0f;
+            intellect = 50f;
+            foundationalTempering = 10f;
+            parentRelationship = 85f;
+            siblingRelationship = 50f;
 
             if (initialLineage != null)
             {

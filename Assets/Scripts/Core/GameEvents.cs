@@ -27,5 +27,8 @@ namespace ArmyLife.Core
 
         // Imperial Retribution
         public static Action<string> OnImperialExecutionTriggered; // (Reason for royal decapitation)
+
+        // Interactive Dilemma Popups (Childhood & Military Career)
+        public static Action<string, string, string, string, string, string, Action, Action, Action> OnChildhoodDilemmaTriggered;
     }
 }

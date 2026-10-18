@@ -43,17 +43,25 @@ namespace ArmyLife.Systems
                 GameEvents.OnFeedEventLogged?.Invoke("PROMOTION BOARD",
                     $"<color=#00FFAA><b>[PROMOTION BOARD CONVENED]</b></color> The Battalion Promotion Board evaluated your service record: " +
                     $"<b>{soldier.accumulatedPromotionPoints} / {nextRank.requiredMeritPoints} Points</b>! " +
-                    $"You passed the board and have been recommended for promotion!");
+                    $"You passed the board and have been recommended for promotion to {nextRank.rankName} ({nextRank.paygrade})!");
 
                 GameManager.Instance.PromoteSoldier(nextRank);
+            }
+            else if (meetsPoints && !meetsFitness)
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("CAREER",
+                    $"<color=#FFB300><b>[PROMOTION BOARD DEFERRED]</b></color> You have enough merit points (<b>{soldier.accumulatedPromotionPoints} / {nextRank.requiredMeritPoints}</b>), " +
+                    $"but your <b>Physical Fitness ({soldier.fitness:F0} / {nextRank.requiredFitness} required)</b> failed the military PT standard! " +
+                    $"Improve your fitness to pass the board for {nextRank.rankName} ({nextRank.paygrade}).");
             }
             else
             {
                 int remaining = Mathf.Max(0, nextRank.requiredMeritPoints - soldier.accumulatedPromotionPoints);
+                string fitnessNote = (!meetsFitness) ? $" [Need {nextRank.requiredFitness} Fitness, currently {soldier.fitness:F0}]" : "";
                 GameEvents.OnFeedEventLogged?.Invoke("CAREER",
                     $"[PROMOTION BOARD RECORD] Earned +{semesterPoints} promotion points this semester. " +
                     $"Current Total: <b>{soldier.accumulatedPromotionPoints} / {nextRank.requiredMeritPoints} Points</b> for {nextRank.rankName} ({nextRank.paygrade}). " +
-                    $"({remaining} points needed for board).");
+                    $"({remaining} points needed for board{fitnessNote}).");
             }
         }
 

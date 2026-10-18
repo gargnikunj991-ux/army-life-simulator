@@ -36,6 +36,7 @@ namespace ArmyLife.UI
         public Button advanceSemesterButton;
         public Button testTalentButton;
         public Button sendMoneyHomeButton;
+        public Button returnToMenuButton;
 
         private void OnEnable()
         {
@@ -51,6 +52,10 @@ namespace ArmyLife.UI
             if (sendMoneyHomeButton != null)
             {
                 sendMoneyHomeButton.onClick.AddListener(OnSendMoneyHomeClicked);
+            }
+            if (returnToMenuButton != null)
+            {
+                returnToMenuButton.onClick.AddListener(OnReturnToMenuClicked);
             }
         }
 
@@ -69,8 +74,9 @@ namespace ArmyLife.UI
             {
                 sendMoneyHomeButton.onClick.RemoveListener(OnSendMoneyHomeClicked);
             }
-        }
-                testTalentButton.onClick.RemoveListener(OnTestTalentClicked);
+            if (returnToMenuButton != null)
+            {
+                returnToMenuButton.onClick.RemoveListener(OnReturnToMenuClicked);
             }
         }
 
@@ -102,6 +108,7 @@ namespace ArmyLife.UI
                 string status;
                 if (soldier.isDead) status = "<color=#FF0000>[DEAD]</color>";
                 else if (soldier.isRetired) status = "<color=#FFFF44>[VETERAN PENSION]</color>";
+                else if (soldier.isYouthPhase) status = "<color=#00D4FF>[YOUTH PHASE]</color>";
                 else status = soldier.isInCombatDeployment ? "<color=#FF4444>[FRONT TOUR]</color>" : "<color=#44FF44>[BASE]</color>";
 
                 ageAndCalendarLabel.text = $"Age {soldier.age:F1} | Year {year} S{sem} {status}";
@@ -119,11 +126,18 @@ namespace ArmyLife.UI
                 {
                     rankStr = $"[RETIRED] {(soldier.currentRank != null ? soldier.currentRank.rankName : "Veteran")}";
                 }
+                else if (soldier.isYouthPhase)
+                {
+                    if (soldier.age < 2.0f) rankStr = "Infant";
+                    else if (soldier.age < 5.0f) rankStr = "Toddler";
+                    else if (soldier.age < 12.0f) rankStr = "Primary School Pupil";
+                    else rankStr = "Military Academy Cadet";
+                }
                 else
                 {
                     rankStr = (soldier.currentRank != null) 
                         ? $"{soldier.currentRank.rankName} ({soldier.currentRank.paygrade})" 
-                        : "Recruit";
+                        : "Private Recruit (E-1)";
                 }
                 rankLabel.text = rankStr;
             }
@@ -132,6 +146,14 @@ namespace ArmyLife.UI
             {
                 string clanStatus = soldier.isClanHead ? " (Patriarch)" : "";
                 nobleTitleLabel.text = $"{soldier.nobleTitle}{clanStatus}";
+            }
+
+            // Monthly Pay / Allowance
+            if (monthlyPayLabel != null)
+            {
+                monthlyPayLabel.text = soldier.isYouthPhase 
+                    ? "<color=#888888>Family Dependent</color>" 
+                    : $"+${SalaryCalculator.CalculateNetMonthlyPay(soldier):N0} / mo";
             }
 
             // Finances (Reflecting 50% Imperial War Tax)
@@ -201,15 +223,37 @@ namespace ArmyLife.UI
                 var btnText = advanceSemesterButton.GetComponentInChildren<TextMeshProUGUI>();
                 if (btnText != null)
                 {
-                    btnText.text = soldier.isDead ? "REINCARNATE (NEW LIFE)" : "ADVANCE 6 MONTHS (+)";
+                    btnText.text = soldier.isDead 
+                        ? "REINCARNATE (NEW LIFE)" 
+                        : (soldier.isYouthPhase ? "GROW UP (+6 MO)" : "ADVANCE (+6 MO)");
                 }
             }
 
-            // Test Talent Button Visibility
+            // Send Money / Ask Allowance Button
+            if (sendMoneyHomeButton != null)
+            {
+                var sendText = sendMoneyHomeButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (sendText != null)
+                {
+                    sendText.text = soldier.isYouthPhase ? "ASK ALLOWANCE" : "SEND $400 HOME";
+                }
+            }
+
+            // Test Talent / Youth Activities Button
             if (testTalentButton != null)
             {
-                bool canTest = TalentTestingApparatus.CanTestSelf(soldier) && !soldier.isPersonalTalentRevealed;
-                testTalentButton.gameObject.SetActive(canTest);
+                var testText = testTalentButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (soldier.isYouthPhase)
+                {
+                    testTalentButton.gameObject.SetActive(true);
+                    if (testText != null) testText.text = "YOUTH ACTIONS";
+                }
+                else
+                {
+                    bool canTest = TalentTestingApparatus.CanTestSelf(soldier) && !soldier.isPersonalTalentRevealed;
+                    testTalentButton.gameObject.SetActive(canTest);
+                    if (testText != null) testText.text = "TEST (E-4)";
+                }
             }
 
             // Stat Sliders
@@ -232,7 +276,18 @@ namespace ArmyLife.UI
         {
             if (GameManager.Instance != null && GameManager.Instance.currentSoldier != null)
             {
-                TalentTestingApparatus.PerformSelfApparatusTest(GameManager.Instance.currentSoldier);
+                var soldier = GameManager.Instance.currentSoldier;
+                if (soldier.isYouthPhase)
+                {
+                    if (YouthActivitiesModal.Instance != null)
+                    {
+                        YouthActivitiesModal.Instance.OpenModal();
+                    }
+                }
+                else
+                {
+                    TalentTestingApparatus.PerformSelfApparatusTest(soldier);
+                }
             }
         }
 
@@ -240,7 +295,29 @@ namespace ArmyLife.UI
         {
             if (GameManager.Instance != null && GameManager.Instance.currentSoldier != null)
             {
-                GameManager.Instance.SendMoneyToFamily(400);
+                var soldier = GameManager.Instance.currentSoldier;
+                if (soldier.isYouthPhase)
+                {
+                    // Youth asking parents for allowance
+                    soldier.parentRelationship = Mathf.Min(100f, soldier.parentRelationship + 4f);
+                    int allowance = (soldier.nobleTitle > NobleRank.Commoner) ? 100 : 35;
+                    soldier.cashBalance += allowance;
+                    GameEvents.OnFeedEventLogged?.Invoke("FAMILY",
+                        $"<color=#FFD700>[ALLOWANCE RECEIVED]</color> You asked your parents for pocket money. Father smiles and gives you <b>+${allowance}</b>! (Parent Relationship: {soldier.parentRelationship:F0}/100)");
+                    GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
+                }
+                else
+                {
+                    GameManager.Instance.SendMoneyToFamily(400);
+                }
+            }
+        }
+
+        private void OnReturnToMenuClicked()
+        {
+            if (OpeningSceneController.Instance != null)
+            {
+                OpeningSceneController.Instance.ShowOpeningScreen();
             }
         }
     }

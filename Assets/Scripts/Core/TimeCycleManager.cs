@@ -18,6 +18,12 @@ namespace ArmyLife.Core
             else Destroy(gameObject);
         }
 
+        public void ResetClockForNewborn(int birthYear = 2008)
+        {
+            currentYear = birthYear;
+            currentSemester = 1;
+        }
+
         /// <summary>
         /// Advances the simulation clock by 6 months (+0.5 years).
         /// </summary>
