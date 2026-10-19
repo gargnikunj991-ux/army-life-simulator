@@ -217,14 +217,7 @@ namespace ArmyLife.UI
                         ? $" <color=#FF4444>[Dmg: {soldier.meridianDamage:F0}%]</color>" 
                         : "";
 
-                    if (soldier.powerTier >= 11 && !soldier.unlockedTiers11And12)
-                    {
-                        powerTierLabel.text = $"Tier VI (Peak Mortal Limit){damageWarning}";
-                    }
-                    else
-                    {
-                        powerTierLabel.text = $"Power Tier: {soldier.powerTier} / 12{damageWarning}";
-                    }
+                    powerTierLabel.text = $"{PowerTierKnowledgeSystem.FormatSoldierPowerTier(soldier)}{damageWarning}";
                 }
             }
 

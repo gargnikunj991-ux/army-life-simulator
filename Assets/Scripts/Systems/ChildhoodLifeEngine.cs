@@ -19,6 +19,7 @@ namespace ArmyLife.Systems
 
             // 1. Natural Growth & Health Baseline
             soldier.health = Mathf.Min(100f, soldier.health + 2f);
+            soldier.semesterStudyPerformanceGained = 0f; // Reset semester study limit so player can study again in new term
 
             // 2. Family Financial Upkeep (Child is supported by parents)
             if (soldier.lineage != null)

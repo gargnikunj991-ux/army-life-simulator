@@ -111,7 +111,11 @@ namespace ArmyLife.UI
             if (studyHarderButton != null)
             {
                 studyHarderButton.interactable = true;
-                SetButtonLabel(studyHarderButton, "📚 Study Harder (+Score, +Intellect)");
+                bool isCapped = s.semesterStudyPerformanceGained >= SoldierProfile.MAX_SEMESTER_STUDY_BOOST;
+                string capTag = isCapped 
+                    ? "📚 Study Harder (Term Maxed: +3.0%)" 
+                    : $"📚 Study Harder (+{SoldierProfile.MAX_SEMESTER_STUDY_BOOST - s.semesterStudyPerformanceGained:F1}% Max)";
+                SetButtonLabel(studyHarderButton, capTag);
             }
 
             if (joinClubButton != null)
@@ -379,29 +383,43 @@ namespace ArmyLife.UI
         private void OnStudyHarderClicked()
         {
             var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
-            if (s != null)
+            if (s == null) return;
+
+            if (s.semesterStudyPerformanceGained >= SoldierProfile.MAX_SEMESTER_STUDY_BOOST)
             {
-                s.schoolPerformance = Mathf.Min(100f, s.schoolPerformance + 6f);
-                s.intellect = Mathf.Min(100f, s.intellect + 4f);
-                s.meritRating = Mathf.Min(100f, s.meritRating + 3f);
-
-                if (s.age < 12.0f)
-                {
-                    s.primarySchoolScore = Mathf.Min(100f, s.primarySchoolScore + 3.5f);
-                    GameEvents.OnFeedEventLogged?.Invoke("SCHOOL",
-                        $"<color=#00FFAA>[PRIMARY STUDY HARDER]</color> You spent recess studying tactics scrolls and imperial geography! " +
-                        $"Term Performance: <b>{s.schoolPerformance:F0}%</b> | Primary Cumulative Score: <b>{s.primarySchoolScore:F1}/100</b> (+3.5 Primary Score, +4 Intellect).");
-                }
-                else
-                {
-                    GameEvents.OnFeedEventLogged?.Invoke("SCHOOL",
-                        $"<color=#00FFAA>[CADET TACTICAL STUDY]</color> You studied war logs and weapon manuals in the academy archive! " +
-                        $"Cadet Performance: <b>{s.schoolPerformance:F0}%</b> | Intellect: <b>{s.intellect:F0}/100</b> (+4 Intellect, +3 Merit).");
-                }
-
-                GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                GameEvents.OnFeedEventLogged?.Invoke("SCHOOL",
+                    $"<color=#FF8800><b>[SEMESTER STUDY LIMIT REACHED]</b></color> You have already increased your performance by <b>+{s.semesterStudyPerformanceGained:F1}%</b> this semester! " +
+                    $"Your mind is exhausted. No matter how much you cram now, your performance will not increase. Advance to next semester (Age +0.5) to study further!");
                 RefreshSchoolDisplay();
+                return;
             }
+
+            float remainingBoost = SoldierProfile.MAX_SEMESTER_STUDY_BOOST - s.semesterStudyPerformanceGained;
+            float actualBoost = Mathf.Min(3.0f, remainingBoost);
+            s.semesterStudyPerformanceGained += actualBoost;
+
+            s.schoolPerformance = Mathf.Min(100f, s.schoolPerformance + actualBoost);
+            s.intellect = Mathf.Min(100f, s.intellect + 2f);
+            s.meritRating = Mathf.Min(100f, s.meritRating + 1f);
+
+            if (s.age < 12.0f)
+            {
+                s.primarySchoolScore = Mathf.Min(100f, s.primarySchoolScore + (actualBoost * 0.5f));
+                GameEvents.OnFeedEventLogged?.Invoke("SCHOOL",
+                    $"<color=#00FFAA>[PRIMARY STUDY HARDER]</color> You spent recess studying tactics scrolls and imperial geography! " +
+                    $"Performance gained: <b>+{actualBoost:F1}%</b> (Current: <b>{s.schoolPerformance:F1}%</b>) | Primary Cumulative Score: <b>{s.primarySchoolScore:F1}/100</b>. " +
+                    $"<color=#FFD700>[Semester Study Cap: {s.semesterStudyPerformanceGained:F1}/3.0%]</color>");
+            }
+            else
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("SCHOOL",
+                    $"<color=#00FFAA>[CADET TACTICAL STUDY]</color> You studied war logs and weapon manuals in the academy archive! " +
+                    $"Performance gained: <b>+{actualBoost:F1}%</b> (Current: <b>{s.schoolPerformance:F1}%</b>) | Intellect: <b>{s.intellect:F0}/100</b>. " +
+                    $"<color=#FFD700>[Semester Study Cap: {s.semesterStudyPerformanceGained:F1}/3.0%]</color>");
+            }
+
+            GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+            RefreshSchoolDisplay();
         }
 
         private void OnJoinClubClicked()

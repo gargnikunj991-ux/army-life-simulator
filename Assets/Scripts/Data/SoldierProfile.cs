@@ -46,9 +46,11 @@ namespace ArmyLife.Data
         public bool isInCombatDeployment;       // True during frontline tours (+Hazard Pay)
         public int medalsEarnedCount;
 
-        [Header("Power Cultivation (12 Tiers)")]
+        [Header("Power Cultivation (4 Pre-Tier Stages + 12 Tiers)")]
+        [Range(1, 4)]
+        public int preTierStage = 1;            // 1 to 4: Body Tempering, Meridian Awakening, Qi Circulation, Foundational Core
         [Range(0, 12)]
-        public int powerTier;                   // 0 to 12
+        public int powerTier;                   // 0 to 12 (0 = Pre-Tier Stages 1-4)
         [Range(0f, 100f)]
         public float tierProgressPercent;       // Progress towards next tier breakthrough
         public int failedBreakthroughCount;     // Consecutive bottleneck failures (3 = fatal / crippling!)
@@ -133,6 +135,8 @@ namespace ArmyLife.Data
         public SchoolLevel schoolLevel = SchoolLevel.None;
         public SchoolTier schoolTier = SchoolTier.City3rd;
         [Range(0f, 100f)] public float schoolPerformance = 70f;
+        public float semesterStudyPerformanceGained = 0f; // Max 3.0 pts per semester
+        public const float MAX_SEMESTER_STUDY_BOOST = 3.0f;
         [Range(0f, 100f)] public float primarySchoolScore = 65f; // Cumulative primary school performance (Ages 6-11)
         public string primarySchoolGraduationHonors = "Pending";
         public string schoolClub = "None";

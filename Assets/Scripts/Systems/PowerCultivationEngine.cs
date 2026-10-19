@@ -67,15 +67,56 @@ namespace ArmyLife.Systems
             if (roll <= successChance)
             {
                 // SUCCESS
-                soldier.powerTier++;
                 soldier.tierProgressPercent = 0f;
                 soldier.failedBreakthroughCount = 0;
                 soldier.meridianDamage = Mathf.Max(0f, soldier.meridianDamage - 20f); // Breakthrough cleanses impurities
                 soldier.health = 100f;
 
-                GameEvents.OnPowerTierBreakthrough?.Invoke(soldier.powerTier);
-                GameEvents.OnFeedEventLogged?.Invoke("BREAKTHROUGH",
-                    $"<color=#00FFAA><b>[TIER BREAKTHROUGH SUCCESS!]</b></color> Your core condensed and your life aura surged! You have successfully stepped into <b>Tier {soldier.powerTier}</b>!");
+                if (soldier.powerTier == 0)
+                {
+                    // Pre-Tier 1: 4 Preparatory Mortal Stages
+                    if (soldier.preTierStage < 4)
+                    {
+                        soldier.preTierStage++;
+                        GameEvents.OnFeedEventLogged?.Invoke("BREAKTHROUGH",
+                            $"<color=#00FFAA><b>[PRE-TIER STAGE ADVANCEMENT]</b></color> You completed <b>{PowerTierKnowledgeSystem.GetPreTierStageName(soldier.preTierStage - 1)}</b> and advanced to <b>{PowerTierKnowledgeSystem.GetPreTierStageName(soldier.preTierStage)}</b> (Stage {soldier.preTierStage}/4)!");
+                    }
+                    else
+                    {
+                        // Completes Stage 4 -> Steps into Tier 1!
+                        soldier.powerTier = 1;
+                        GameEvents.OnPowerTierBreakthrough?.Invoke(1);
+                        GameEvents.OnFeedEventLogged?.Invoke("BREAKTHROUGH",
+                            $"<color=#FFD700>==================================================\n" +
+                            $"<b>[MORTAL TRANSCENDENCE • TIER 1 ACHIEVED!]</b>\n" +
+                            $"Having mastered all 4 preparatory stages, your meridian core ignited! You have officially stepped into <b>Tier 1 ({PowerTierKnowledgeSystem.GetTierDesignation(1)})</b>!\n" +
+                            $"==================================================</color>");
+                    }
+                }
+                else
+                {
+                    soldier.powerTier++;
+                    GameEvents.OnPowerTierBreakthrough?.Invoke(soldier.powerTier);
+
+                    if (soldier.powerTier == 7)
+                    {
+                        soldier.meritRating = Mathf.Min(100f, soldier.meritRating + 30f);
+                        soldier.clanFavor = Mathf.Min(100f, soldier.clanFavor + 25f);
+
+                        GameEvents.OnFeedEventLogged?.Invoke("BREAKTHROUGH",
+                            $"<color=#FFD700>==================================================\n" +
+                            $"<b>[NATIONAL GUARDIAN ASCENSION • TIER 7]</b>\n" +
+                            $"You have shattered the spoken mortal barrier! The Imperial Throne and High Command officially register you as a revered <b>NATIONAL GUARDIAN OF THE EMPIRE</b>!\n" +
+                            $"Your name is inscribed upon the Great Monument of Valeria (+30 Merit, +25 Clan Favor).\n" +
+                            $"==================================================</color>");
+                    }
+                    else
+                    {
+                        string guardianTag = PowerTierKnowledgeSystem.IsNationalGuardian(soldier.powerTier) ? " <color=#FFD700>[NATIONAL GUARDIAN]</color>" : "";
+                        GameEvents.OnFeedEventLogged?.Invoke("BREAKTHROUGH",
+                            $"<color=#00FFAA><b>[TIER BREAKTHROUGH SUCCESS!]</b></color> Your core condensed and your life aura surged! You have successfully stepped into <b>Tier {soldier.powerTier} ({PowerTierKnowledgeSystem.GetTierDesignation(soldier.powerTier)})</b>!{guardianTag}");
+                    }
+                }
 
                 GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
                 return true;
