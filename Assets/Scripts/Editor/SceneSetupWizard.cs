@@ -204,19 +204,28 @@ namespace ArmyLife.Editor
             var bottomRect = bottomBar.GetComponent<RectTransform>();
             bottomRect.anchorMin = new Vector2(0, 0.02f);
             bottomRect.anchorMax = new Vector2(1, 0.105f);
-            bottomRect.offsetMin = new Vector2(40, 4);
-            bottomRect.offsetMax = new Vector2(-40, -4);
+            bottomRect.offsetMin = new Vector2(20, 4);
+            bottomRect.offsetMax = new Vector2(-20, -4);
 
+            // 4-Button BitLife-style Bottom Navigation Bar
             var advanceBtnObj = CreateButton("AdvanceSemesterButton", bottomBar.transform, "GROW UP (+)", new Color(0.18f, 0.65f, 0.35f));
-            SetRect(advanceBtnObj.GetComponent<RectTransform>(), 0.02f, 0.10f, 0.48f, 0.90f);
+            SetRect(advanceBtnObj.GetComponent<RectTransform>(), 0.01f, 0.10f, 0.31f, 0.90f);
             hudView.advanceSemesterButton = advanceBtnObj.GetComponent<Button>();
 
-            var sendBtnObj = CreateButton("SendMoneyHomeButton", bottomBar.transform, "📋 ACTIVITIES", new Color(0.20f, 0.45f, 0.75f));
-            SetRect(sendBtnObj.GetComponent<RectTransform>(), 0.52f, 0.10f, 0.98f, 0.90f);
+            var clanBtnObj = CreateButton("ClanButton", bottomBar.transform, "👑 CLAN", new Color(0.75f, 0.55f, 0.15f));
+            SetRect(clanBtnObj.GetComponent<RectTransform>(), 0.33f, 0.10f, 0.53f, 0.90f);
+            hudView.clanButton = clanBtnObj.GetComponent<Button>();
+
+            var schoolBtnObj = CreateButton("SchoolButton", bottomBar.transform, "🏫 SCHOOL", new Color(0.20f, 0.45f, 0.75f));
+            SetRect(schoolBtnObj.GetComponent<RectTransform>(), 0.55f, 0.10f, 0.75f, 0.90f);
+            hudView.schoolButton = schoolBtnObj.GetComponent<Button>();
+
+            var sendBtnObj = CreateButton("SendMoneyHomeButton", bottomBar.transform, "⚡ ACTIVITIES", new Color(0.55f, 0.30f, 0.65f));
+            SetRect(sendBtnObj.GetComponent<RectTransform>(), 0.77f, 0.10f, 0.99f, 0.90f);
             hudView.sendMoneyHomeButton = sendBtnObj.GetComponent<Button>();
 
             var testBtnObj = CreateButton("TestTalentButton", bottomBar.transform, "TEST (E-4)", new Color(0.25f, 0.50f, 0.85f));
-            SetRect(testBtnObj.GetComponent<RectTransform>(), 0.75f, 0.10f, 0.98f, 0.90f);
+            SetRect(testBtnObj.GetComponent<RectTransform>(), 0.77f, 0.10f, 0.99f, 0.90f);
             hudView.testTalentButton = testBtnObj.GetComponent<Button>();
             testBtnObj.SetActive(false); // Hidden during youth phase
 
@@ -767,6 +776,163 @@ namespace ArmyLife.Editor
 
             youthOverlay.SetActive(false);
             youthModalObj.SetActive(true);
+
+            // ==========================================
+            // 11. CLAN MODAL (Dynastic Family & Feudal Relations)
+            // ==========================================
+            var clanModalObj = CreateUIElement("ClanModal", rootPanel.transform);
+            SetFullScreen(clanModalObj.GetComponent<RectTransform>());
+            var clanCtrl = clanModalObj.AddComponent<ClanModal>();
+            hudView.clanModal = clanCtrl;
+
+            var clanOverlay = CreateUIElement("ClanOverlay", clanModalObj.transform);
+            SetFullScreen(clanOverlay.GetComponent<RectTransform>());
+            var clanDimBg = clanOverlay.AddComponent<Image>();
+            clanDimBg.color = new Color(0f, 0f, 0f, 0.92f);
+            clanCtrl.modalRoot = clanOverlay;
+
+            var clanBox = CreateUIElement("ClanBox", clanOverlay.transform);
+            var cbRect = clanBox.GetComponent<RectTransform>();
+            cbRect.anchorMin = new Vector2(0.04f, 0.05f);
+            cbRect.anchorMax = new Vector2(0.96f, 0.95f);
+            cbRect.offsetMin = Vector2.zero;
+            cbRect.offsetMax = Vector2.zero;
+            var clanBoxBg = clanBox.AddComponent<Image>();
+            clanBoxBg.color = new Color(0.10f, 0.13f, 0.18f);
+
+            var cTitle = CreateText("ClanTitle", clanBox.transform, "ANCESTRAL CLAN & DYNASTIC LINEAGE", 34, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.85f, 0.2f));
+            SetRect(cTitle.GetComponent<RectTransform>(), 0.05f, 0.92f, 0.95f, 0.985f);
+            clanCtrl.titleText = cTitle;
+
+            var cSummary = CreateText("ClanSummary", clanBox.transform, "Clan standings...", 20, TextAlignmentOptions.Center, FontStyles.Normal, new Color(0.85f, 0.90f, 0.95f));
+            SetRect(cSummary.GetComponent<RectTransform>(), 0.05f, 0.83f, 0.95f, 0.91f);
+            clanCtrl.clanSummaryText = cSummary;
+
+            var cScrollObj = CreateUIElement("MembersScroll", clanBox.transform);
+            SetRect(cScrollObj.GetComponent<RectTransform>(), 0.04f, 0.09f, 0.96f, 0.82f);
+            var cScroll = cScrollObj.AddComponent<ScrollRect>();
+            cScroll.horizontal = false;
+            cScroll.vertical = true;
+            cScroll.scrollSensitivity = 35f;
+
+            var cViewport = CreateUIElement("Viewport", cScrollObj.transform);
+            SetFullScreen(cViewport.GetComponent<RectTransform>());
+            cViewport.AddComponent<RectMask2D>();
+            cScroll.viewport = cViewport.GetComponent<RectTransform>();
+
+            var cContent = CreateUIElement("Content", cViewport.transform);
+            var cContentRect = cContent.GetComponent<RectTransform>();
+            cContentRect.anchorMin = new Vector2(0f, 1f);
+            cContentRect.anchorMax = new Vector2(1f, 1f);
+            cContentRect.pivot = new Vector2(0.5f, 1f);
+            cContentRect.offsetMin = Vector2.zero;
+            cContentRect.offsetMax = Vector2.zero;
+            cScroll.content = cContentRect;
+
+            var clanListLayout = cContent.AddComponent<VerticalLayoutGroup>();
+            clanListLayout.padding = new RectOffset(10, 10, 10, 10);
+            clanListLayout.spacing = 10f;
+            clanListLayout.childControlHeight = true;
+            clanListLayout.childControlWidth = true;
+            clanListLayout.childForceExpandHeight = false;
+            clanListLayout.childForceExpandWidth = true;
+
+            var cFitter = cContent.AddComponent<ContentSizeFitter>();
+            cFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            clanCtrl.membersContainer = cContent.transform;
+
+            var cCloseBtn = CreateButton("CloseBtn", clanBox.transform, "◄ CLOSE", new Color(0.35f, 0.40f, 0.45f));
+            SetRect(cCloseBtn.GetComponent<RectTransform>(), 0.30f, 0.02f, 0.70f, 0.075f);
+            clanCtrl.closeButton = cCloseBtn.GetComponent<Button>();
+
+            clanOverlay.SetActive(false);
+            clanModalObj.SetActive(true);
+
+            // ==========================================
+            // 12. SCHOOL MODAL (Academy & Peers System)
+            // ==========================================
+            var schoolModalObj = CreateUIElement("SchoolModal", rootPanel.transform);
+            SetFullScreen(schoolModalObj.GetComponent<RectTransform>());
+            var schoolCtrl = schoolModalObj.AddComponent<SchoolModal>();
+            hudView.schoolModal = schoolCtrl;
+
+            var schoolOverlay = CreateUIElement("SchoolOverlay", schoolModalObj.transform);
+            SetFullScreen(schoolOverlay.GetComponent<RectTransform>());
+            var schoolDimBg = schoolOverlay.AddComponent<Image>();
+            schoolDimBg.color = new Color(0f, 0f, 0f, 0.92f);
+            schoolCtrl.modalRoot = schoolOverlay;
+
+            var schoolBox = CreateUIElement("SchoolBox", schoolOverlay.transform);
+            var sbRect = schoolBox.GetComponent<RectTransform>();
+            sbRect.anchorMin = new Vector2(0.04f, 0.05f);
+            sbRect.anchorMax = new Vector2(0.96f, 0.95f);
+            sbRect.offsetMin = Vector2.zero;
+            sbRect.offsetMax = Vector2.zero;
+            var schoolBoxBg = schoolBox.AddComponent<Image>();
+            schoolBoxBg.color = new Color(0.10f, 0.13f, 0.18f);
+
+            var sTitle = CreateText("SchoolTitle", schoolBox.transform, "ACADEMY & CLASSMATES", 34, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.2f, 0.85f, 1f));
+            SetRect(sTitle.GetComponent<RectTransform>(), 0.05f, 0.92f, 0.95f, 0.985f);
+            schoolCtrl.titleText = sTitle;
+
+            var sSummary = CreateText("SchoolSummary", schoolBox.transform, "Performance & Club...", 20, TextAlignmentOptions.Center, FontStyles.Normal, new Color(0.85f, 0.90f, 0.95f));
+            SetRect(sSummary.GetComponent<RectTransform>(), 0.05f, 0.83f, 0.95f, 0.91f);
+            schoolCtrl.schoolSummaryText = sSummary;
+
+            var sActionsRow = CreateUIElement("SchoolActionsRow", schoolBox.transform);
+            SetRect(sActionsRow.GetComponent<RectTransform>(), 0.05f, 0.74f, 0.95f, 0.82f);
+            var saLayout = sActionsRow.AddComponent<HorizontalLayoutGroup>();
+            saLayout.spacing = 14;
+            saLayout.childControlWidth = true;
+            saLayout.childControlHeight = true;
+            saLayout.childForceExpandWidth = true;
+            saLayout.childForceExpandHeight = true;
+
+            var studyBtn = CreateButton("StudyHarderBtn", sActionsRow.transform, "📖 STUDY HARDER (+Performance)", new Color(0.18f, 0.55f, 0.35f));
+            schoolCtrl.studyHarderButton = studyBtn.GetComponent<Button>();
+
+            var clubBtn = CreateButton("JoinClubBtn", sActionsRow.transform, "🥋 EXTRACURRICULAR CLUB", new Color(0.20f, 0.45f, 0.75f));
+            schoolCtrl.joinClubButton = clubBtn.GetComponent<Button>();
+
+            var sScrollObj = CreateUIElement("PeersScroll", schoolBox.transform);
+            SetRect(sScrollObj.GetComponent<RectTransform>(), 0.04f, 0.09f, 0.96f, 0.73f);
+            var sScroll = sScrollObj.AddComponent<ScrollRect>();
+            sScroll.horizontal = false;
+            sScroll.vertical = true;
+            sScroll.scrollSensitivity = 35f;
+
+            var sViewport = CreateUIElement("Viewport", sScrollObj.transform);
+            SetFullScreen(sViewport.GetComponent<RectTransform>());
+            sViewport.AddComponent<RectMask2D>();
+            sScroll.viewport = sViewport.GetComponent<RectTransform>();
+
+            var sContent = CreateUIElement("Content", sViewport.transform);
+            var sContentRect = sContent.GetComponent<RectTransform>();
+            sContentRect.anchorMin = new Vector2(0f, 1f);
+            sContentRect.anchorMax = new Vector2(1f, 1f);
+            sContentRect.pivot = new Vector2(0.5f, 1f);
+            sContentRect.offsetMin = Vector2.zero;
+            sContentRect.offsetMax = Vector2.zero;
+            sScroll.content = sContentRect;
+
+            var sLayout = sContent.AddComponent<VerticalLayoutGroup>();
+            sLayout.padding = new RectOffset(10, 10, 10, 10);
+            sLayout.spacing = 10f;
+            sLayout.childControlHeight = true;
+            sLayout.childControlWidth = true;
+            sLayout.childForceExpandHeight = false;
+            sLayout.childForceExpandWidth = true;
+
+            var sFitter = sContent.AddComponent<ContentSizeFitter>();
+            sFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            schoolCtrl.peersContainer = sContent.transform;
+
+            var sCloseBtn = CreateButton("CloseBtn", schoolBox.transform, "◄ CLOSE", new Color(0.35f, 0.40f, 0.45f));
+            SetRect(sCloseBtn.GetComponent<RectTransform>(), 0.30f, 0.02f, 0.70f, 0.075f);
+            schoolCtrl.closeButton = sCloseBtn.GetComponent<Button>();
+
+            schoolOverlay.SetActive(false);
+            schoolModalObj.SetActive(true);
 
             // Initial view states: Opening screen active, HUD hidden
             openingPanel.SetActive(true);

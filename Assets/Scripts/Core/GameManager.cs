@@ -127,6 +127,14 @@ namespace ArmyLife.Core
             string[] parts = soldierName.Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length > 0) currentSoldier.firstName = parts[0];
             if (parts.Length > 1) currentSoldier.lastName = parts[parts.Length - 1];
+
+            // Roll realistic birth state and city from continental geography
+            var (state, city, isImperial) = WorldGeographyDatabase.RollBirthLocation(birthCountry, currentSoldier.nobleTitle);
+            currentSoldier.birthState = state;
+            currentSoldier.birthCity = city;
+            currentSoldier.isBornInImperialState = isImperial;
+            currentSoldier.InitializeStartingSchoolTier();
+            currentSoldier.InitializeSchoolPeersIfEligible();
             
             // Clock starts at Year 2008 for newborn baby (turns 18 in 2026!)
             if (TimeCycleManager.Instance != null)
@@ -148,8 +156,9 @@ namespace ArmyLife.Core
             // Save new life into persistent storage
             LifePersistenceManager.SaveSoldierLife(currentSoldier);
 
+            string imperialBadge = isImperial ? " <color=#FFD700>[IMPERIAL CROWN DOMAIN]</color>" : "";
             GameEvents.OnFeedEventLogged?.Invoke("BIRTH",
-                $"<color=#00FFAA><b>[A NEW LIFE BEGINS]</b></color> You were born in <b>{birthCountry}</b> as <b>{soldierName}</b> ({gender}). " +
+                $"<color=#00FFAA><b>[A NEW LIFE BEGINS]</b></color> You were born in the city of <b>{city}</b>, province of <b>{state}</b> ({birthCountry}){imperialBadge} as <b>{soldierName}</b> ({gender}). " +
                 $"Appearance: <i>{hairStyle}, {hairColor} hair, {eyeColor} eyes, {skinTone} complexion ({looks:F0}% Looks)</i>. " +
                 $"Lineage: <b>{(lineage != null ? lineage.archetypeName : "Civilian Grunt")}</b>. " +
                 $"Hereditary Noble Rank: <b>{currentSoldier.nobleTitle}</b>.");

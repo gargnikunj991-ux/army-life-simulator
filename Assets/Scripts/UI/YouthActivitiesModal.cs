@@ -99,17 +99,40 @@ namespace ArmyLife.UI
 
             if (youthStatsSummaryText != null)
             {
+                string ageNotice = (s.age < 6.0f) 
+                    ? "\n<color=#FF8800><b>BitLife Age Restriction:</b> You are under 6 years old! Most academy activities are locked until Primary School (Age 6.0).</color>"
+                    : "";
+
                 string examLine = s.tookMockExam
-                    ? $"\n<color=#FFD700><b>National Mock Exam (Age 17.5):</b> {s.mockExamScore}/100 ({s.mockExamProjectedAcademy}) | Prep Boost: +{s.examPreparationBonus} pts</color>"
+                    ? $"\n<color=#FFD700><b>National Mock Exam (Age 17.5):</b> {s.mockExamScore}/750 ({s.mockExamProjectedAcademy}) | Prep Boost: +{s.examPreparationBonus * 2.0f:F0} pts</color>"
                     : (s.age >= 16.0f 
-                        ? $"\n<color=#00D4FF><b>National Mock Exam:</b> Slated for Age 17.5 | Current Prep Bonus: +{s.examPreparationBonus} pts</color>" 
+                        ? $"\n<color=#00D4FF><b>National Mock Exam:</b> Slated for Age 17.5 | Current Prep Bonus: +{s.examPreparationBonus * 2.0f:F0} pts</color>" 
                         : "");
 
                 youthStatsSummaryText.text = 
                     $"<b>❤️ Health:</b> {s.health:F0}%   |   <b>🏃 Fitness:</b> {s.fitness:F0}%   |   <b>⚔️ Combat:</b> {s.combatSkill:F0}%\n" +
                     $"<b>🧠 Intellect:</b> {s.intellect:F0}%   |   <b>🏡 Family Favor:</b> {s.parentRelationship:F0}%   |   <b>💰 Pocket Money:</b> ${s.cashBalance:N0}\n" +
                     $"<b>🥋 Foundational Tempering:</b> {s.foundationalTempering:F0}/100   |   <b>⚔️ Lucian Standing:</b> +{s.clanSuccessionScore} Favor" +
-                    examLine;
+                    ageNotice + examLine;
+            }
+
+            // Update button label tags for clear BitLife-style age gates
+            UpdateButtonLabel(studyTacticsButton, "📚 STUDY STRATEGY & TACTICS", s.age >= 6.0f ? "(+Intellect)" : "<color=#FF6666>[Unlocks at Age 6]</color>");
+            UpdateButtonLabel(clanLibraryButton, "📜 CLAN MARTIAL ARCHIVE", s.age >= 6.0f ? "(+Qi Insight)" : "<color=#FF6666>[Unlocks at Age 6]</color>");
+            UpdateButtonLabel(cadetFiringRangeButton, "🎯 CADET FIRING RANGE", s.age >= 12.0f ? "(+Combat Skill)" : "<color=#FF6666>[Unlocks at Age 12]</color>");
+            UpdateButtonLabel(oddJobsButton, "💼 DISTRICT ODD JOBS", s.age >= 12.0f ? "(+Earn Cash)" : "<color=#FF6666>[Unlocks at Age 12]</color>");
+            UpdateButtonLabel(apothecaryButton, "🏥 APOTHECARY BONE BROTH", s.age >= 4.0f ? "(-$30, +Health)" : "<color=#FF6666>[Unlocks at Age 4]</color>");
+            UpdateButtonLabel(takeMockExamButton, "📝 TAKE MOCK MILITARY EXAM", s.age >= 17.5f ? "(Ready)" : "<color=#FF6666>[Age 17.5 Only]</color>");
+            UpdateButtonLabel(askFatherExamHelpButton, "👑 ASK FATHER FOR EXAM HELP", s.age >= 16.0f ? "(Available)" : "<color=#FF6666>[Unlocks at Age 16]</color>");
+        }
+
+        private void UpdateButtonLabel(Button btn, string prefix, string suffix)
+        {
+            if (btn == null) return;
+            var tmp = btn.GetComponentInChildren<TextMeshProUGUI>();
+            if (tmp != null)
+            {
+                tmp.text = $"{prefix} {suffix}";
             }
         }
 
@@ -123,7 +146,14 @@ namespace ArmyLife.UI
                     s.fitness = Mathf.Min(100f, s.fitness + 2f);
                     s.health = Mathf.Min(100f, s.health + 2f);
                     GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
-                        $"<color=#00FFAA>[EARLY ACTIVITY]</color> You crawl and wobble vigorously across the courtyard tiles! (+2 Fitness, +2 Health).");
+                        $"<color=#00FFAA>[TODDLER CRAWLING]</color> You crawl and wobble vigorously across the courtyard tiles! (+2 Fitness, +2 Health).");
+                    GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                }
+                else if (s.age < 6.0f)
+                {
+                    s.fitness = Mathf.Min(100f, s.fitness + 3f);
+                    GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
+                        $"<color=#00FFAA>[COURTYARD PLAY]</color> You chase courtyard birds and run laps around the stone lanterns (+3 Fitness).");
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                 }
                 else
@@ -139,12 +169,11 @@ namespace ArmyLife.UI
             var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
             if (s != null)
             {
-                if (s.age < 2.0f)
+                if (s.age < 6.0f)
                 {
-                    s.intellect = Mathf.Min(100f, s.intellect + 2f);
                     GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
-                        $"<color=#00AAFF>[EARLY ACTIVITY]</color> You stare intently and chew on the corner of a brightly illustrated military picture book! (+2 Intellect).");
-                    GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        $"<color=#FF8800><b>[TOO YOUNG FOR SCHOOL]</b></color> You are only Age <b>{s.age:F1}</b>! " +
+                        $"Like in BitLife, structured tactical schooling begins at <b>Age 6.0</b> (Primary School). Go play with wooden toys or spend time with Mother!");
                 }
                 else
                 {
@@ -159,7 +188,16 @@ namespace ArmyLife.UI
             var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
             if (s != null)
             {
-                ChildhoodLifeEngine.PerformCadetFiringRange(s);
+                if (s.age < 12.0f)
+                {
+                    GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
+                        $"<color=#FF8800><b>[WEAPON RESTRICTION]</b></color> Live energy carbine qualification is strictly restricted to cadets aged <b>12 and older</b>! " +
+                        $"You are currently only Age <b>{s.age:F1}</b>. The range sergeant waves you away.");
+                }
+                else
+                {
+                    ChildhoodLifeEngine.PerformCadetFiringRange(s);
+                }
                 RefreshStatsDisplay();
             }
         }
@@ -169,12 +207,11 @@ namespace ArmyLife.UI
             var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
             if (s != null)
             {
-                if (s.age < 5.0f)
+                if (s.age < 6.0f)
                 {
-                    s.intellect = Mathf.Min(100f, s.intellect + 2f);
                     GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
-                        $"<color=#00D4FF>[EARLY ACTIVITY]</color> You flip curiously through picture scrolls of ancient heroes in the study room (+2 Intellect).");
-                    GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        $"<color=#FF8800><b>[FORBIDDEN ARCHIVE]</b></color> The clan guards block the iron doors: " +
+                        $"<i>'Toddlers cannot read ancient meridian charts! Come back when you turn 6.'</i> (Unlocks at Age 6.0).");
                 }
                 else
                 {
@@ -189,10 +226,11 @@ namespace ArmyLife.UI
             var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
             if (s != null)
             {
-                if (s.age < 4.0f)
+                if (s.age < 12.0f)
                 {
                     GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
-                        $"<color=#FFD700>[TODDLER PLAY]</color> You are too young to work district odd jobs! Mother gives you a warm sweet dumpling instead.");
+                        $"<color=#FF8800><b>[CHILD LABOR RESTRICTION]</b></color> Imperial labor laws forbid hiring children under Age <b>12.0</b>! " +
+                        $"You are currently only Age <b>{s.age:F1}</b>. Ask your parents for an allowance instead.");
                 }
                 else
                 {
@@ -207,7 +245,18 @@ namespace ArmyLife.UI
             var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
             if (s != null)
             {
-                ChildhoodLifeEngine.PerformApothecaryNourishment(s);
+                if (s.age < 4.0f)
+                {
+                    GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
+                        $"<color=#FF8800><b>[DIGESTION RESTRICTION]</b></color> An infant's stomach cannot digest concentrated celestial marrow herbs! " +
+                        $"Mother feeds you sweet honey and warm milk instead (+2 Health).");
+                    s.health = Mathf.Min(100f, s.health + 2f);
+                    GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                }
+                else
+                {
+                    ChildhoodLifeEngine.PerformApothecaryNourishment(s);
+                }
                 RefreshStatsDisplay();
             }
         }
@@ -231,7 +280,7 @@ namespace ArmyLife.UI
                 {
                     s.siblingRelationship = Mathf.Min(100f, s.siblingRelationship + 5f);
                     GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
-                        $"<color=#FF8844>[FAMILY PLAY]</color> You and your brother {s.siblingRivalName} playfully roll around on the rug with wooden toy swords (+5 Sibling Bond).");
+                        $"<color=#FF8844>[FAMILY PLAY]</color> You and your brother {s.siblingRivalName} playfully roll around on the rug with baby toys (+5 Sibling Bond).");
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                 }
                 else

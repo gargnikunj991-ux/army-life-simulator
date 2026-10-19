@@ -27,6 +27,38 @@ namespace ArmyLife.Systems
                 soldier.cashBalance += familySupport;
             }
 
+            // Ensure Clan & School are active and synced
+            soldier.InitializeDefaultClanMembers();
+            if (age >= 6.0f)
+            {
+                soldier.InitializeSchoolPeersIfEligible();
+
+                // Dynamic academic performance reflecting user's tier difficulty:
+                // City: difficult to cross 50
+                // State: difficult to score 75
+                // Imperial: 85-90 rare, 95+ legendary
+                float targetPerf = SchoolHelper.CalculateTargetPerformance(soldier.schoolTier, soldier.intellect, soldier.foundationalTempering);
+                if (soldier.schoolPerformance <= 0.1f)
+                {
+                    soldier.schoolPerformance = targetPerf;
+                }
+                else
+                {
+                    soldier.schoolPerformance = Mathf.Lerp(soldier.schoolPerformance, targetPerf, 0.20f);
+                }
+
+                if (age < 12.0f)
+                {
+                    soldier.primarySchoolScore = Mathf.Clamp((soldier.primarySchoolScore * 0.75f) + (soldier.schoolPerformance * 0.25f), 25f, 100f);
+                }
+
+                // Annual academic promotion check (Ages 7.0, 8.0, 9.0, 10.0, 11.0, 13.0, 14.0, 16.0, 17.0)
+                if (Mathf.Approximately(age % 1.0f, 0f) && !Mathf.Approximately(soldier.lastPromotionCheckAge, age) && !Mathf.Approximately(age, 12.0f) && !Mathf.Approximately(age, 18.0f))
+                {
+                    ProcessAnnualSchoolPromotion(soldier, age);
+                }
+            }
+
             // 3. Age-Specific Milestones & Feed Logs for all 36 semesters!
             LogAgeMilestone(soldier, age);
 
@@ -172,8 +204,7 @@ namespace ArmyLife.Systems
             }
             else if (Mathf.Approximately(age, 12.0f))
             {
-                GameEvents.OnFeedEventLogged?.Invoke("CADET",
-                    $"<color=#00FFAA><b>[YOUTH MARTIAL ACADEMY • AGE 12.0]</b></color> You enrolled in the District Cadet Academy! Crisp uniforms, morning inspections, and wooden rifle drills (+5 Combat Skill).");
+                ProcessPrimarySchoolGraduation(soldier);
                 soldier.combatSkill = Mathf.Min(100f, soldier.combatSkill + 5f);
             }
             else if (Mathf.Approximately(age, 12.5f))
@@ -207,8 +238,22 @@ namespace ArmyLife.Systems
             }
             else if (Mathf.Approximately(age, 15.0f))
             {
-                GameEvents.OnFeedEventLogged?.Invoke("CITY LIFE",
-                    $"<b>[DISTRICT MARKETS • AGE 15.0]</b> You explored the bustling lower-tier merchant quarters, watching traveling mercenaries trade beast hides and energy cores.");
+                // Transition from Middle School to Youth Academy (Ages 15.0 to 17.5)
+                soldier.schoolLevel = SchoolLevel.YouthAcademy;
+                if (soldier.schoolTier == SchoolTier.State1st && soldier.schoolPerformance >= 85f)
+                {
+                    soldier.schoolTier = SchoolTier.ImperialPinnacle;
+                    soldier.isImperialScholarshipStudent = true;
+                }
+                soldier.InitializeSchoolPeersIfEligible();
+                soldier.combatSkill = Mathf.Min(100f, soldier.combatSkill + 5f);
+                soldier.intellect = Mathf.Min(100f, soldier.intellect + 3f);
+
+                string imperialTag = soldier.isImperialScholarshipStudent ? " <color=#FFD700>[IMPERIAL SCHOLARSHIP RECIPIENT]</color>" : "";
+                GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
+                    $"<color=#00FFAA><b>[MIDDLE SCHOOL GRADUATION & YOUTH ACADEMY • AGE 15.0]</b></color>\n" +
+                    $"You graduated Middle School and matriculated into <color=#00D4FF><b>{soldier.schoolName}</b></color> ({SchoolHelper.GetTierTitle(soldier.schoolTier)})!{imperialTag}\n" +
+                    $"The final 3 years of youth academy drills, advanced tactical simulations, and live carbine marksmanship begin! (+5 Combat Skill, +3 Intellect).");
             }
             else if (Mathf.Approximately(age, 15.5f))
             {
@@ -244,11 +289,156 @@ namespace ArmyLife.Systems
                     $"<color=#FF8800>==================================================\n" +
                     $"<b>[THE NATIONAL MOCK EXAM • AGE 17.5]</b>\n" +
                     $"You sat for the official preliminary trial ranking exam alongside candidates nationwide!\n" +
-                    $"Mock Exam Score: <b>{soldier.mockExamScore} / 100</b>\n" +
+                    $"Mock Exam Score: <b>{soldier.mockExamScore} / 750</b>\n" +
                     $"Projected Placement: <color=#00FFAA><b>{projectedAcademy}</b></color>\n" +
                     $"Only 6 months remain before the final National Military Ranking Exam at Age 18.0!\n" +
                     $"==================================================</color>");
             }
+        }
+
+        private static void ProcessAnnualSchoolPromotion(SoldierProfile soldier, float age)
+        {
+            if (soldier == null || soldier.schoolLevel == SchoolLevel.None) return;
+            soldier.lastPromotionCheckAge = age;
+
+            float threshold = SchoolHelper.GetPromotionThreshold(soldier.schoolTier);
+            if (soldier.schoolPerformance >= threshold)
+            {
+                if (soldier.schoolTier < SchoolTier.ImperialPinnacle)
+                {
+                    if (soldier.schoolTier == SchoolTier.State1st)
+                    {
+                        // Promotion from State 1st to Imperial Pinnacle!
+                        soldier.schoolTier = SchoolTier.ImperialPinnacle;
+                        soldier.isImperialScholarshipStudent = true;
+                        soldier.timesPromotedSchool++;
+                        soldier.meritRating = Mathf.Min(100f, soldier.meritRating + 15f);
+                        soldier.clanSuccessionScore += 12;
+                        soldier.parentRelationship = Mathf.Min(100f, soldier.parentRelationship + 15f);
+                        soldier.InitializeSchoolPeersIfEligible();
+
+                        GameEvents.OnFeedEventLogged?.Invoke("IMPERIAL SCOUTING",
+                            $"<color=#FFD700>==================================================\n" +
+                            $"<b>[IMPERIAL SCHOLARSHIP TRANSFER • AGE {age:F0}]</b>\n" +
+                            $"Imperial Academy heralds arrived from Valeria Magna! With an extraordinary score of <b>{soldier.schoolPerformance:F1}%</b> in {SchoolHelper.GetTierTitle(SchoolTier.State1st)}, you were selected as the <b>Top Scholar of {soldier.birthState}</b>!\n" +
+                            $"Transferred to: <color=#FFD700><b>THE GRAND IMPERIAL YOUTH ACADEMY (VALERIA MAGNA)</b></color>!\n" +
+                            $"Your clan elders hosted a celebratory banquet across the province (+15 Merit, +12 Clan Standing).\n" +
+                            $"==================================================</color>");
+                    }
+                    else
+                    {
+                        SchoolTier oldTier = soldier.schoolTier;
+                        soldier.schoolTier++;
+                        soldier.timesPromotedSchool++;
+                        soldier.meritRating = Mathf.Min(100f, soldier.meritRating + 4f);
+                        soldier.clanSuccessionScore += 3;
+                        soldier.InitializeSchoolPeersIfEligible();
+
+                        GameEvents.OnFeedEventLogged?.Invoke("PROMOTION",
+                            $"<color=#00FFAA><b>[ANNUAL SCHOOL PROMOTION • AGE {age:F0}]</b></color> " +
+                            $"With a top-tier performance of <b>{soldier.schoolPerformance:F1}%</b> (exceeding the {threshold:F0}% benchmark), you earned promotion from {SchoolHelper.GetTierTitle(oldTier)} to <color=#00D4FF><b>{soldier.schoolName}</b></color>! (+4 Merit, +3 Clan Standing).");
+                    }
+                }
+                else
+                {
+                    GameEvents.OnFeedEventLogged?.Invoke("ACADEMIC HONOR",
+                        $"<color=#FFD700><b>[IMPERIAL PINNACLE TOP SCHOLAR • AGE {age:F0}]</b></color> You defended your elite standing at the pinnacle of {soldier.schoolName} with an exceptional {soldier.schoolPerformance:F1}% score (+5 Merit)!");
+                    soldier.meritRating = Mathf.Min(100f, soldier.meritRating + 5f);
+                }
+            }
+            else if (soldier.schoolPerformance < 32f && soldier.schoolTier > SchoolTier.City3rd)
+            {
+                SchoolTier oldTier = soldier.schoolTier;
+                soldier.schoolTier--;
+                soldier.timesDemotedSchool++;
+                soldier.meritRating = Mathf.Max(0f, soldier.meritRating - 4f);
+                soldier.InitializeSchoolPeersIfEligible();
+
+                GameEvents.OnFeedEventLogged?.Invoke("ACADEMIC REASSIGNMENT",
+                    $"<color=#FF4444><b>[ANNUAL SCHOOL REASSIGNMENT • AGE {age:F0}]</b></color> " +
+                    $"Failing to meet rigorous benchmarks ({soldier.schoolPerformance:F1}%), you were transferred down from {SchoolHelper.GetTierTitle(oldTier)} to <color=#FF8800><b>{soldier.schoolName}</b></color>. Sibling Lucian sneered at your report card (-4 Merit).");
+            }
+            else
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("REPORT CARD",
+                    $"<b>[ANNUAL REPORT CARD • AGE {age:F0}]</b> You concluded the academic year in <b>{soldier.schoolName}</b> with a score of <b>{soldier.schoolPerformance:F1}%</b>. You retained your seat in good standing.");
+            }
+        }
+
+        private static void ProcessPrimarySchoolGraduation(SoldierProfile soldier)
+        {
+            if (soldier == null) return;
+
+            string grade;
+            string honorsTitle;
+            int meritBonus;
+            int clanBonus;
+
+            if (soldier.primarySchoolScore >= 88f)
+            {
+                grade = "A+";
+                honorsTitle = "Imperial Valedictorian (Top 1% Honors)";
+                meritBonus = 15;
+                clanBonus = 10;
+                soldier.primarySchoolGraduationHonors = honorsTitle;
+                soldier.meritRating = Mathf.Min(100f, soldier.meritRating + meritBonus);
+                soldier.clanSuccessionScore += clanBonus;
+                soldier.parentRelationship = Mathf.Min(100f, soldier.parentRelationship + 10f);
+
+                if (soldier.schoolTier < SchoolTier.State2nd)
+                {
+                    soldier.schoolTier = SchoolTier.State2nd;
+                }
+            }
+            else if (soldier.primarySchoolScore >= 70f)
+            {
+                grade = "A";
+                honorsTitle = "Distinguished Honors Graduate";
+                meritBonus = 8;
+                clanBonus = 5;
+                soldier.primarySchoolGraduationHonors = honorsTitle;
+                soldier.meritRating = Mathf.Min(100f, soldier.meritRating + meritBonus);
+                soldier.clanSuccessionScore += clanBonus;
+
+                if (soldier.schoolTier < SchoolTier.City1st)
+                {
+                    soldier.schoolTier = SchoolTier.City1st;
+                }
+            }
+            else if (soldier.primarySchoolScore >= 50f)
+            {
+                grade = "B/C";
+                honorsTitle = "Standard Primary Graduate";
+                meritBonus = 3;
+                clanBonus = 1;
+                soldier.primarySchoolGraduationHonors = honorsTitle;
+                soldier.meritRating = Mathf.Min(100f, soldier.meritRating + meritBonus);
+                soldier.clanSuccessionScore += clanBonus;
+            }
+            else
+            {
+                grade = "D";
+                honorsTitle = "Remedial Pass";
+                meritBonus = -5;
+                clanBonus = -5;
+                soldier.primarySchoolGraduationHonors = honorsTitle;
+                soldier.meritRating = Mathf.Max(0f, soldier.meritRating + meritBonus);
+                soldier.clanSuccessionScore = Math.Max(0, soldier.clanSuccessionScore + clanBonus);
+            }
+
+            // Transition from Primary School to Middle School (Ages 12 to 14)
+            soldier.schoolLevel = SchoolLevel.MiddleSchool;
+            soldier.InitializeSchoolPeersIfEligible();
+
+            GameEvents.OnFeedEventLogged?.Invoke("GRADUATION",
+                $"<color=#FFD700>==================================================\n" +
+                $"<b>[PRIMARY SCHOOL COMMENCEMENT & GRADUATION • AGE 12.0]</b>\n" +
+                $"Cumulative Academic Score: <b>{soldier.primarySchoolScore:F1} / 100</b> (Grade: <b>{grade}</b>)\n" +
+                $"Graduation Standing: <b>{honorsTitle}</b>\n" +
+                $"Merit & Clan Impact: <b>{(meritBonus >= 0 ? "+" : "")}{meritBonus} Merit</b> | <b>{(clanBonus >= 0 ? "+" : "")}{clanBonus} Clan Standing</b>\n" +
+                $"Middle School Admission: Enrolled in <color=#00FFAA><b>{soldier.schoolName}</b></color> ({SchoolHelper.GetTierTitle(soldier.schoolTier)})!\n" +
+                $"<i>Your primary school honors permanently count toward your Age 18.0 National Military Ranking Exam!</i>\n" +
+                $"==================================================</color>");
         }
 
         private static void TriggerYouthDilemmaIfEligible(SoldierProfile soldier, float age)
@@ -731,28 +921,55 @@ namespace ArmyLife.Systems
             if (soldier == null)
             {
                 projectedAcademy = "Recruit Depot";
-                return 30;
+                return 220;
             }
 
-            float physicalScore = (soldier.fitness * 0.35f) + (soldier.combatSkill * 0.35f);
-            float academicScore = soldier.intellect * 0.30f;
-            float nobleBonus = (soldier.nobleTitle > NobleRank.Commoner) ? ((int)soldier.nobleTitle * 4f) : 0f;
-            float temperingBonus = soldier.foundationalTempering * 0.08f;
-            float prepBonus = soldier.examPreparationBonus;
+            // 750-Point National Ranking Exam Scaling (3 stages x 250 max)
+            // Baseline 3 trials projection (each up to ~250 pts)
+            float physicalScore = ((soldier.fitness * 0.5f) + (soldier.combatSkill * 0.5f)) * 2.2f + 25f;
+            float tacticalScore = (soldier.intellect * 2.0f) + 30f;
+            float martialScore = ((soldier.combatSkill * 0.6f) + (soldier.foundationalTempering * 0.4f)) * 2.0f + 20f;
 
-            int score = Mathf.Clamp(Mathf.RoundToInt(physicalScore + academicScore + nobleBonus + temperingBonus + prepBonus), 30, 100);
+            float nobleBonus = (soldier.nobleTitle > NobleRank.Commoner) ? ((int)soldier.nobleTitle * 8f) : 0f;
+            float prepBonus = soldier.examPreparationBonus * 2.0f;
+            float primaryBonus = (soldier.primarySchoolScore - 50f) * 0.4f;
 
-            if (score >= 88)
+            float tierBonus = 0f;
+            switch (soldier.schoolTier)
             {
-                projectedAcademy = "Imperial War Academy (Officer O-1)";
+                case SchoolTier.City3rd: tierBonus = 0f; break;
+                case SchoolTier.City2nd: tierBonus = 12f; break;
+                case SchoolTier.City1st: tierBonus = 24f; break;
+                case SchoolTier.State3rd: tierBonus = 40f; break;
+                case SchoolTier.State2nd: tierBonus = 60f; break;
+                case SchoolTier.State1st: tierBonus = 80f; break;
+                case SchoolTier.ImperialPinnacle: tierBonus = 105f; break;
             }
-            else if (score >= 70)
+            if (soldier.isImperialScholarshipStudent) tierBonus += 20f;
+
+            int score = Mathf.Clamp(Mathf.RoundToInt(physicalScore + tacticalScore + martialScore + nobleBonus + prepBonus + primaryBonus + tierBonus), 150, 750);
+
+            // Placement benchmarks across 750 points:
+            // City students difficult to cross 50% (< 375 pts = Frontline Recruit Depot)
+            // 50% - 74.9% (375 - 559 pts) = Technical & Cyber Warfare School (E-3 PFC)
+            // State students difficult to score 75% (560 - 637 pts) = Vanguard Candidate Academy (E-4 Specialist)
+            // 85% - 94.9% (638 - 711 pts) = Imperial War Academy Honors (E-4 Fast-Track)
+            // >= 95% (>= 712 pts) = Imperial Crown War Academy (Officer O-1 2nd Lieutenant)
+            if (score >= 712)
+            {
+                projectedAcademy = "Imperial Crown War Academy (Officer O-1 Elite)";
+            }
+            else if (score >= 638)
+            {
+                projectedAcademy = "Imperial War Academy Honors (E-4 Fast-Track)";
+            }
+            else if (score >= 560)
             {
                 projectedAcademy = "Vanguard Candidate Academy (E-4 Specialist)";
             }
-            else if (score >= 50)
+            else if (score >= 375)
             {
-                projectedAcademy = "Technical & Cyber Warfare School (E-3)";
+                projectedAcademy = "Technical & Cyber Warfare School (E-3 PFC)";
             }
             else
             {
@@ -771,9 +988,9 @@ namespace ArmyLife.Systems
 
             GameEvents.OnFeedEventLogged?.Invoke("MOCK EXAM",
                 $"<color=#00FFAA><b>[NATIONAL MOCK EXAM RESULT]</b></color>\n" +
-                $"Preliminary Score: <b>{soldier.mockExamScore} / 100</b>\n" +
+                $"Preliminary Score: <b>{soldier.mockExamScore} / 750</b>\n" +
                 $"Projected Placement: <b>{projectedAcademy}</b>\n" +
-                $"Current Prep Bonus: <b>+{soldier.examPreparationBonus} pts</b>. Run to father or study before the final exam at Age 18!");
+                $"Current Prep Bonus: <b>+{soldier.examPreparationBonus * 2.0f:F0} pts</b>. Run to father or study before the final exam at Age 18!");
         }
 
         public static void RequestFatherExamIntervention(SoldierProfile soldier)
@@ -850,13 +1067,13 @@ namespace ArmyLife.Systems
             {
                 // Headless test / automated simulation fallback when no UI is listening
                 float physicalPerf = (soldier.fitness * 0.5f) + (soldier.foundationalTempering * 0.5f);
-                soldier.examPhysicalScore = Mathf.RoundToInt(Mathf.Clamp(physicalPerf * 0.35f, 15f, 35f));
+                soldier.examPhysicalScore = Mathf.RoundToInt(Mathf.Clamp(physicalPerf * 2.2f + 25f, 90f, 250f));
 
                 float tacticalPerf = (soldier.intellect * 0.5f) + (soldier.combatSkill * 0.5f);
-                soldier.examTacticalScore = Mathf.RoundToInt(Mathf.Clamp(tacticalPerf * 0.35f, 15f, 35f));
+                soldier.examTacticalScore = Mathf.RoundToInt(Mathf.Clamp(tacticalPerf * 2.2f + 25f, 90f, 250f));
 
-                float martialPerf = (soldier.combatSkill * 0.55f) + (soldier.powerTier * 5f);
-                soldier.examMartialScore = Mathf.RoundToInt(Mathf.Clamp(martialPerf * 0.35f, 15f, 35f));
+                float martialPerf = (soldier.combatSkill * 0.50f) + (soldier.powerTier * 15f) + (soldier.talentScore * 0.25f);
+                soldier.examMartialScore = Mathf.RoundToInt(Mathf.Clamp(martialPerf * 1.8f + 25f, 90f, 250f));
 
                 FinalizeExamAndCommission(soldier, gm);
                 return;
@@ -864,7 +1081,7 @@ namespace ArmyLife.Systems
 
             GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                 "EXAM STAGE 1: PHYSICAL TRIAL",
-                "The 5km High-Gravity Trench Run",
+                "The 5km High-Gravity Trench Run (250 pts)",
                 "The trial horn blares! You are thrown onto the brutal 5km high-gravity obstacle course: barbed wire crawls, electrified mud pits, and concrete climbing walls under simulated artillery fire.",
                 "Activate Meridian Breathing & Full Sprint (High stamina & tempering test)",
                 "Paced Tactical Cadence (Safe, steady energy management)",
@@ -873,24 +1090,24 @@ namespace ArmyLife.Systems
                 () =>
                 {
                     float performance = (soldier.fitness * 0.5f) + (soldier.foundationalTempering * 0.5f);
-                    int stagePoints = Mathf.RoundToInt(Mathf.Clamp(performance * 0.35f, 15f, 35f));
+                    int stagePoints = Mathf.RoundToInt(Mathf.Clamp(performance * 2.2f + 25f, 90f, 250f));
                     soldier.examPhysicalScore = stagePoints;
 
                     GameEvents.OnFeedEventLogged?.Invoke("EXAM TRIAL",
                         $"<b>[STAGE 1 RESULT]</b> Your meridian breathing surged smoothly! You vaulted the final wall in record time! " +
-                        $"Physical Trial Score: <color=#00FFAA><b>+{stagePoints} pts</b></color>.");
+                        $"Physical Trial Score: <color=#00FFAA><b>+{stagePoints} / 250 pts</b></color>.");
 
                     TriggerExamStage2(soldier, gm);
                 },
                 // Choice B: Paced Cadence
                 () =>
                 {
-                    int stagePoints = Mathf.RoundToInt(Mathf.Clamp((soldier.fitness * 0.28f) + 12f, 18f, 28f));
+                    int stagePoints = Mathf.RoundToInt(Mathf.Clamp((soldier.fitness * 1.8f) + 60f, 110f, 215f));
                     soldier.examPhysicalScore = stagePoints;
 
                     GameEvents.OnFeedEventLogged?.Invoke("EXAM TRIAL",
                         $"<b>[STAGE 1 RESULT]</b> You paced yourself with disciplined cadence, crossing the finish line without a scratch. " +
-                        $"Physical Trial Score: <color=#00D4FF><b>+{stagePoints} pts</b></color>.");
+                        $"Physical Trial Score: <color=#00D4FF><b>+{stagePoints} / 250 pts</b></color>.");
 
                     TriggerExamStage2(soldier, gm);
                 },
@@ -898,12 +1115,12 @@ namespace ArmyLife.Systems
                 () =>
                 {
                     soldier.health = Mathf.Max(25f, soldier.health - 15f);
-                    int stagePoints = Mathf.RoundToInt(Mathf.Clamp((soldier.fitness * 0.32f) + 16f, 20f, 34f));
+                    int stagePoints = Mathf.RoundToInt(Mathf.Clamp((soldier.fitness * 2.0f) + 45f, 115f, 240f));
                     soldier.examPhysicalScore = stagePoints;
 
                     GameEvents.OnFeedEventLogged?.Invoke("EXAM TRIAL",
                         $"<b>[STAGE 1 RESULT]</b> You sprinted till your lungs burned, collapsing across the finish line with bleeding knees! " +
-                        $"Physical Trial Score: <color=#FFD700><b>+{stagePoints} pts</b></color> (Health -15).");
+                        $"Physical Trial Score: <color=#FFD700><b>+{stagePoints} / 250 pts</b></color> (Health -15).");
 
                     TriggerExamStage2(soldier, gm);
                 }
@@ -914,7 +1131,7 @@ namespace ArmyLife.Systems
         {
             GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                 "EXAM STAGE 2: WAR ROOM SIMULATION",
-                "Sector 9 Mech Incursion Scenario",
+                "Sector 9 Mech Incursion Scenario (250 pts)",
                 "Inside the holographic war simulation chamber, an Iron Federation armored mech battalion breaks through the defensive perimeter in Sector 9. As candidate commander, what is your order?",
                 "Aggressive Flanking Ambush (High risk, tests Intellect & Combat Aptitude)",
                 "Defense-in-Depth & Funnel Artillery Strike (Textbook tactical mastery)",
@@ -923,24 +1140,24 @@ namespace ArmyLife.Systems
                 () =>
                 {
                     float eval = (soldier.intellect * 0.5f) + (soldier.combatSkill * 0.5f);
-                    int points = Mathf.RoundToInt(Mathf.Clamp(eval * 0.35f, 15f, 35f));
+                    int points = Mathf.RoundToInt(Mathf.Clamp(eval * 2.2f + 25f, 90f, 250f));
                     soldier.examTacticalScore = points;
 
                     GameEvents.OnFeedEventLogged?.Invoke("EXAM TRIAL",
                         $"<b>[STAGE 2 RESULT]</b> Your daring armored pincer movement encircled and annihilated the enemy vanguard! " +
-                        $"Tactical Strategy Score: <color=#00FFAA><b>+{points} pts</b></color>.");
+                        $"Tactical Strategy Score: <color=#00FFAA><b>+{points} / 250 pts</b></color>.");
 
                     TriggerExamStage3(soldier, gm);
                 },
                 // Choice B: Defense-in-Depth
                 () =>
                 {
-                    int points = Mathf.RoundToInt(Mathf.Clamp((soldier.intellect * 0.34f) + 10f, 18f, 32f));
+                    int points = Mathf.RoundToInt(Mathf.Clamp((soldier.intellect * 1.9f) + 55f, 110f, 225f));
                     soldier.examTacticalScore = points;
 
                     GameEvents.OnFeedEventLogged?.Invoke("EXAM TRIAL",
                         $"<b>[STAGE 2 RESULT]</b> The evaluators nodded in approval at your disciplined artillery funnel corridors! " +
-                        $"Tactical Strategy Score: <color=#00D4FF><b>+{points} pts</b></color>.");
+                        $"Tactical Strategy Score: <color=#00D4FF><b>+{points} / 250 pts</b></color>.");
 
                     TriggerExamStage3(soldier, gm);
                 },
@@ -948,12 +1165,12 @@ namespace ArmyLife.Systems
                 () =>
                 {
                     soldier.isTechnicalSchoolGraduate = true;
-                    int points = Mathf.RoundToInt(Mathf.Clamp((soldier.intellect * 0.32f) + 14f, 20f, 33f));
+                    int points = Mathf.RoundToInt(Mathf.Clamp((soldier.intellect * 2.0f) + 40f, 115f, 235f));
                     soldier.examTacticalScore = points;
 
                     GameEvents.OnFeedEventLogged?.Invoke("EXAM TRIAL",
                         $"<b>[STAGE 2 RESULT]</b> You hijacked the simulated enemy comms network and triggered an automated shutdown! " +
-                        $"Cyber Strategy Score: <color=#FFD700><b>+{points} pts</b></color> (Guaranteed Tech Stipend Qualification)!");
+                        $"Cyber Strategy Score: <color=#FFD700><b>+{points} / 250 pts</b></color> (Guaranteed Tech Stipend Qualification)!");
 
                     TriggerExamStage3(soldier, gm);
                 }
@@ -964,7 +1181,7 @@ namespace ArmyLife.Systems
         {
             GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                 "EXAM STAGE 3: PROCTOR DUEL",
-                "The Live Martial Appraisal",
+                "The Live Martial Appraisal (250 pts)",
                 "Final stage! Senior Warrant Officer Proctor Gary—a towering veteran in combat armor wielding a heavy shock-blade—steps into the central ring. 'Show me your steel, candidate!'",
                 "Explosive Martial Strike (Direct power test; tests Combat Skill & Cultivation)",
                 "Technical Parry & Counter-Takedown (Tests Combat Skill & Intellect)",
@@ -972,39 +1189,39 @@ namespace ArmyLife.Systems
                 // Choice A: Explosive Strike
                 () =>
                 {
-                    float martialRating = (soldier.combatSkill * 0.55f) + (soldier.powerTier * 5f) + (soldier.talentScore * 0.1f);
-                    int points = Mathf.RoundToInt(Mathf.Clamp(martialRating * 0.35f, 15f, 35f));
+                    float martialRating = (soldier.combatSkill * 0.50f) + (soldier.powerTier * 15f) + (soldier.talentScore * 0.25f);
+                    int points = Mathf.RoundToInt(Mathf.Clamp(martialRating * 1.8f + 25f, 90f, 250f));
                     soldier.examMartialScore = points;
 
                     GameEvents.OnFeedEventLogged?.Invoke("EXAM TRIAL",
                         $"<b>[STAGE 3 RESULT]</b> Your shockwave strike forced Proctor Gary back two paces! The evaluator grins: 'Fine power, cadet!' " +
-                        $"Martial Duel Score: <color=#00FFAA><b>+{points} pts</b></color>.");
+                        $"Martial Duel Score: <color=#00FFAA><b>+{points} / 250 pts</b></color>.");
 
                     FinalizeExamAndCommission(soldier, gm);
                 },
                 // Choice B: Technical Parry
                 () =>
                 {
-                    float technicalRating = (soldier.combatSkill * 0.45f) + (soldier.intellect * 0.35f);
-                    int points = Mathf.RoundToInt(Mathf.Clamp(technicalRating * 0.35f, 16f, 33f));
+                    float technicalRating = (soldier.combatSkill * 0.50f) + (soldier.intellect * 0.40f);
+                    int points = Mathf.RoundToInt(Mathf.Clamp(technicalRating * 2.1f + 30f, 100f, 235f));
                     soldier.examMartialScore = points;
 
                     GameEvents.OnFeedEventLogged?.Invoke("EXAM TRIAL",
                         $"<b>[STAGE 3 RESULT]</b> You cleanly deflected his heavy slash and swept his lead leg, demonstrating pristine academy form! " +
-                        $"Martial Duel Score: <color=#00D4FF><b>+{points} pts</b></color>.");
+                        $"Martial Duel Score: <color=#00D4FF><b>+{points} / 250 pts</b></color>.");
 
                     FinalizeExamAndCommission(soldier, gm);
                 },
                 // Choice C: Iron Defense
                 () =>
                 {
-                    float enduranceRating = (soldier.foundationalTempering * 0.5f) + (soldier.fitness * 0.4f);
-                    int points = Mathf.RoundToInt(Mathf.Clamp(enduranceRating * 0.33f, 15f, 32f));
+                    float enduranceRating = (soldier.foundationalTempering * 0.55f) + (soldier.fitness * 0.45f);
+                    int points = Mathf.RoundToInt(Mathf.Clamp(enduranceRating * 2.0f + 35f, 100f, 230f));
                     soldier.examMartialScore = points;
 
                     GameEvents.OnFeedEventLogged?.Invoke("EXAM TRIAL",
                         $"<b>[STAGE 3 RESULT]</b> You absorbed Gary's three-hit flurry with unwavering stance, standing firm like an iron bastion! " +
-                        $"Martial Duel Score: <color=#FFD700><b>+{points} pts</b></color>.");
+                        $"Martial Duel Score: <color=#FFD700><b>+{points} / 250 pts</b></color>.");
 
                     FinalizeExamAndCommission(soldier, gm);
                 }
@@ -1015,38 +1232,65 @@ namespace ArmyLife.Systems
         {
             if (soldier == null) return;
 
-            // Compute total score from the 3 trials + background preparation + lineage backing
+            // Compute total score from the 3 trials (max 250 each = 750) + background preparation + lineage backing + primary school score + school tier!
             int stageTotal = soldier.examPhysicalScore + soldier.examTacticalScore + soldier.examMartialScore;
-            float nobleBonus = (soldier.nobleTitle > NobleRank.Commoner) ? ((int)soldier.nobleTitle * 3.5f) : 0f;
-            float prepBonus = soldier.examPreparationBonus * 0.8f;
+            float nobleBonus = (soldier.nobleTitle > NobleRank.Commoner) ? ((int)soldier.nobleTitle * 8f) : 0f;
+            float prepBonus = soldier.examPreparationBonus * 2.0f;
+            float primaryBonus = (soldier.primarySchoolScore - 50f) * 0.4f;
 
-            soldier.examScore = Mathf.Clamp(Mathf.RoundToInt(stageTotal + nobleBonus + prepBonus), 30, 100);
+            float tierBonus = 0f;
+            switch (soldier.schoolTier)
+            {
+                case SchoolTier.City3rd: tierBonus = 0f; break;
+                case SchoolTier.City2nd: tierBonus = 12f; break;
+                case SchoolTier.City1st: tierBonus = 24f; break;
+                case SchoolTier.State3rd: tierBonus = 40f; break;
+                case SchoolTier.State2nd: tierBonus = 60f; break;
+                case SchoolTier.State1st: tierBonus = 80f; break;
+                case SchoolTier.ImperialPinnacle: tierBonus = 105f; break;
+            }
+            if (soldier.isImperialScholarshipStudent) tierBonus += 20f;
 
-            // Determine Commission & Starting Rank
+            soldier.examScore = Mathf.Clamp(Mathf.RoundToInt(stageTotal + nobleBonus + prepBonus + primaryBonus + tierBonus), 150, 750);
+
+            // Determine Commission & Starting Rank based on 750-point scale:
+            // City students difficult to cross 50% (< 375 = Frontline Recruit Depot)
+            // 50% - 74.9% (375 - 559) = Technical & Cyber Warfare School (E-3 PFC)
+            // State students difficult to score 75% (560 - 637) = Vanguard Candidate Academy (E-4 Specialist)
+            // 85% - 94.9% (638 - 711) = Imperial War Academy Honors (E-4 Fast-Track OCS Candidate)
+            // >= 95% (>= 712) = Imperial Crown War Academy (Officer O-1 2nd Lieutenant)
             MilitaryRankSO assignedRank = null;
             string academyName;
             string department;
             int startingBonusCash = 0;
 
-            if (soldier.examScore >= 88)
+            if (soldier.examScore >= 712)
             {
-                // Top 1% Pinnacle: Imperial War Academy (Officer O-1 2nd Lieutenant)
-                academyName = "<color=#FFD700><b>IMPERIAL WAR ACADEMY (TOP 1% ELITE)</b></color>";
+                // Top 1% Pinnacle: Imperial Crown War Academy (Officer O-1 2nd Lieutenant)
+                academyName = "<color=#FFD700><b>THE IMPERIAL CROWN WAR ACADEMY (TOP 1% ELITE COMMAND)</b></color>";
                 department = "Officer Corps & Strategic Command";
                 assignedRank = FindRank(gm, "O-1") ?? FindRank(gm, "E-4");
-                startingBonusCash = 3000;
+                startingBonusCash = 4000;
             }
-            else if (soldier.examScore >= 70)
+            else if (soldier.examScore >= 638)
             {
-                // Vanguard Candidate Academy (E-4 Specialist/Corporal)
+                // 85-90% State Prodigy & Imperial Honors Stream (E-4 Specialist / Fast-Track)
+                academyName = "<color=#FFD700><b>IMPERIAL WAR ACADEMY (HONORS STREAM)</b></color>";
+                department = "Vanguard Strike & Tactical Staff";
+                assignedRank = FindRank(gm, "E-4") ?? FindRank(gm, "E-3");
+                startingBonusCash = 2500;
+            }
+            else if (soldier.examScore >= 560)
+            {
+                // Crossing 75%: Vanguard Candidate Academy (E-4 Specialist/Corporal)
                 academyName = "<color=#00FFAA><b>VANGUARD CANDIDATE ACADEMY</b></color>";
                 department = "Specialist & Reconnaissance";
                 assignedRank = FindRank(gm, "E-4") ?? FindRank(gm, "E-3");
                 startingBonusCash = 1500;
             }
-            else if (soldier.examScore >= 50)
+            else if (soldier.examScore >= 375)
             {
-                // Technical & Cyber Warfare School (E-3 Private First Class)
+                // Crossing 50%: Technical & Cyber Warfare School (E-3 Private First Class)
                 academyName = "<color=#00D4FF><b>TECHNICAL & CYBER WARFARE SCHOOL</b></color>";
                 department = "Technical & Cyber Operations";
                 soldier.isTechnicalSchoolGraduate = true;
@@ -1055,7 +1299,7 @@ namespace ArmyLife.Systems
             }
             else
             {
-                // Frontline Grunt Walk-In (E-1 Private Recruit)
+                // Below 50%: Frontline Grunt Walk-In (E-1 Private Recruit)
                 academyName = "<color=#AAAAAA><b>VALERIAN GROUND FORCES RECRUIT DEPOT</b></color>";
                 department = "Frontline Infantry";
                 assignedRank = FindRank(gm, "E-1");
@@ -1071,14 +1315,16 @@ namespace ArmyLife.Systems
 
             // Score Breakdown Summary
             string scoreProgression = soldier.tookMockExam
-                ? $"\n• Mock Exam (Age 17.5): <b>{soldier.mockExamScore}/100</b> ({soldier.mockExamProjectedAcademy})\n• Final Exam (Age 18.0): <b>{soldier.examScore}/100</b> (<color=#00FFAA>+{(soldier.examScore - soldier.mockExamScore):+0;-0;0} improvement!</color>)"
-                : $"\n• Final Exam Score: <b>{soldier.examScore}/100</b>";
+                ? $"\n• Mock Exam (Age 17.5): <b>{soldier.mockExamScore}/750</b> ({soldier.mockExamProjectedAcademy})\n• Final Exam (Age 18.0): <b>{soldier.examScore}/750</b> (<color=#00FFAA>+{(soldier.examScore - soldier.mockExamScore):+0;-0;0} improvement!</color>)"
+                : $"\n• Final Exam Score: <b>{soldier.examScore}/750</b>";
 
-            string trialBreakdown = $"\n• Trial Breakdown: Physical (+{soldier.examPhysicalScore}) | Tactical (+{soldier.examTacticalScore}) | Martial (+{soldier.examMartialScore})";
+            string trialBreakdown = $"\n• Trial Breakdown: Physical (+{soldier.examPhysicalScore}/250) | Tactical (+{soldier.examTacticalScore}/250) | Martial (+{soldier.examMartialScore}/250)";
             if (soldier.examPreparationBonus > 0)
             {
-                trialBreakdown += $" | Prep Boost (+{soldier.examPreparationBonus})";
+                trialBreakdown += $" | Prep Boost (+{soldier.examPreparationBonus * 2.0f:F0})";
             }
+            trialBreakdown += $" | Primary School ({soldier.primarySchoolGraduationHonors}, {(primaryBonus >= 0 ? "+" : "")}{primaryBonus:F1} pts)";
+            trialBreakdown += $" | School Tier ({SchoolHelper.GetTierTitle(soldier.schoolTier)}, +{tierBonus:F1} pts)";
 
             GameEvents.OnFeedEventLogged?.Invoke("COMMISSION",
                 $"<color=#FFD700>==================================================\n" +

@@ -40,12 +40,16 @@ namespace ArmyLife.UI
         [Header("Modals")]
         public YouthActivitiesModal youthActivitiesModal;
         public DilemmaModal dilemmaModal;
+        public ClanModal clanModal;
+        public SchoolModal schoolModal;
 
         [Header("Action Buttons")]
         public Button advanceSemesterButton;
         public Button testTalentButton;
         public Button sendMoneyHomeButton;
         public Button returnToMenuButton;
+        public Button clanButton;
+        public Button schoolButton;
 
         private void OnEnable()
         {
@@ -67,6 +71,14 @@ namespace ArmyLife.UI
             {
                 sendMoneyHomeButton.onClick.AddListener(OnSendMoneyHomeClicked);
             }
+            if (clanButton != null)
+            {
+                clanButton.onClick.AddListener(OnClanButtonClicked);
+            }
+            if (schoolButton != null)
+            {
+                schoolButton.onClick.AddListener(OnSchoolButtonClicked);
+            }
             if (returnToMenuButton != null)
             {
                 returnToMenuButton.onClick.AddListener(OnReturnToMenuClicked);
@@ -87,6 +99,14 @@ namespace ArmyLife.UI
             if (sendMoneyHomeButton != null)
             {
                 sendMoneyHomeButton.onClick.RemoveListener(OnSendMoneyHomeClicked);
+            }
+            if (clanButton != null)
+            {
+                clanButton.onClick.RemoveListener(OnClanButtonClicked);
+            }
+            if (schoolButton != null)
+            {
+                schoolButton.onClick.RemoveListener(OnSchoolButtonClicked);
             }
             if (returnToMenuButton != null)
             {
@@ -339,6 +359,40 @@ namespace ArmyLife.UI
             if (OpeningSceneController.Instance != null)
             {
                 OpeningSceneController.Instance.ShowOpeningScreen();
+            }
+        }
+
+        public void OnClanButtonClicked()
+        {
+            if (clanModal != null)
+            {
+                clanModal.OpenModal();
+            }
+            else if (ClanModal.Instance != null)
+            {
+                ClanModal.Instance.OpenModal();
+            }
+            else
+            {
+                var found = FindAnyObjectByType<ClanModal>(FindObjectsInactive.Include);
+                if (found != null) found.OpenModal();
+            }
+        }
+
+        public void OnSchoolButtonClicked()
+        {
+            if (schoolModal != null)
+            {
+                schoolModal.OpenModal();
+            }
+            else if (SchoolModal.Instance != null)
+            {
+                SchoolModal.Instance.OpenModal();
+            }
+            else
+            {
+                var found = FindAnyObjectByType<SchoolModal>(FindObjectsInactive.Include);
+                if (found != null) found.OpenModal();
             }
         }
     }
