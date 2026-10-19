@@ -115,6 +115,55 @@ namespace ArmyLife.Editor
 
             Debug.Log("<color=#00FFAA>========== ALL MOCK EXAM & FATHER HELP TESTS PASSED PERFECTLY! ==========</color>");
         }
+
+        [MenuItem("Army Life/Run Full 36-Semester Childhood Lifecycle Test", false, 11)]
+        public static void RunFullChildhoodProgressionTest()
+        {
+            Debug.Log("<color=#00D4FF>========== STARTING FULL 36-SEMESTER CHILDHOOD LIFECYCLE TEST ==========</color>");
+
+            var child = new SoldierProfile("Valen Frost", null, 140)
+            {
+                nobleTitle = NobleRank.Baron,
+                age = 0.0f,
+                fitness = 20f,
+                combatSkill = 15f,
+                intellect = 45f,
+                foundationalTempering = 10f,
+                health = 100f,
+                cashBalance = 500
+            };
+
+            int loggedEvents = 0;
+            GameEvents.OnFeedEventLogged += (category, msg) => { loggedEvents++; };
+
+            // Simulate all 36 semesters of childhood from Age 0.0 to 18.0
+            for (int semester = 1; semester <= 36; semester++)
+            {
+                child.age += 0.5f;
+                child.totalSemestersLived++;
+                ChildhoodLifeEngine.ProcessYouthSemester(child, null);
+
+                // Simulate occasional youth activity clicks
+                if (child.age >= 10.0f && semester % 4 == 0)
+                {
+                    ChildhoodLifeEngine.PerformCadetFiringRange(child);
+                    ChildhoodLifeEngine.PerformClanMartialLibrary(child);
+                }
+            }
+
+            Debug.Log($"[Childhood Lifecycle] Age reached: {child.age:F1} | Total Semesters: {child.totalSemestersLived}");
+            Debug.Log($"[Childhood Lifecycle] Stats at 18: Fitness={child.fitness:F0}, Combat={child.combatSkill:F0}, Intellect={child.intellect:F0}, Tempering={child.foundationalTempering:F0}, Health={child.health:F0}, Cash=${child.cashBalance:N0}");
+            Debug.Log($"[Childhood Lifecycle] Exam Final Score: {child.examScore}/100 | Total Feed Events Logged: {loggedEvents}");
+
+            Debug.Assert(child.age >= 18.0f, "Child should reach age 18.0!");
+            Debug.Assert(child.totalSemestersLived == 36, "Child should survive exactly 36 semesters!");
+            Debug.Assert(child.examScore >= 30, "Exam score should be computed!");
+            Debug.Assert(child.fitness > 20f, "Fitness should grow over childhood!");
+            Debug.Assert(child.combatSkill > 15f, "Combat skill should grow over childhood!");
+            Debug.Assert(loggedEvents >= 36, "Every semester should log milestone feed events!");
+
+            Debug.Log("<color=#00FFAA>========== 36-SEMESTER CHILDHOOD PROGRESSION TEST PASSED 100%! ==========</color>");
+        }
     }
 }
 #endif

@@ -113,20 +113,23 @@ namespace ArmyLife.UI
 
         private void OnChoiceAClicked()
         {
-            onChoiceASelected?.Invoke();
+            Action callback = onChoiceASelected;
             CloseAndRefresh();
+            callback?.Invoke();
         }
 
         private void OnChoiceBClicked()
         {
-            onChoiceBSelected?.Invoke();
+            Action callback = onChoiceBSelected;
             CloseAndRefresh();
+            callback?.Invoke();
         }
 
         private void OnChoiceCClicked()
         {
-            onChoiceCSelected?.Invoke();
+            Action callback = onChoiceCSelected;
             CloseAndRefresh();
+            callback?.Invoke();
         }
 
         private void CloseAndRefresh()

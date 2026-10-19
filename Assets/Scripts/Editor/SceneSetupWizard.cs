@@ -715,7 +715,7 @@ namespace ArmyLife.Editor
             var yFitter = yContent.AddComponent<ContentSizeFitter>();
             yFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            // Activity Buttons (7 Interactive Choices)
+            // Activity Buttons (11 Interactive Choices)
             var yBtn1 = CreateButton("TemperingBtn", yContent.transform, "🏃 BODY TEMPERING (+Fitness & Marrow)", new Color(0.18f, 0.60f, 0.35f));
             SetLayoutHeight(yBtn1, 62);
             youthCtrl.bodyTemperingButton = yBtn1.GetComponent<Button>();
@@ -723,6 +723,22 @@ namespace ArmyLife.Editor
             var yBtn2 = CreateButton("StudyBtn", yContent.transform, "📚 STUDY STRATEGY & TACTICS (+Intellect)", new Color(0.20f, 0.45f, 0.75f));
             SetLayoutHeight(yBtn2, 62);
             youthCtrl.studyTacticsButton = yBtn2.GetComponent<Button>();
+
+            var yBtnRange = CreateButton("RangeBtn", yContent.transform, "🎯 CADET FIRING RANGE (+Combat Skill & Marksmanship)", new Color(0.85f, 0.35f, 0.15f));
+            SetLayoutHeight(yBtnRange, 62);
+            youthCtrl.cadetFiringRangeButton = yBtnRange.GetComponent<Button>();
+
+            var yBtnLib = CreateButton("LibraryBtn", yContent.transform, "📜 CLAN MARTIAL ARCHIVE (+Tempering & Qi Insight)", new Color(0.15f, 0.65f, 0.75f));
+            SetLayoutHeight(yBtnLib, 62);
+            youthCtrl.clanLibraryButton = yBtnLib.GetComponent<Button>();
+
+            var yBtnJobs = CreateButton("OddJobsBtn", yContent.transform, "💼 DISTRICT ODD JOBS (+Earn Cash & Fitness)", new Color(0.70f, 0.50f, 0.20f));
+            SetLayoutHeight(yBtnJobs, 62);
+            youthCtrl.oddJobsButton = yBtnJobs.GetComponent<Button>();
+
+            var yBtnHerb = CreateButton("ApothecaryBtn", yContent.transform, "🏥 APOTHECARY BONE BROTH (-$30, +Health & Bones)", new Color(0.25f, 0.65f, 0.45f));
+            SetLayoutHeight(yBtnHerb, 62);
+            youthCtrl.apothecaryButton = yBtnHerb.GetComponent<Button>();
 
             var yBtn3 = CreateButton("FamilyBtn", yContent.transform, "🏡 SPEND TIME WITH PARENTS (+Clan Favor)", new Color(0.75f, 0.55f, 0.20f));
             SetLayoutHeight(yBtn3, 62);
@@ -762,9 +778,16 @@ namespace ArmyLife.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            EditorUtility.DisplayDialog("Army Life Simulator", 
-                "Playable Scene updated successfully with full BitLife-style Character Customization!\n\nJust click PLAY (▶) in Unity to test!", 
-                "Let's Play!");
+            if (!Application.isBatchMode)
+            {
+                EditorUtility.DisplayDialog("Army Life Simulator", 
+                    "Playable Scene updated successfully with full BitLife-style Character Customization!\n\nJust click PLAY (▶) in Unity to test!", 
+                    "Let's Play!");
+            }
+            else
+            {
+                Debug.Log("<color=#00FFAA>[SceneSetupWizard] Playable scene generated and saved successfully!</color>");
+            }
         }
 
         private static void CreateCycleSelector(string name, Transform parent, string labelText, out Button prevBtn, out Button nextBtn, out TextMeshProUGUI valueTmp)

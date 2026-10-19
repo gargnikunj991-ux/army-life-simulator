@@ -114,6 +114,13 @@ namespace ArmyLife.Data
         public bool receivedFatherExamBoost;
         public int examPreparationBonus;
 
+        [Header("Interactive National Exam Performance (Age 18.0)")]
+        public int examPhysicalScore;
+        public int examTacticalScore;
+        public int examMartialScore;
+        public string childhoodRomanceInterest = "Evelyn";
+        public bool participatedUndergroundRing;
+
         public SoldierProfile(string name, FamilyLineageSO initialLineage, int rolledTalent)
         {
             characterName = name;

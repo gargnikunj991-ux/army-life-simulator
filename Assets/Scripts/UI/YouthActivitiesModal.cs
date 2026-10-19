@@ -19,6 +19,10 @@ namespace ArmyLife.UI
         [Header("Activity Buttons")]
         public Button bodyTemperingButton;
         public Button studyTacticsButton;
+        public Button cadetFiringRangeButton;
+        public Button clanLibraryButton;
+        public Button oddJobsButton;
+        public Button apothecaryButton;
         public Button familyTimeButton;
         public Button siblingSparButton;
         public Button askAllowanceButton;
@@ -38,6 +42,10 @@ namespace ArmyLife.UI
         {
             if (bodyTemperingButton != null) bodyTemperingButton.onClick.AddListener(OnBodyTemperingClicked);
             if (studyTacticsButton != null) studyTacticsButton.onClick.AddListener(OnStudyTacticsClicked);
+            if (cadetFiringRangeButton != null) cadetFiringRangeButton.onClick.AddListener(OnCadetFiringRangeClicked);
+            if (clanLibraryButton != null) clanLibraryButton.onClick.AddListener(OnClanMartialLibraryClicked);
+            if (oddJobsButton != null) oddJobsButton.onClick.AddListener(OnOddJobsClicked);
+            if (apothecaryButton != null) apothecaryButton.onClick.AddListener(OnApothecaryClicked);
             if (familyTimeButton != null) familyTimeButton.onClick.AddListener(OnFamilyTimeClicked);
             if (siblingSparButton != null) siblingSparButton.onClick.AddListener(OnSiblingSparClicked);
             if (askAllowanceButton != null) askAllowanceButton.onClick.AddListener(OnAskAllowanceClicked);
@@ -50,6 +58,10 @@ namespace ArmyLife.UI
         {
             if (bodyTemperingButton != null) bodyTemperingButton.onClick.RemoveListener(OnBodyTemperingClicked);
             if (studyTacticsButton != null) studyTacticsButton.onClick.RemoveListener(OnStudyTacticsClicked);
+            if (cadetFiringRangeButton != null) cadetFiringRangeButton.onClick.RemoveListener(OnCadetFiringRangeClicked);
+            if (clanLibraryButton != null) clanLibraryButton.onClick.RemoveListener(OnClanMartialLibraryClicked);
+            if (oddJobsButton != null) oddJobsButton.onClick.RemoveListener(OnOddJobsClicked);
+            if (apothecaryButton != null) apothecaryButton.onClick.RemoveListener(OnApothecaryClicked);
             if (familyTimeButton != null) familyTimeButton.onClick.RemoveListener(OnFamilyTimeClicked);
             if (siblingSparButton != null) siblingSparButton.onClick.RemoveListener(OnSiblingSparClicked);
             if (askAllowanceButton != null) askAllowanceButton.onClick.RemoveListener(OnAskAllowanceClicked);
@@ -138,6 +150,64 @@ namespace ArmyLife.UI
                 {
                     ChildhoodLifeEngine.PerformStudyTactics(s);
                 }
+                RefreshStatsDisplay();
+            }
+        }
+
+        private void OnCadetFiringRangeClicked()
+        {
+            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
+            if (s != null)
+            {
+                ChildhoodLifeEngine.PerformCadetFiringRange(s);
+                RefreshStatsDisplay();
+            }
+        }
+
+        private void OnClanMartialLibraryClicked()
+        {
+            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
+            if (s != null)
+            {
+                if (s.age < 5.0f)
+                {
+                    s.intellect = Mathf.Min(100f, s.intellect + 2f);
+                    GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
+                        $"<color=#00D4FF>[EARLY ACTIVITY]</color> You flip curiously through picture scrolls of ancient heroes in the study room (+2 Intellect).");
+                    GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                }
+                else
+                {
+                    ChildhoodLifeEngine.PerformClanMartialLibrary(s);
+                }
+                RefreshStatsDisplay();
+            }
+        }
+
+        private void OnOddJobsClicked()
+        {
+            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
+            if (s != null)
+            {
+                if (s.age < 4.0f)
+                {
+                    GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
+                        $"<color=#FFD700>[TODDLER PLAY]</color> You are too young to work district odd jobs! Mother gives you a warm sweet dumpling instead.");
+                }
+                else
+                {
+                    ChildhoodLifeEngine.PerformStreetErrandsAndJobs(s);
+                }
+                RefreshStatsDisplay();
+            }
+        }
+
+        private void OnApothecaryClicked()
+        {
+            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
+            if (s != null)
+            {
+                ChildhoodLifeEngine.PerformApothecaryNourishment(s);
                 RefreshStatsDisplay();
             }
         }
