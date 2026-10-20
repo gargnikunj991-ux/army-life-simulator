@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmyLife.Data.PowerTierSO
   tierLevel: 6
   designation: Peak Grandmaster
-  stratum: 1
+  stratum: 2
   maxLifespanYears: 140
   monthlySalaryBonus: 4500
   monthlyCashBurn: 4500

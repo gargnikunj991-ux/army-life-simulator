@@ -36,6 +36,7 @@ namespace ArmyLife.UI
             else Destroy(gameObject);
 
             if (modalRoot != null) modalRoot.SetActive(false);
+            gameObject.SetActive(false);
         }
 
         private void OnEnable()
@@ -73,6 +74,7 @@ namespace ArmyLife.UI
         public void OpenModal()
         {
             gameObject.SetActive(true);
+            transform.SetAsLastSibling();
             if (modalRoot != null)
             {
                 modalRoot.SetActive(true);
@@ -82,14 +84,11 @@ namespace ArmyLife.UI
 
         public void CloseModal()
         {
-            if (modalRoot != null && modalRoot != gameObject)
+            if (modalRoot != null)
             {
                 modalRoot.SetActive(false);
             }
-            else
-            {
-                gameObject.SetActive(false);
-            }
+            gameObject.SetActive(false);
         }
 
         private void RefreshStatsDisplay()
@@ -110,20 +109,20 @@ namespace ArmyLife.UI
                         : "");
 
                 youthStatsSummaryText.text = 
-                    $"<b>❤️ Health:</b> {s.health:F0}%   |   <b>🏃 Fitness:</b> {s.fitness:F0}%   |   <b>⚔️ Combat:</b> {s.combatSkill:F0}%\n" +
-                    $"<b>🧠 Intellect:</b> {s.intellect:F0}%   |   <b>🏡 Family Favor:</b> {s.parentRelationship:F0}%   |   <b>💰 Pocket Money:</b> ${s.cashBalance:N0}\n" +
-                    $"<b>🥋 Foundational Tempering:</b> {s.foundationalTempering:F0}/100   |   <b>⚔️ Lucian Standing:</b> +{s.clanSuccessionScore} Favor" +
+                    $"<b>Health:</b> {s.health:F0}%   |   <b>Fitness:</b> {s.fitness:F0}%   |   <b>Combat:</b> {s.combatSkill:F0}%\n" +
+                    $"<b>Intellect:</b> {s.intellect:F0}%   |   <b>Family Favor:</b> {s.parentRelationship:F0}%   |   <b>Pocket Money:</b> ${s.cashBalance:N0}\n" +
+                    $"<b>Foundational Tempering:</b> {s.foundationalTempering:F0}/100   |   <b>Succession Favor:</b> +{s.clanSuccessionScore} Favor" +
                     ageNotice + examLine;
             }
 
             // Update button label tags for clear BitLife-style age gates
-            UpdateButtonLabel(studyTacticsButton, "📚 STUDY STRATEGY & TACTICS", s.age >= 6.0f ? "(+Intellect)" : "<color=#FF6666>[Unlocks at Age 6]</color>");
-            UpdateButtonLabel(clanLibraryButton, "📜 CLAN MARTIAL ARCHIVE", s.age >= 6.0f ? "(+Qi Insight)" : "<color=#FF6666>[Unlocks at Age 6]</color>");
-            UpdateButtonLabel(cadetFiringRangeButton, "🎯 CADET FIRING RANGE", s.age >= 12.0f ? "(+Combat Skill)" : "<color=#FF6666>[Unlocks at Age 12]</color>");
-            UpdateButtonLabel(oddJobsButton, "💼 DISTRICT ODD JOBS", s.age >= 12.0f ? "(+Earn Cash)" : "<color=#FF6666>[Unlocks at Age 12]</color>");
-            UpdateButtonLabel(apothecaryButton, "🏥 APOTHECARY BONE BROTH", s.age >= 4.0f ? "(-$30, +Health)" : "<color=#FF6666>[Unlocks at Age 4]</color>");
-            UpdateButtonLabel(takeMockExamButton, "📝 TAKE MOCK MILITARY EXAM", s.age >= 17.5f ? "(Ready)" : "<color=#FF6666>[Age 17.5 Only]</color>");
-            UpdateButtonLabel(askFatherExamHelpButton, "👑 ASK FATHER FOR EXAM HELP", s.age >= 16.0f ? "(Available)" : "<color=#FF6666>[Unlocks at Age 16]</color>");
+            UpdateButtonLabel(studyTacticsButton, "STUDY STRATEGY & TACTICS", s.age >= 6.0f ? "(+Intellect)" : "<color=#FF6666>[Unlocks at Age 6]</color>");
+            UpdateButtonLabel(clanLibraryButton, "CLAN MARTIAL ARCHIVE", s.age >= 6.0f ? "(+Qi Insight)" : "<color=#FF6666>[Unlocks at Age 6]</color>");
+            UpdateButtonLabel(cadetFiringRangeButton, "CADET FIRING RANGE", s.age >= 12.0f ? "(+Combat Skill)" : "<color=#FF6666>[Unlocks at Age 12]</color>");
+            UpdateButtonLabel(oddJobsButton, "DISTRICT ODD JOBS", s.age >= 12.0f ? "(+Earn Cash)" : "<color=#FF6666>[Unlocks at Age 12]</color>");
+            UpdateButtonLabel(apothecaryButton, "APOTHECARY BONE BROTH", s.age >= 4.0f ? "(-$30, +Health)" : "<color=#FF6666>[Unlocks at Age 4]</color>");
+            UpdateButtonLabel(takeMockExamButton, "TAKE MOCK MILITARY EXAM", s.age >= 17.5f ? "(Ready)" : "<color=#FF6666>[Age 17.5 Only]</color>");
+            UpdateButtonLabel(askFatherExamHelpButton, "ASK FATHER FOR EXAM HELP", s.age >= 16.0f ? "(Available)" : "<color=#FF6666>[Unlocks at Age 16]</color>");
         }
 
         private void UpdateButtonLabel(Button btn, string prefix, string suffix)

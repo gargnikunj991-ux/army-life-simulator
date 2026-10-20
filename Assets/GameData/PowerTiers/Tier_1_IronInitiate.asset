@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmyLife.Data.PowerTierSO
   tierLevel: 1
   designation: Iron Initiate
-  stratum: 0
+  stratum: 1
   maxLifespanYears: 85
   monthlySalaryBonus: 750
   monthlyCashBurn: 200

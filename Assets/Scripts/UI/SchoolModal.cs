@@ -26,6 +26,7 @@ namespace ArmyLife.UI
             else Destroy(gameObject);
 
             if (modalRoot != null) modalRoot.SetActive(false);
+            gameObject.SetActive(false);
         }
 
         private void OnEnable()
@@ -45,6 +46,7 @@ namespace ArmyLife.UI
         public void OpenModal()
         {
             gameObject.SetActive(true);
+            transform.SetAsLastSibling();
             if (modalRoot != null) modalRoot.SetActive(true);
 
             RefreshSchoolDisplay();
@@ -52,14 +54,8 @@ namespace ArmyLife.UI
 
         public void CloseModal()
         {
-            if (modalRoot != null && modalRoot != gameObject)
-            {
-                modalRoot.SetActive(false);
-            }
-            else
-            {
-                gameObject.SetActive(false);
-            }
+            if (modalRoot != null) modalRoot.SetActive(false);
+            gameObject.SetActive(false);
         }
 
         public void RefreshSchoolDisplay()
@@ -87,13 +83,13 @@ namespace ArmyLife.UI
                 if (studyHarderButton != null)
                 {
                     studyHarderButton.interactable = false;
-                    SetButtonLabel(studyHarderButton, "📚 Study Harder [Age 6.0]");
+                    SetButtonLabel(studyHarderButton, "Study Harder [Age 6.0]");
                 }
 
                 if (joinClubButton != null)
                 {
                     joinClubButton.interactable = false;
-                    SetButtonLabel(joinClubButton, "🛡️ Cadet Clubs [Age 6.0]");
+                    SetButtonLabel(joinClubButton, "Cadet Clubs [Age 6.0]");
                 }
 
                 if (peersContainer != null)
@@ -113,15 +109,15 @@ namespace ArmyLife.UI
                 studyHarderButton.interactable = true;
                 bool isCapped = s.semesterStudyPerformanceGained >= SoldierProfile.MAX_SEMESTER_STUDY_BOOST;
                 string capTag = isCapped 
-                    ? "📚 Study Harder (Term Maxed: +3.0%)" 
-                    : $"📚 Study Harder (+{SoldierProfile.MAX_SEMESTER_STUDY_BOOST - s.semesterStudyPerformanceGained:F1}% Max)";
+                    ? "Study Harder (Term Maxed: +3.0%)" 
+                    : $"Study Harder (+{SoldierProfile.MAX_SEMESTER_STUDY_BOOST - s.semesterStudyPerformanceGained:F1}% Max)";
                 SetButtonLabel(studyHarderButton, capTag);
             }
 
             if (joinClubButton != null)
             {
                 joinClubButton.interactable = true;
-                SetButtonLabel(joinClubButton, "🛡️ Join / Change Cadet Club");
+                SetButtonLabel(joinClubButton, "Join / Change Cadet Club");
             }
 
             if (titleText != null)
@@ -161,7 +157,7 @@ namespace ArmyLife.UI
                 }
                 else
                 {
-                    string imperialBadge = s.isImperialScholarshipStudent ? " <color=#FFD700>★ IMPERIAL SCHOLAR ★</color>" : "";
+                    string imperialBadge = s.isImperialScholarshipStudent ? " <color=#FFD700>[IMPERIAL SCHOLAR]</color>" : "";
                     schoolSummaryText.text = 
                         $"<b>Institution:</b> {tierBadge}{imperialBadge}   |   <b>Cadet Club:</b> {s.schoolClub}   |   <b>Promotions:</b> +{s.timesPromotedSchool}\n" +
                         $"<b>Youth Academy Drill:</b> {s.schoolPerformance:F0}% ({rankTier})   |   <b>Annual Status:</b> {promoStatus}\n" +
@@ -203,7 +199,7 @@ namespace ArmyLife.UI
             text.fontSize = 17;
             text.alignment = TextAlignmentOptions.Center;
             text.color = new Color(0.75f, 0.80f, 0.90f);
-            text.text = "🏫 <i>No school classmates yet. Formal district primary school enrollment and peer interactions begin at <b>Age 6.0</b>!</i>";
+            text.text = "<i>No school classmates yet. Formal district primary school enrollment and peer interactions begin at <b>Age 6.0</b>!</i>";
 
             var rect = textObj.GetComponent<RectTransform>();
             rect.anchorMin = Vector2.zero;
@@ -251,11 +247,11 @@ namespace ArmyLife.UI
             infoText.fontSize = 20;
 
             string relColor = (peer.relationship >= 70f) ? "#00FFAA" : (peer.relationship >= 40f ? "#FFD700" : "#FF4444");
-            string statusTag = peer.isCrush ? " <color=#FF66AA>[Cadet Crush ♥]</color>" : (peer.isFriend ? " <color=#00FFAA>[Close Friend]</color>" : "");
+            string statusTag = peer.isCrush ? " <color=#FF66AA>[Cadet Crush]</color>" : (peer.isFriend ? " <color=#00FFAA>[Close Friend]</color>" : "");
 
             infoText.text = 
                 $"<b>{peer.name}</b> <size=16>({peer.role}){statusTag}</size>\n" +
-                $"<size=17><color=#00D4FF>[{peer.personalityTrait}]</color>  •  Relationship: <color={relColor}><b>{peer.relationship:F0}%</b></color></size>";
+                $"<size=17><color=#00D4FF>[{peer.personalityTrait}]</color>  -  Relationship: <color={relColor}><b>{peer.relationship:F0}%</b></color></size>";
 
             // Action Button
             var actionBtnObj = new GameObject("InteractBtn");
@@ -294,9 +290,9 @@ namespace ArmyLife.UI
                           $"Relationship: <b>{peer.relationship:F0}%</b> | Trait: <i>{peer.personalityTrait}</i>\n\n" +
                           $"How would you like to interact with {peer.name} during recess / free drill?";
 
-            string choiceA = "💬 Chat & Hang Out (+Relationship)";
-            string choiceB = "⚔️ Field Sparring Challenge (+Combat, +Respect)";
-            string choiceC = (soldier.age >= 13.0f) ? "💌 Ask Out / Flirt (Romantic Interest)" : "🎭 Pull a Cadet Prank";
+            string choiceA = "Chat & Hang Out (+Relationship)";
+            string choiceB = "Field Sparring Challenge (+Combat, +Respect)";
+            string choiceC = (soldier.age >= 13.0f) ? "Ask Out / Flirt (Romantic Interest)" : "Pull a Cadet Prank";
 
             GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                 "SCHOOL ENCOUNTER",
@@ -348,7 +344,7 @@ namespace ArmyLife.UI
                             soldier.childhoodRomanceInterest = peer.name;
 
                             GameEvents.OnFeedEventLogged?.Invoke("ROMANCE",
-                                $"<color=#FF66AA><b>[CADET SWEETHEART ♥]</b></color> You shyly confessed your feelings to {peer.name} behind the rifle armory. " +
+                                $"<color=#FF66AA><b>[CADET SWEETHEART]</b></color> You shyly confessed your feelings to {peer.name} behind the rifle armory. " +
                                 $"{peer.name} smiled warmly and accepted! You are now dating! (+15 Relationship).");
                         }
                         else
@@ -431,9 +427,9 @@ namespace ArmyLife.UI
                 "EXTRACURRICULAR CLUB",
                 "Join an Academy Club",
                 "Extracurricular cadet clubs hone your abilities and bolster your reputation before the National Military Exam.",
-                "🥋 Martial Sparring & CQB Club (+Combat)",
-                "♟️ Tactical War Chess & Drone Club (+Intellect)",
-                "🎯 Imperial Marksmanship Society (+Combat & Range)",
+                "Martial Sparring & CQB Club (+Combat)",
+                "Tactical War Chess & Drone Club (+Intellect)",
+                "Imperial Marksmanship Society (+Combat & Range)",
                 () => { s.schoolClub = "Martial Sparring Club"; s.combatSkill += 5f; GameEvents.OnFeedEventLogged?.Invoke("SCHOOL", $"You joined the <b>Martial Sparring Club</b> (+5 Combat Skill)!"); RefreshSchoolDisplay(); },
                 () => { s.schoolClub = "War Chess & Tactics Club"; s.intellect += 6f; GameEvents.OnFeedEventLogged?.Invoke("SCHOOL", $"You joined the <b>War Chess & Tactics Club</b> (+6 Intellect)!"); RefreshSchoolDisplay(); },
                 () => { s.schoolClub = "Marksmanship Society"; s.combatSkill += 4f; s.fitness += 2f; GameEvents.OnFeedEventLogged?.Invoke("SCHOOL", $"You joined the <b>Marksmanship Society</b> (+4 Combat, +2 Fitness)!"); RefreshSchoolDisplay(); }

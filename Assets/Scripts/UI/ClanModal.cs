@@ -24,6 +24,7 @@ namespace ArmyLife.UI
             else Destroy(gameObject);
 
             if (modalRoot != null) modalRoot.SetActive(false);
+            gameObject.SetActive(false);
         }
 
         private void OnEnable()
@@ -39,6 +40,7 @@ namespace ArmyLife.UI
         public void OpenModal()
         {
             gameObject.SetActive(true);
+            transform.SetAsLastSibling();
             if (modalRoot != null) modalRoot.SetActive(true);
 
             RefreshClanDisplay();
@@ -46,14 +48,9 @@ namespace ArmyLife.UI
 
         public void CloseModal()
         {
-            if (modalRoot != null && modalRoot != gameObject)
-            {
-                modalRoot.SetActive(false);
-            }
-            else
-            {
-                gameObject.SetActive(false);
-            }
+            if (modalRoot != null) modalRoot.SetActive(false);
+            gameObject.SetActive(false);
+            gameObject.SetActive(false);
         }
 
         public void RefreshClanDisplay()
@@ -173,9 +170,9 @@ namespace ArmyLife.UI
                           $"Relationship: <b>{member.relationship:F0}%</b> | Trait: <i>{member.personalityTrait}</i>\n\n" +
                           $"{relDesc}\nHow will you interact with them?";
 
-            string choiceA = "💬 Spend Time & Converse (+Relationship)";
-            string choiceB = "💰 Ask for Allowance / Clan Funds";
-            string choiceC = (soldier.age >= 4.0f) ? "⚔️ Courtyard Sparring Match" : "🎁 Compliment & Honor";
+            string choiceA = "Spend Time & Converse (+Relationship)";
+            string choiceB = "Ask for Allowance / Clan Funds";
+            string choiceC = (soldier.age >= 4.0f) ? "Courtyard Sparring Match" : "Compliment & Honor";
 
             GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                 "CLAN INTERACTION",

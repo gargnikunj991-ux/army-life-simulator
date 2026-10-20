@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmyLife.Data.PowerTierSO
   tierLevel: 3
   designation: Silver Centurion
-  stratum: 0
+  stratum: 1
   maxLifespanYears: 95
   monthlySalaryBonus: 2250
   monthlyCashBurn: 800

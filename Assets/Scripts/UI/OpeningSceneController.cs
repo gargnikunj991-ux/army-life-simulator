@@ -591,7 +591,7 @@ namespace ArmyLife.UI
                 {
                     string noble = lineage.startingNobleRank.ToString();
                     string wealth = $"${lineage.startingFamilyWealth:N0}";
-                    string tier = $"Tier {lineage.startingPowerTier}";
+                    string tier = lineage.startingPowerTier > 0 ? $"Tier {lineage.startingPowerTier} (Early)" : "Pre-Tier (Mortal)";
                     string stone = lineage.startingNobleRank > NobleRank.Commoner ? "Ancestral Stone (At Birth)" : "Army Resonance Chamber (Rank E-4)";
 
                     lineageDetailsText.text = 
@@ -611,11 +611,11 @@ namespace ArmyLife.UI
             {
                 string first = (characterFirstNameInput != null && !string.IsNullOrWhiteSpace(characterFirstNameInput.text)) ? characterFirstNameInput.text.Trim() : "Ethan";
                 string last = (characterLastNameInput != null && !string.IsNullOrWhiteSpace(characterLastNameInput.text)) ? characterLastNameInput.text.Trim() : "Vance";
-                string genderIcon = (selectedGender == "Female") ? "♀" : "♂";
+                string genderIcon = (selectedGender == "Female") ? "[F]" : "[M]";
                 characterPreviewBadgeText.text = 
-                    $"<color=#00D4FF><b>{genderIcon} {first} {last}</b></color> (Newborn • Age 0.0)\n" +
+                    $"<color=#00D4FF><b>{genderIcon} {first} {last}</b></color> (Newborn - Age 0.0)\n" +
                     $"<b>Homeland:</b> {country.name}  |  <b>Lineage Fate:</b> 80% Commoner, 1% Grand Duke\n" +
-                    $"<b>Appearance:</b> {HairStyles[selectedHairStyleIndex]} • {HairColors[selectedHairColorIndex]} Hair • {EyeColors[selectedEyeColorIndex]} Eyes • {SkinTones[selectedSkinToneIndex]}";
+                    $"<b>Appearance:</b> {HairStyles[selectedHairStyleIndex]} - {HairColors[selectedHairColorIndex]} Hair - {EyeColors[selectedEyeColorIndex]} Eyes - {SkinTones[selectedSkinToneIndex]}";
 
                 if (confirmStartLifeButton != null)
                 {
@@ -743,7 +743,7 @@ namespace ArmyLife.UI
 
             string statusColor = life.isDead ? "#FF4444" : (life.isRetired ? "#FFD700" : "#00FFAA");
             string statusStr = life.isDead ? "KIA / DECEASED" : (life.isRetired ? "HONORABLY RETIRED" : "ACTIVE DUTY");
-            string genIcon = (life.gender == "Female") ? "♀" : "♂";
+            string genIcon = (life.gender == "Female") ? "[F]" : "[M]";
             headerText.text = $"<b>{life.characterName} ({genIcon})</b>  <color={statusColor}>[{statusStr}]</color>";
 
             // 2. Details Row
@@ -752,10 +752,13 @@ namespace ArmyLife.UI
             var detailsText = detailsObj.AddComponent<TextMeshProUGUI>();
             detailsText.fontSize = 22;
             detailsText.color = new Color(0.8f, 0.85f, 0.9f);
-            detailsObj.AddComponent<LayoutElement>().preferredHeight = 70;
+            string powerDisplay = life.powerTier > 0 
+                ? $"Tier {life.powerTier} ({PowerTierKnowledgeSystem.GetSubTierName(life.subTier)})/12" 
+                : $"Pre-Tier (Stage {Mathf.Clamp(life.preTierStage, 1, 4)}/4)";
+
             detailsText.text = 
                 $"Homeland: <b>{life.birthCountry ?? "The Valerian Empire"}</b> | Age: <b>{life.age:F1}</b> | Rank: <b>{life.rankName} ({life.rankPaygrade})</b>\n" +
-                $"Lineage: <b>{life.lineageArchetypeName}</b> | Power: <b>Tier {life.powerTier}/12</b> | Wealth: <b>${life.cashBalance:N0}</b>\n" +
+                $"Lineage: <b>{life.lineageArchetypeName}</b> | Power: <b>{powerDisplay}</b> | Wealth: <b>${life.cashBalance:N0}</b>\n" +
                 $"Look: <i>{life.hairStyle}, {life.hairColor} hair, {life.eyeColor} eyes</i>";
 
             // 3. Buttons Row

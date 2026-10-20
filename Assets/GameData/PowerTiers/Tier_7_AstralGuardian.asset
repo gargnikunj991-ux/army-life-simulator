@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmyLife.Data.PowerTierSO
   tierLevel: 7
   designation: Astral Guardian
-  stratum: 2
+  stratum: 3
   maxLifespanYears: 220
   monthlySalaryBonus: 5250
   monthlyCashBurn: 8000

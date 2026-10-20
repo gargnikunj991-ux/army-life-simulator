@@ -16,6 +16,21 @@ namespace ArmyLife.UI
         private const int MaxFeedEntries = 100;
         private int entryCount = 0;
 
+        private void Awake()
+        {
+            if (feedContentText != null)
+            {
+                feedContentText.raycastTarget = false;
+            }
+            if (feedScrollRect != null)
+            {
+                if (feedScrollRect.GetComponent<RectMask2D>() == null && feedScrollRect.viewport == null)
+                {
+                    feedScrollRect.gameObject.AddComponent<RectMask2D>();
+                }
+            }
+        }
+
         private void OnEnable()
         {
             GameEvents.OnFeedEventLogged += AddFeedEntry;

@@ -218,7 +218,7 @@ namespace ArmyLife.Core
                 return;
             }
 
-            // 3. Phase Splitting: Youth Childhood (Ages 0 to 18) vs Active Duty Military
+            // 3. Phase Splitting: Youth Childhood (Ages 0 to 18) vs Adult Career (Civilian & Military)
             if (currentSoldier.isYouthPhase)
             {
                 ChildhoodLifeEngine.ProcessYouthSemester(currentSoldier, this);
@@ -226,16 +226,30 @@ namespace ArmyLife.Core
             else
             {
                 // Turning Point: Age 18.0 Enlistment & National Military Ranking Exam!
-                if (currentSoldier.currentRank == null)
+                if (currentSoldier.careerTrack == CareerTrack.YouthStudent)
                 {
                     ChildhoodLifeEngine.ConductNationalMilitaryExam(currentSoldier, this);
                 }
 
+                // Advance Education, Schooling, and Careers (Basic training, College, Tech, Medical, War Academy)
+                CivilAndMilitaryCareerEngine.AdvanceCareerTurn(currentSoldier, this);
+
                 // Mandatory Military Retirement Evaluation ("Up or Out" policy)
-                MilitaryCareerEngine.EvaluateCareerRetirement(currentSoldier);
+                if (!currentSoldier.isCivilian)
+                {
+                    MilitaryCareerEngine.EvaluateCareerRetirement(currentSoldier);
+                }
 
                 // Frontline Combat Tour Processing (Real mortality & casualty risk!)
-                if (!currentSoldier.isRetired && currentSoldier.isInCombatDeployment)
+                bool isInActiveCombatTour = !currentSoldier.isRetired && 
+                                            !currentSoldier.isCivilian && 
+                                            currentSoldier.isInCombatDeployment &&
+                                            currentSoldier.careerTrack != CareerTrack.MilitaryRecruitBasic &&
+                                            currentSoldier.careerTrack != CareerTrack.MilitaryTechSchool &&
+                                            currentSoldier.careerTrack != CareerTrack.MilitaryMedicalSchool &&
+                                            currentSoldier.careerTrack != CareerTrack.MilitaryWarAcademy;
+
+                if (isInActiveCombatTour)
                 {
                     MilitaryCareerEngine.ProcessCombatDeploymentTour(currentSoldier);
 
@@ -246,7 +260,7 @@ namespace ArmyLife.Core
                     PowerCultivationEngine.CheckSecretCaveAnomaly(currentSoldier);
                 }
 
-                // Payday: 6 months of compensation with 50% Imperial War Tax
+                // Payday: 6 months of compensation with tax and career rules
                 if (currentSoldier.isRetired)
                 {
                     long pension = 1500L * 6;
@@ -264,16 +278,33 @@ namespace ArmyLife.Core
 
                     currentSoldier.cashBalance += semesterNet;
 
-                    GameEvents.OnFeedEventLogged?.Invoke("PAYDAY",
-                        $"<b>[MILITARY PAY & 50% WAR TAX]</b> Gross: ${gross:N0}/mo | " +
-                        $"<color=#FF4444>50% Imperial War Tax: -${tax:N0}/mo (-${semesterTax:N0})</color> | " +
-                        $"<b>Net Take-Home: +${semesterNet:N0}</b> (+${net:N0}/mo). Bank: <b>${currentSoldier.cashBalance:N0}</b>.");
+                    if (currentSoldier.careerTrack == CareerTrack.MilitaryRecruitBasic)
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("PAYDAY",
+                            "[RECRUIT BASIC TRAINING] $0/mo salary during 6 months of basic training. Free mess hall rations and drill equipment provided.");
+                    }
+                    else if (currentSoldier.careerTrack == CareerTrack.CivilianCollege)
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("PAYDAY",
+                            "[IMPERIAL COLLEGE] Full-time academic study ($0/mo salary). Deducted $12,500 semester tuition toward $100k degree.");
+                    }
+                    else if (currentSoldier.isCivilian)
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("PAYDAY",
+                            $"<b>[CIVILIAN INCOME]</b> Position: <b>{currentSoldier.civilianJobTitle}</b> | Gross: ${gross:N0}/mo | Civil Municipal Tax: -${tax:N0}/mo (50%) | " +
+                            $"<b>Net Take-Home: +${semesterNet:N0}</b> (+${net:N0}/mo). Bank: <b>${currentSoldier.cashBalance:N0}</b>.");
+                    }
+                    else
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("PAYDAY",
+                            $"<b>[MILITARY COMPENSATION]</b> Gross: ${gross:N0}/mo | " +
+                            $"<color=#FF4444>40% Imperial War Tax: -${tax:N0}/mo (-${semesterTax:N0})</color> | " +
+                            $"<b>Net Take-Home: +${semesterNet:N0}</b> (+${net:N0}/mo). Bank: <b>${currentSoldier.cashBalance:N0}</b>.");
+                    }
 
-                    // Basic living expenses & low-level military resources (rations, uniform maintenance, bone balms)
-                    int basicExpenses = 600; // $100/mo for basic supplies
+                    // Basic living expenses & low-level resources
+                    int basicExpenses = currentSoldier.isCivilian ? 400 : 600;
                     currentSoldier.cashBalance = System.Math.Max(0, currentSoldier.cashBalance - basicExpenses);
-                    GameEvents.OnFeedEventLogged?.Invoke("EXPENSES",
-                        $"[LIVING EXPENSES] Deducted <b>-${basicExpenses}</b> for 6 months of mess hall rations, uniform upkeep, and basic bone-tempering ointments.");
 
                     // Cultivation Energy Burn (Only if soldier is noble or has learned about cultivation)
                     if (currentSoldier.knowsAboutCultivation || currentSoldier.nobleTitle > NobleRank.Commoner)
@@ -281,8 +312,11 @@ namespace ArmyLife.Core
                         PowerCultivationEngine.ProcessSemesterCultivation(currentSoldier, currentTierSO);
                     }
 
-                    // Military Promotion Board Evaluation (Climbs through PT tests, merit, and service!)
-                    PromotionBoardEngine.EvaluatePromotionBoard(currentSoldier, militaryRankDatabase);
+                    // Military Promotion Board Evaluation (Only active duty enlisted & officers)
+                    if (currentSoldier.careerTrack == CareerTrack.MilitaryEnlisted || currentSoldier.careerTrack == CareerTrack.MilitaryOfficer)
+                    {
+                        PromotionBoardEngine.EvaluatePromotionBoard(currentSoldier, militaryRankDatabase);
+                    }
                 }
             }
 
@@ -332,6 +366,8 @@ namespace ArmyLife.Core
 
             currentSoldier.currentRank = nextRank;
             currentSoldier.totalPromotionsEarned++;
+            currentSoldier.accumulatedPromotionPoints = 0;
+            currentSoldier.timeInCurrentRankSemesters = 0;
 
             GameEvents.OnFeedEventLogged?.Invoke("PROMOTION",
                 $"<color=#00FFAA><b>[PROMOTION APPROVED!]</b></color> You have been promoted to <b>{nextRank.rankName} ({nextRank.paygrade})</b>! " +

@@ -4,6 +4,22 @@ using UnityEngine;
 
 namespace ArmyLife.Data
 {
+    public enum CareerTrack
+    {
+        YouthStudent,           // Ages 0 to 18.0
+        // Military Tracks
+        MilitaryRecruitBasic,   // 6 months (1 semester), UNPAID ($0), passes out as E-1 Private
+        MilitaryEnlisted,       // E-1 to E-9 active duty
+        MilitaryOfficer,        // O-1 to O-10 active duty
+        MilitaryTechSchool,     // 2 years (4 semesters). Year 1 unpaid ($0), Year 2 paid $200/mo. Passes out as E-3 Specialist with tech stipends!
+        MilitaryMedicalSchool,  // 3 years (6 semesters). Year 1 unpaid ($0), Years 2-3 paid $250/mo. Passes out as Combat Medic Officer!
+        MilitaryWarAcademy,     // 4 years (8 semesters). PAID FROM DAY 1 ($300/mo). MUST have Tier 1 Cultivation to pass out!
+        // Civilian Tracks
+        CivilianWork,           // Direct entry jobs $150/mo to $300/mo
+        CivilianCollege,        // 4 years (8 semesters). Costs $100,000 for 4 years ($12,500/sem).
+        CivilianProfessional    // Post-college degree careers starting at $500+/mo up to position!
+    }
+
     [Serializable]
     public class SoldierProfile
     {
@@ -46,13 +62,28 @@ namespace ArmyLife.Data
         public bool isInCombatDeployment;       // True during frontline tours (+Hazard Pay)
         public int medalsEarnedCount;
 
-        [Header("Power Cultivation (4 Pre-Tier Stages + 12 Tiers)")]
+        [Header("Career Track (Civilian vs Military Education & Employment)")]
+        public CareerTrack careerTrack = CareerTrack.YouthStudent;
+        public string civilianJobTitle = "Unemployed";
+        public long civilianSalaryPerMonth = 0;
+        public string collegeDegreeName;
+        public int collegeSemestersCompleted;
+        public long collegeTuitionDebt;
+        public int militarySchoolSemestersCompleted;
+        public bool graduatedCollege;
+        public bool graduatedWarAcademy;
+        public bool graduatedTechSchool;
+        public bool graduatedMedicalSchool;
+        public bool isCivilian => careerTrack == CareerTrack.CivilianWork || careerTrack == CareerTrack.CivilianCollege || careerTrack == CareerTrack.CivilianProfessional;
+
+        [Header("Power Cultivation (4 Pre-Tier Stages + 12 Tiers with 4 Sub-Tiers)")]
         [Range(1, 4)]
         public int preTierStage = 1;            // 1 to 4: Body Tempering, Meridian Awakening, Qi Circulation, Foundational Core
         [Range(0, 12)]
         public int powerTier;                   // 0 to 12 (0 = Pre-Tier Stages 1-4)
+        public PowerSubTier subTier = PowerSubTier.Early; // Early, Mid, Late, Peak within each tier
         [Range(0f, 100f)]
-        public float tierProgressPercent;       // Progress towards next tier breakthrough
+        public float tierProgressPercent;       // Progress towards next sub-tier or major tier breakthrough
         public int failedBreakthroughCount;     // Consecutive bottleneck failures (3 = fatal / crippling!)
         [Range(0f, 100f)]
         public float meridianDamage;            // 0 = healthy; 50+ = severe cultivation penalty
@@ -75,15 +106,26 @@ namespace ArmyLife.Data
         [Range(0f, 100f)] public float clanFavor = 50f;
         [Range(0f, 100f)] public float squadRespect = 50f;
         [Range(0f, 100f)] public float coFavor = 50f;
+        [Range(0f, 100f)] public float happiness = 80f;
 
         [Header("Knowledge & Family Well-Being")]
         public bool knowsAboutCultivation;      // False for commoners; unlocked at E-4 or noble birth
         public float familyLivingCondition = 20f; // 0=Impoverished, 40=Modest, 70=Comfortable, 100=Prominent
         public long totalSentToFamily;
+        public long totalRemittancesSentToFamily { get => totalSentToFamily; set => totalSentToFamily = value; }
 
         [Header("Treasury & Military Currency")]
         public long cashBalance;
         public long combatMeritPoints;          // Restricted military currency for serums & prototypes
+
+        [Header("Military Career Tracking")]
+        public int timeInCurrentRankSemesters;
+        public int promotionPoints { get => accumulatedPromotionPoints; set => accumulatedPromotionPoints = value; }
+        public FamilyLineageSO familyLineage { get => lineage; set => lineage = value; }
+        public string birthProvince { get => birthState; set => birthState = value; }
+        public SchoolLevel currentSchoolLevel { get => schoolLevel; set => schoolLevel = value; }
+        public SchoolTier currentSchoolTier { get => schoolTier; set => schoolTier = value; }
+        public void InitializePeers() => InitializeSchoolPeersIfEligible();
 
         [Header("Dynasty, Marriage & Succession")]
         public bool isMarried;

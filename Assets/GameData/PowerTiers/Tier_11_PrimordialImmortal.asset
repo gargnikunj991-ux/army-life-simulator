@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmyLife.Data.PowerTierSO
   tierLevel: 11
   designation: Primordial Immortal
-  stratum: 3
+  stratum: 4
   maxLifespanYears: 500
   monthlySalaryBonus: 8250
   monthlyCashBurn: 60000

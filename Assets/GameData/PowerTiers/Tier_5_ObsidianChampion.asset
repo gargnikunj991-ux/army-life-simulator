@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmyLife.Data.PowerTierSO
   tierLevel: 5
   designation: Obsidian Champion
-  stratum: 1
+  stratum: 2
   maxLifespanYears: 125
   monthlySalaryBonus: 3750
   monthlyCashBurn: 2800

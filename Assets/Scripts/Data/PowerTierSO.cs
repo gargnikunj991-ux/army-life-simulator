@@ -11,6 +11,14 @@ namespace ArmyLife.Data
         PrimordialSect      // Tiers 11-12: Hidden Ancient Sect Realms (500 & 1,000 year lifespans)
     }
 
+    public enum PowerSubTier
+    {
+        Early = 0,
+        Mid = 1,
+        Late = 2,
+        Peak = 3
+    }
+
     [CreateAssetMenu(fileName = "PowerTier_", menuName = "ArmyLife/Power Tier")]
     public class PowerTierSO : ScriptableObject
     {
@@ -64,6 +72,18 @@ namespace ArmyLife.Data
             }
         }
 
+        public static string GetSubTierName(PowerSubTier subTier)
+        {
+            switch (subTier)
+            {
+                case PowerSubTier.Early: return "Early";
+                case PowerSubTier.Mid: return "Mid";
+                case PowerSubTier.Late: return "Late";
+                case PowerSubTier.Peak: return "Peak";
+                default: return "Early";
+            }
+        }
+
         public static string GetTierDesignation(int tier)
         {
             switch (tier)
@@ -103,7 +123,35 @@ namespace ArmyLife.Data
         }
 
         /// <summary>
-        /// Formats the power tier display string for a soldier, respecting knowledge fog.
+        /// Returns the climbing difficulty multiplier based on major tier and sub-tier.
+        /// Higher tiers and higher sub-tiers (Early -> Mid -> Late -> Peak) require exponentially denser Qi.
+        /// </summary>
+        public static float GetClimbingDifficultyFactor(int tier, PowerSubTier subTier)
+        {
+            if (tier <= 0) return 1.0f;
+            float tierFactor = 1.0f + (tier * 0.40f);
+            float subTierFactor = 1.0f + ((int)subTier * 0.30f);
+            return tierFactor * subTierFactor;
+        }
+
+        /// <summary>
+        /// Returns the bottleneck trial difficulty for sub-tier advancement within a tier.
+        /// Early -> Mid (0.22+) < Mid -> Late (0.34+) < Late -> Peak (0.46+).
+        /// </summary>
+        public static float GetSubTierAdvancementDifficulty(int tier, PowerSubTier currentSubTier)
+        {
+            float tierBase = tier * 0.035f;
+            switch (currentSubTier)
+            {
+                case PowerSubTier.Early: return 0.22f + tierBase; // Advancing to Mid
+                case PowerSubTier.Mid:   return 0.34f + tierBase; // Advancing to Late
+                case PowerSubTier.Late:  return 0.46f + tierBase; // Advancing to Peak
+                default:                 return 0.50f + tierBase;
+            }
+        }
+
+        /// <summary>
+        /// Formats the power tier display string for a soldier, respecting knowledge fog and sub-tiers.
         /// </summary>
         public static string FormatSoldierPowerTier(SoldierProfile soldier)
         {
@@ -116,19 +164,16 @@ namespace ArmyLife.Data
             }
 
             int perceivedMax = GetPerceivedMaxTier(soldier.powerTier, soldier.unlockedTiers11And12);
+            string subTierStr = GetSubTierName(soldier.subTier);
 
             if (soldier.powerTier >= 7)
             {
                 string hiddenTag = soldier.powerTier >= 11 ? " [HIDDEN REALM]" : "";
-                return $"<color=#FFD700>Tier {soldier.powerTier}/{perceivedMax} • National Guardian ({GetTierDesignation(soldier.powerTier)}){hiddenTag}</color>";
-            }
-            else if (soldier.powerTier >= 4)
-            {
-                return $"Tier {soldier.powerTier}/{perceivedMax} ({GetTierDesignation(soldier.powerTier)})";
+                return $"<color=#FFD700>Tier {soldier.powerTier} ({subTierStr})/{perceivedMax} • National Guardian ({GetTierDesignation(soldier.powerTier)}){hiddenTag}</color>";
             }
             else
             {
-                return $"Tier {soldier.powerTier}/{perceivedMax} ({GetTierDesignation(soldier.powerTier)})";
+                return $"Tier {soldier.powerTier} ({subTierStr})/{perceivedMax} ({GetTierDesignation(soldier.powerTier)})";
             }
         }
     }

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmyLife.Data.PowerTierSO
   tierLevel: 12
   designation: Apex Divinity
-  stratum: 3
+  stratum: 4
   maxLifespanYears: 1000
   monthlySalaryBonus: 9000
   monthlyCashBurn: 100000

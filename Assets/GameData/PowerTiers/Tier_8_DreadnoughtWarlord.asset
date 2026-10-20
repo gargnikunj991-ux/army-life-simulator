@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmyLife.Data.PowerTierSO
   tierLevel: 8
   designation: Dreadnought Warlord
-  stratum: 2
+  stratum: 3
   maxLifespanYears: 260
   monthlySalaryBonus: 6000
   monthlyCashBurn: 14000

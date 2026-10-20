@@ -49,6 +49,7 @@ namespace ArmyLife.UI
             {
                 modalRoot.SetActive(false);
             }
+            gameObject.SetActive(false);
         }
 
         private void OnEnable()
@@ -101,13 +102,11 @@ namespace ArmyLife.UI
                 }
             }
 
+            gameObject.SetActive(true);
+            transform.SetAsLastSibling();
             if (modalRoot != null)
             {
                 modalRoot.SetActive(true);
-            }
-            else
-            {
-                gameObject.SetActive(true);
             }
         }
 
@@ -138,10 +137,7 @@ namespace ArmyLife.UI
             {
                 modalRoot.SetActive(false);
             }
-            else
-            {
-                gameObject.SetActive(false);
-            }
+            gameObject.SetActive(false);
 
             if (GameManager.Instance != null && GameManager.Instance.currentSoldier != null)
             {

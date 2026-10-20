@@ -111,6 +111,8 @@ namespace ArmyLife.Systems
             existing.rankPaygrade = soldier.currentRank != null ? soldier.currentRank.paygrade : "E-1";
             existing.rankName = soldier.currentRank != null ? soldier.currentRank.rankName : "Private Recruit";
             existing.powerTier = soldier.powerTier;
+            existing.subTier = soldier.subTier;
+            existing.preTierStage = soldier.preTierStage;
             existing.talentScore = soldier.talentScore;
             existing.isPersonalTalentRevealed = soldier.isPersonalTalentRevealed;
             existing.cashBalance = soldier.cashBalance;

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmyLife.Data.PowerTierSO
   tierLevel: 4
   designation: Gold Striker
-  stratum: 1
+  stratum: 2
   maxLifespanYears: 115
   monthlySalaryBonus: 3000
   monthlyCashBurn: 1500

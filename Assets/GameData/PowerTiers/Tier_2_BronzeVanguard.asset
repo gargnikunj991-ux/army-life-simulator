@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmyLife.Data.PowerTierSO
   tierLevel: 2
   designation: Bronze Vanguard
-  stratum: 0
+  stratum: 1
   maxLifespanYears: 90
   monthlySalaryBonus: 1500
   monthlyCashBurn: 450

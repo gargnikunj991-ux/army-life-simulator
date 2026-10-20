@@ -25,6 +25,8 @@ namespace ArmyLife.Data
         public string rankPaygrade;
         public string rankName;
         public int powerTier;
+        public PowerSubTier subTier;
+        public int preTierStage;
         public int talentScore;
         public bool isPersonalTalentRevealed;
         public long cashBalance;

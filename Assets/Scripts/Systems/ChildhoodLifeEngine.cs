@@ -1338,8 +1338,11 @@ namespace ArmyLife.Systems
                 $"==================================================</color>");
 
             GameEvents.OnFeedEventLogged?.Invoke("ACTIVE DUTY",
-                $"<color=#00FFAA><b>[OFFICIAL ENLISTMENT COMPLETE]</b></color> At age 18.0, your childhood in the Valerian Empire has concluded. " +
-                $"You put on the combat fatigues of the Valerian Vanguard. Your active military career begins now!");
+                $"<color=#00FFAA><b>[AGE 18 NATIONAL EXAM CONCLUDED]</b></color> At age 18.0, your childhood in the Valerian Empire has concluded. " +
+                $"Your final exam score of <b>{soldier.examScore}/750</b> determines your career trajectory. Choose your path!");
+
+            // Branching Choice between Civil Life ($150-$300 or College $100k) and Military Tracks (War Academy, Tech, Medical, Recruit)
+            CivilAndMilitaryCareerEngine.EvaluateAge18CareerChoice(soldier, gm);
 
             GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
         }
