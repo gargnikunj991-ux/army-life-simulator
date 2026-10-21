@@ -233,8 +233,8 @@ namespace ArmyLife.Systems
             }
             else if (Mathf.Approximately(age, 14.5f))
             {
-                GameEvents.OnFeedEventLogged?.Invoke("MARTIAL STUDY",
-                    $"<b>[ENERGY THEORY • AGE 14.5]</b> You studied the circulation of atmospheric qi through the 12 prime meridians (+4 Foundational Tempering).");
+                GameEvents.OnFeedEventLogged?.Invoke("SCIENCE",
+                    $"<b>[AUGMENTATION THEORY • AGE 14.5]</b> You studied principles of biomechanical cyberware and sub-dermal neural conduction (+4 Sub-Dermal Framework).");
                 soldier.foundationalTempering = Mathf.Min(100f, soldier.foundationalTempering + 4f);
             }
             else if (Mathf.Approximately(age, 15.0f))
@@ -462,12 +462,12 @@ namespace ArmyLife.Systems
             }
             else if (Mathf.Approximately(age, 2.0f))
             {
-                // Age 2.0: Spilled Ancestral Vitality Tonic
+                // Age 2.0: Spilled Bio-Enhancement Serum
                 GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
-                    "COURTYARD DISCOVERY",
-                    "The Spilled Vitality Tonic",
-                    "While toddling near Father's meditation chamber, you spot a knocked-over crystal vial of glowing imperial bone-tempering tonic pooling on the stone table.",
-                    "Drink the glowing liquid! (Vitality surge vs Meridian burn)",
+                    "LABORATORY DISCOVERY",
+                    "The Spilled Bio-Serum",
+                    "While toddling near Father's military study, you spot an unsealed vial of glowing imperial bio-enhancement serum pooling on the metal desk.",
+                    "Lick the glowing fluid! (Cellular surge vs Neural toxicity)",
                     "Call out loudly for Mother (+Family Relation)",
                     "Carefully wipe it clean with your sleeve (+Discipline)",
                     () =>
@@ -476,13 +476,13 @@ namespace ArmyLife.Systems
                         {
                             soldier.foundationalTempering += 10f;
                             soldier.fitness += 5f;
-                            GameEvents.OnFeedEventLogged?.Invoke("DILEMMA", "<color=#00FFAA>[FORTUNE]</color> Your infant body absorbed the rich celestial herbs! A warm energy tempered your baby bones (+10 Tempering, +5 Fitness)!");
+                            GameEvents.OnFeedEventLogged?.Invoke("DILEMMA", "<color=#00FFAA>[FORTUNE]</color> Your infant biology bonded with the military nanites! Bone and muscle density reinforced (+10 Framework, +5 Fitness)!");
                         }
                         else
                         {
                             soldier.health = Mathf.Max(30f, soldier.health - 15f);
                             soldier.meridianDamage += 5f;
-                            GameEvents.OnFeedEventLogged?.Invoke("DILEMMA", "<color=#FF6600>[RECOIL]</color> The herbal power was too intense for your infant meridians, causing a feverish night (Health -15, Meridian Damage +5).");
+                            GameEvents.OnFeedEventLogged?.Invoke("DILEMMA", "<color=#FF6600>[TOXICITY RECOIL]</color> The bio-serum was too concentrated for infant receptors, causing fever and neural strain (Health -15, Neural Strain +5).");
                         }
                     },
                     () =>
@@ -583,14 +583,14 @@ namespace ArmyLife.Systems
                     "CLAN SECRETS",
                     "The Unlocked Martial Pavilion",
                     "Passing through the clan courtyard at midnight, you notice the heavy iron gate to the Ancestral Martial Archive was left unlocked by an elder!",
-                    "Sneak inside and memorize an ancient meridian breathing chart (+15 Tempering)",
-                    "Respect clan tradition and meditate peacefully outside (+5 Fitness, +5 Intellect)",
+                    "Sneak inside and study classified cyber-neural schematics (+15 Framework)",
+                    "Respect clan tradition and run calisthenics peacefully outside (+5 Fitness, +5 Intellect)",
                     "Lock the door and report it to Father (+10 Parent Relation, +8 Clan Favor)",
                     () =>
                     {
                         soldier.foundationalTempering += 15f;
                         soldier.knowsAboutCultivation = true;
-                        GameEvents.OnFeedEventLogged?.Invoke("DILEMMA", "<color=#FFD700>[SECRET UNLOCKED]</color> You studied ancient illuminated silk scrolls of energy circulation! (+15 Foundational Tempering, Cultivation Knowledge Unlocked)!");
+                        GameEvents.OnFeedEventLogged?.Invoke("DILEMMA", "<color=#FFD700>[SECRET UNLOCKED]</color> You studied classified blueprints of military cyberware and neural pathways! (+15 Sub-Dermal Framework, Augmentation Clearance Unlocked)!");
                     },
                     () =>
                     {
@@ -834,7 +834,7 @@ namespace ArmyLife.Systems
             }
 
             string choiceBLabel = "Solo Midnight Oil: Library Cramming & Night Ruck Drills (+10 Prep, -10 HP)";
-            string choiceCLabel = "Breathing Cultivation: Inner Serenity & Meridian Tempering (+6 Prep, +10 HP)";
+            string choiceCLabel = "Bio-Feedback Training: Neural Stabilization & Stress Recovery (+6 Prep, +10 HP)";
 
             GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                 "NATIONAL MOCK EXAM",
@@ -1184,7 +1184,7 @@ namespace ArmyLife.Systems
                 "EXAM STAGE 3: PROCTOR DUEL",
                 "The Live Martial Appraisal (250 pts)",
                 "Final stage! Senior Warrant Officer Proctor Gary—a towering veteran in combat armor wielding a heavy shock-blade—steps into the central ring. 'Show me your steel, candidate!'",
-                "Explosive Martial Strike (Direct power test; tests Combat Skill & Cultivation)",
+                "Explosive Kinetic Strike (Direct power test; tests Combat Skill & Augmentation)",
                 "Technical Parry & Counter-Takedown (Tests Combat Skill & Intellect)",
                 "Iron Defense: Absorb & Outlast (Tests Tempering & Fitness)",
                 // Choice A: Explosive Strike
@@ -1414,8 +1414,8 @@ namespace ArmyLife.Systems
             soldier.knowsAboutCultivation = true;
 
             GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
-                $"<color=#00D4FF>[CLAN MARTIAL LIBRARY]</color> You unrolled ancient silk scrolls of body tempering and qi meridian flow! " +
-                $"Foundational Tempering: <b>{soldier.foundationalTempering:F0}/100</b> | Intellect: <b>{soldier.intellect:F0}/100</b> (Cultivation insight deepened).");
+                $"<color=#00D4FF>[MILITARY ARCHIVES]</color> You studied technical blueprints of biomechanical augmentations and neural frameworks! " +
+                $"Sub-Dermal Framework: <b>{soldier.foundationalTempering:F0}/100</b> | Intellect: <b>{soldier.intellect:F0}/100</b> (Augmentation doctrine mastered).");
             GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
         }
 

@@ -137,10 +137,10 @@ namespace ArmyLife.UI
                     RefreshUI();
                 });
 
-            // 2. Body Tempering
+            // 2. Body Conditioning
             string stageName = PowerTierKnowledgeSystem.GetPreTierStageName(s.preTierStage);
-            CreateActivityCard($"Martial Body Tempering ({stageName})",
-                "Endure harsh physical conditioning to purify bones, meridians, and marrow foundation.",
+            CreateActivityCard($"Sub-Dermal Conditioning ({stageName})",
+                "Endure high-intensity physical conditioning to prepare bone density and neural pathways for super-soldier augmentations.",
                 new Color(0.70f, 0.35f, 0.15f), () =>
                 {
                     s.foundationalTempering = Mathf.Min(100f, s.foundationalTempering + 6f);
@@ -151,8 +151,8 @@ namespace ArmyLife.UI
                     if (s.foundationalTempering >= 50f && s.preTierStage < 3) s.preTierStage = 3;
                     if (s.foundationalTempering >= 80f && s.preTierStage < 4) s.preTierStage = 4;
 
-                    GameEvents.OnFeedEventLogged?.Invoke("MARTIAL",
-                        $"<color=#00FFAA>[BODY TEMPERING]</color> You completed grueling muscle and bone refining drills! (+6 Tempering, +3 Fitness).");
+                    GameEvents.OnFeedEventLogged?.Invoke("TRAINING",
+                        $"<color=#00FFAA>[SUB-DERMAL CONDITIONING]</color> You completed grueling muscular and biomechanical drills! (+6 Framework, +3 Fitness).");
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
@@ -170,34 +170,34 @@ namespace ArmyLife.UI
                     RefreshUI();
                 });
 
-            // 4. Clan Martial Library
-            CreateActivityCard("Clan Martial Archives",
-                "Peruse ancient imperial strategy manuals and classified breathing scriptures.",
+            // 4. Classified Archives
+            CreateActivityCard("Classified Military Archives",
+                "Peruse classified doctrine, mechanized warfare manuals, and super-soldier gene blueprints.",
                 new Color(0.50f, 0.25f, 0.70f), () =>
                 {
                     s.intellect = Mathf.Min(100f, s.intellect + 3f);
                     s.knowsAboutCultivation = true;
                     GameEvents.OnFeedEventLogged?.Invoke("STUDY",
-                        "<color=#FFD700>[SECRET ARCHIVES]</color> You unlocked ancient scrolls detailing Qi pathways and imperial cultivation secrets! (+3 Intellect).");
+                        "<color=#FFD700>[CLASSIFIED ARCHIVES]</color> You unlocked classified Imperial files on Super-Soldier Augmentations and Neural Systems! (+3 Intellect).");
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
 
-            // 5. Apothecary
-            CreateActivityCard("Imperial Herbal Apothecary",
-                "Purchase cleansing herbal teas ($30) to soothe meridian strain and restore vitality.",
+            // 5. Bio-Regen Stimulants
+            CreateActivityCard("Military Bio-Regen Dispensary",
+                "Purchase cellular cleansing stims ($30) to purge neural strain and restore biological vitality.",
                 new Color(0.15f, 0.55f, 0.35f), () =>
                 {
                     if (s.cashBalance < 30)
                     {
-                        GameEvents.OnFeedEventLogged?.Invoke("APOTHECARY", "<color=#FF4444>[POVERTY]</color> You lack $30 for herbal tea.");
+                        GameEvents.OnFeedEventLogged?.Invoke("MEDICAL", "<color=#FF4444>[POVERTY]</color> You lack $30 for cleansing stims.");
                         return;
                     }
                     s.cashBalance -= 30;
                     s.health = Mathf.Min(100f, s.health + 15f);
                     s.meridianDamage = Mathf.Max(0f, s.meridianDamage - 10f);
-                    GameEvents.OnFeedEventLogged?.Invoke("APOTHECARY",
-                        "<color=#00FFAA>[HERBAL CLEANSING]</color> The herbal elixir purified your meridians (-10% Meridian Damage, +15 Health).");
+                    GameEvents.OnFeedEventLogged?.Invoke("MEDICAL",
+                        "<color=#00FFAA>[CELLULAR CLEANSING]</color> The neural serum cleansed your implant receptors (-10% Neural Strain, +15 Health).");
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
@@ -370,9 +370,9 @@ namespace ArmyLife.UI
                     RefreshUI();
                 });
 
-            // 8. Public Park Qi Meditation
-            CreateActivityCard("Public Park Qi Meditation",
-                "Sit beneath ancient willows to absorb energy currents and temper inner meridians.",
+            // 8. Bio-Rhythm Neural Synchronization
+            CreateActivityCard("Bio-Rhythm Neural Sync",
+                "Sit in a sensory recovery booth to harmonize neural bio-rhythms and reduce implant strain.",
                 new Color(0.55f, 0.25f, 0.75f), () =>
                 {
                     if (s.tierProgressPercent >= 95f)
@@ -439,9 +439,9 @@ namespace ArmyLife.UI
                     RefreshUI();
                 });
 
-            // 3. Qi Cultivation Chamber
-            CreateActivityCard("Qi Meditation Chamber",
-                "Channel ambient atmospheric energy. Progress Qi and attempt realm breakthroughs.",
+            // 3. Super-Soldier Augmentation Pod
+            CreateActivityCard("Augmentation Calibration Pod",
+                "Enter the pressurized bio-chamber to infuse next-tier military serums and calibrate cyber-frames.",
                 new Color(0.55f, 0.25f, 0.75f), () =>
                 {
                     if (s.tierProgressPercent >= 95f)
@@ -523,8 +523,8 @@ namespace ArmyLife.UI
             // 8. Test Talent (Rank E-4+)
             if (!s.isPersonalTalentRevealed)
             {
-                CreateActivityCard("Resonance Testing Chamber (Rank E-4)",
-                    "Submit to the army resonance stone to unlock and reveal your innate Power Talent score.",
+                CreateActivityCard("Genetic Aptitude Scanner (Rank E-4)",
+                    "Submit to the Imperial bio-resonance scanner to analyze and unlock your Genetic Aptitude score (0-200).",
                     new Color(0.20f, 0.40f, 0.80f), () =>
                     {
                         TalentTestingApparatus.PerformSelfApparatusTest(s);

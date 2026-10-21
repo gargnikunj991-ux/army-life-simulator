@@ -109,15 +109,15 @@ namespace ArmyLife.UI
                     $"<b>Appearance:</b> <i>{s.hairStyle ?? "Short"} {s.hairColor ?? "Black"} hair, {s.eyeColor ?? "Brown"} eyes, {s.gender}</i>";
             }
 
-            // Physical Status
+            // Physical Status & Cyber-Bio Strain
             if (physicalStatusText != null)
             {
-                string meridianColor = s.meridianDamage > 50f ? "#FF4444" : (s.meridianDamage > 20f ? "#FFAA00" : "#44FF44");
-                string temperingPhase = s.isYouthPhase ? $"Tempering Phase {s.preTierStage}/4" : "Foundation Solidified";
+                string strainColor = s.meridianDamage > 50f ? "#FF4444" : (s.meridianDamage > 20f ? "#FFAA00" : "#44FF44");
+                string prepPhase = s.isYouthPhase ? $"Conditioning Phase {s.preTierStage}/4 ({PowerTierKnowledgeSystem.GetPreTierStageName(s.preTierStage)})" : "Framework Integrated";
 
                 physicalStatusText.text = 
-                    $"<b>Meridian Strain:</b> <color={meridianColor}>{s.meridianDamage:F0}% Damage</color>   |   <b>Body:</b> {temperingPhase}\n" +
-                    $"<b>Foundational Resonance:</b> {s.foundationalTempering:F0}/100   |   <b>Happiness:</b> {s.happiness:F0}%";
+                    $"<b>Neural Strain:</b> <color={strainColor}>{s.meridianDamage:F0}% Toxicity</color>   |   <b>Framework:</b> {prepPhase}\n" +
+                    $"<b>Bio-Aptitude Calibration:</b> {s.foundationalTempering:F0}/100   |   <b>Morale:</b> {s.happiness:F0}%";
             }
 
             if (healthSlider != null) healthSlider.value = s.health / 100f;
@@ -126,41 +126,41 @@ namespace ArmyLife.UI
             if (fitnessSlider != null) fitnessSlider.value = s.fitness / 100f;
             if (fitnessText != null) fitnessText.text = $"Fitness: {s.fitness:F0}%";
 
-            // Power Cultivation
+            // Super-Soldier Augmentation Program
             if (powerRealmText != null)
             {
-                bool showCultivation = s.knowsAboutCultivation || s.nobleTitle > NobleRank.Commoner;
-                if (showCultivation)
+                bool showAugmentation = s.knowsAboutCultivation || s.nobleTitle > NobleRank.Commoner;
+                if (showAugmentation)
                 {
-                    string realmStr = PowerTierKnowledgeSystem.FormatSoldierPowerTier(s);
-                    powerRealmText.text = $"<b>Cultivation Realm:</b> {realmStr}\n" +
-                                          $"<b>Consecutive Bottleneck Failures:</b> {s.failedBreakthroughCount}/3 (3rd failure causes core detonation!)";
+                    string augmentStr = PowerTierKnowledgeSystem.FormatSoldierPowerTier(s);
+                    powerRealmText.text = $"<b>Augmentation Class:</b> {augmentStr}\n" +
+                                          $"<b>Implant Calibration Faults:</b> {s.failedBreakthroughCount}/3 (3rd fault triggers fatal neural overload!)";
                 }
                 else
                 {
-                    powerRealmText.text = "<b>Cultivation Realm:</b> <i>[Censored by Imperial Edict] (Requires Rank E-4)</i>";
+                    powerRealmText.text = "<b>Augmentation Program:</b> <i>[Classified by High Command] (Requires Rank E-4 Clearance)</i>";
                 }
             }
 
             if (qiProgressSlider != null)
             {
-                bool showCultivation = s.knowsAboutCultivation || s.nobleTitle > NobleRank.Commoner;
-                qiProgressSlider.gameObject.SetActive(showCultivation);
+                bool showAugmentation = s.knowsAboutCultivation || s.nobleTitle > NobleRank.Commoner;
+                qiProgressSlider.gameObject.SetActive(showAugmentation);
                 qiProgressSlider.value = s.tierProgressPercent / 100f;
             }
 
             if (qiProgressText != null)
             {
-                bool showCultivation = s.knowsAboutCultivation || s.nobleTitle > NobleRank.Commoner;
-                qiProgressText.gameObject.SetActive(showCultivation);
-                qiProgressText.text = $"Qi Condensation: {s.tierProgressPercent:F1}%";
+                bool showAugmentation = s.knowsAboutCultivation || s.nobleTitle > NobleRank.Commoner;
+                qiProgressText.gameObject.SetActive(showAugmentation);
+                qiProgressText.text = $"Serum Infusion Saturation: {s.tierProgressPercent:F1}%";
             }
 
             if (talentScoreText != null)
             {
                 talentScoreText.text = s.isPersonalTalentRevealed 
-                    ? $"<b>Innate Resonance Talent:</b> <color=#FFD700>{s.talentScore} / 200</color>"
-                    : "<b>Innate Resonance Talent:</b> <i>[Unawakened / Hidden] (Requires Rank E-4 Test)</i>";
+                    ? $"<b>Genetic Aptitude Rating:</b> <color=#FFD700>{s.talentScore} / 200</color>"
+                    : "<b>Genetic Aptitude Rating:</b> <i>[Unscreened] (Requires Rank E-4 Medical Clearance)</i>";
             }
 
             // Career / Military Record

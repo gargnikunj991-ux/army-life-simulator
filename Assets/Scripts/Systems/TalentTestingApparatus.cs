@@ -41,14 +41,14 @@ namespace ArmyLife.Systems
             soldier.isPersonalTalentRevealed = true;
 
             string talentClassification;
-            if (soldier.talentScore >= 180) talentClassification = "<color=#FFD700>HEAVENLY TRANSCENDENT (S-Rank)</color>";
-            else if (soldier.talentScore >= 150) talentClassification = "<color=#AA00FF>GUARDIAN SEED (A-Rank)</color>";
-            else if (soldier.talentScore >= 100) talentClassification = "<color=#00AAFF>MILITARY PRODIGY (B-Rank)</color>";
-            else if (soldier.talentScore >= 50) talentClassification = "<color=#00FF88>STANDARD SOLDIER (C-Rank)</color>";
-            else talentClassification = "<color=#888888>MARROWLESS (D-Rank)</color>";
+            if (soldier.talentScore >= 180) talentClassification = "<color=#FFD700>APEX TITAN CANDIDATE (S-Rank)</color>";
+            else if (soldier.talentScore >= 150) talentClassification = "<color=#AA00FF>DREADNOUGHT SEED (A-Rank)</color>";
+            else if (soldier.talentScore >= 100) talentClassification = "<color=#00AAFF>VANGUARD PRODIGY (B-Rank)</color>";
+            else if (soldier.talentScore >= 50) talentClassification = "<color=#00FF88>STANDARD OPERATIVE (C-Rank)</color>";
+            else talentClassification = "<color=#888888>BASE HYPO-REACTIVE (D-Rank)</color>";
 
             GameEvents.OnFeedEventLogged?.Invoke("TESTING", 
-                $"<b>[RESONANCE CHAMBER RESULTS]</b> Your spiritual-biological talent was officially measured at: <b>{soldier.talentScore} / 200</b> ({talentClassification})!");
+                $"<b>[GENETIC SCANNER RESULTS]</b> Your biological aptitude for Super-Soldier Augmentations was officially measured at: <b>{soldier.talentScore} / 200</b> ({talentClassification})!");
 
             GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
             return true;

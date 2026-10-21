@@ -4,11 +4,11 @@ namespace ArmyLife.Data
 {
     public enum TierStratum
     {
-        PreTierMortal,      // Pre-Tier 1: 4 Preparatory Stages (Body Tempering, Meridian Awakening, Qi Circulation, Foundational Core)
-        MortalInitiate,     // Tiers 1-3: Standard enhanced human biology
-        MortalPeak,         // Tiers 4-6: The Spoken Limit of mortal biology (Grandmaster)
-        NationalGuardian,   // Tiers 7-10: Strategic deterrents known only to top houses
-        PrimordialSect      // Tiers 11-12: Hidden Ancient Sect Realms (500 & 1,000 year lifespans)
+        PreTierMortal,      // Pre-Tier 1: 4 Preparatory Stages (Cellular Conditioning, Neural Calibration, Bio-Resonance Sync, Sub-Dermal Framework)
+        MortalInitiate,     // Tiers 1-3: Enhanced Operative Classes (Iron Vanguard, Bronze Strike, Silver Centurion)
+        MortalPeak,         // Tiers 4-6: Titan Warframe Augments (Gold Vanguard, Platinum Frame, Apex Titan)
+        NationalGuardian,   // Tiers 7-10: Strategic Dreadnought Super-Soldiers (Dreadnought, Orbital Sovereign, Imperial Pillar)
+        PrimordialSect      // Tiers 11-12: Classified Pre-War Prototypes (Singularity Operative, Transcendent Warmaster Frame)
     }
 
     public enum PowerSubTier
@@ -64,11 +64,11 @@ namespace ArmyLife.Data
         {
             switch (stage)
             {
-                case 1: return "Body Tempering";
-                case 2: return "Meridian Awakening";
-                case 3: return "Qi Circulation";
-                case 4: return "Foundational Core";
-                default: return "Body Tempering";
+                case 1: return "Cellular Conditioning";
+                case 2: return "Neural Calibration";
+                case 3: return "Bio-Resonance Integration";
+                case 4: return "Sub-Dermal Framework";
+                default: return "Cellular Conditioning";
             }
         }
 
@@ -76,11 +76,11 @@ namespace ArmyLife.Data
         {
             switch (subTier)
             {
-                case PowerSubTier.Early: return "Early";
-                case PowerSubTier.Mid: return "Mid";
-                case PowerSubTier.Late: return "Late";
-                case PowerSubTier.Peak: return "Peak";
-                default: return "Early";
+                case PowerSubTier.Early: return "Mk I";
+                case PowerSubTier.Mid: return "Mk II";
+                case PowerSubTier.Late: return "Mk III";
+                case PowerSubTier.Peak: return "Apex";
+                default: return "Mk I";
             }
         }
 
@@ -88,19 +88,19 @@ namespace ArmyLife.Data
         {
             switch (tier)
             {
-                case 1: return "Iron Initiate";
-                case 2: return "Bronze Vanguard";
-                case 3: return "Silver Centurion";
-                case 4: return "Gold Commander";
-                case 5: return "Platinum Warlord";
-                case 6: return "Grandmaster (Mortal Peak)";
-                case 7: return "Domain Lord";
-                case 8: return "Celestial Sovereign";
-                case 9: return "Imperial Pillar";
+                case 1: return "Iron Vanguard Operator";
+                case 2: return "Bronze Strike Commando";
+                case 3: return "Silver Centurion Frame";
+                case 4: return "Gold Vanguard Commander";
+                case 5: return "Platinum Warframe";
+                case 6: return "Titan Dreadnought (Peak Augmented)";
+                case 7: return "Dreadnought Class";
+                case 8: return "Orbital Sovereign Frame";
+                case 9: return "Imperial Aegis Pillar";
                 case 10: return "Apex Strategic Deterrent";
-                case 11: return "Primordial Immortal";
-                case 12: return "Celestial Apex";
-                default: return "Mortal";
+                case 11: return "Singularity Operative (Classified)";
+                case 12: return "Transcendent Warmaster (Classified)";
+                default: return "Standard Human";
             }
         }
 

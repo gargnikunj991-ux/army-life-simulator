@@ -158,7 +158,7 @@ namespace ArmyLife.Systems
             GameEvents.OnFeedEventLogged?.Invoke("WAR ACADEMY",
                 "<color=#FFD700><b>[THE IMPERIAL WAR ACADEMY • 4 YEARS]</b></color> Admitted as an elite Officer Cadet! " +
                 "<b>Pay Policy: Paid from the very start ($300 / month cadet officer salary)</b>. " +
-                "<color=#FF4444><b>CRITICAL GRADUATION REQUIREMENT:</b> You MUST achieve at least <b>Tier 1 Cultivation</b> to pass out and receive your Second Lieutenant (O-1) commission!</color>");
+                "<color=#FF4444><b>CRITICAL GRADUATION REQUIREMENT:</b> You MUST achieve at least <b>Tier 1 Super-Soldier Augmentation</b> to pass out and receive your Second Lieutenant (O-1) commission!</color>");
 
             GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
         }
@@ -296,12 +296,12 @@ namespace ArmyLife.Systems
                             soldier.accumulatedPromotionPoints = 0;
 
                             GameEvents.OnFeedEventLogged?.Invoke("GRADUATION",
-                                "<color=#FFD700><b>[WAR ACADEMY COMMISSION • SECOND LIEUTENANT O-1]</b></color> With 4 years of officer discipline and verified <b>Tier 1 Cultivation</b>, " +
+                                "<color=#FFD700><b>[WAR ACADEMY COMMISSION • SECOND LIEUTENANT O-1]</b></color> With 4 years of officer discipline and verified <b>Tier 1 Super-Soldier Augmentation</b>, " +
                                 "you passed out at the top of your class! Commissioned as an Imperial Officer (O-1).");
                         }
                         else
                         {
-                            // Lacking Tier 1 Cultivation!
+                            // Lacking Tier 1 Augmentation!
                             if (soldier.militarySchoolSemestersCompleted >= 10)
                             {
                                 // Grace period expired -> Discharged to enlisted
@@ -311,14 +311,14 @@ namespace ArmyLife.Systems
                                 soldier.accumulatedPromotionPoints = 0;
 
                                 GameEvents.OnFeedEventLogged?.Invoke("DISMISSAL",
-                                    "<color=#FF4444><b>[WAR ACADEMY DISMISSAL • FAILED CULTIVATION]</b></color> You failed to achieve Tier 1 Cultivation within the maximum grace period. " +
+                                    "<color=#FF4444><b>[WAR ACADEMY DISMISSAL • FAILED AUGMENTATION REQUIREMENT]</b></color> You failed to achieve Tier 1 Augmentation within the maximum grace period. " +
                                     "The War Academy rejected your officer commission. You have been demoted and reassigned as an Enlisted Private (E-1).");
                             }
                             else
                             {
                                 GameEvents.OnFeedEventLogged?.Invoke("BOTTLENECK",
-                                    "<color=#FFAA00><b>[COMMISSION DELAYED • TIER 1 REQUIRED]</b></color> You completed 4 years of academics, " +
-                                    "but the Imperial High Command refuses to commission you until you reach <b>Tier 1 Cultivation</b>! Break through soon or face enlisted demotion.");
+                                    "<color=#FFAA00><b>[COMMISSION DELAYED • TIER 1 AUGMENTATION REQUIRED]</b></color> You completed 4 years of academics, " +
+                                    "but the Imperial High Command refuses to commission you until you reach <b>Tier 1 Augmentation</b>! Calibrate soon in the Augmentation Pod or face enlisted demotion.");
                             }
                         }
                     }

@@ -381,7 +381,7 @@ namespace ArmyLife.Core
             {
                 currentSoldier.knowsAboutCultivation = true;
                 GameEvents.OnFeedEventLogged?.Invoke("CLEARANCE",
-                    "<color=#00AAFF>[SECURITY CLEARANCE GRANTED]</color> Reaching rank E-4 grants clearance to requisition the Army Resonance Chamber to officially test your personal talent!");
+                    "<color=#00AAFF>[SECURITY CLEARANCE GRANTED]</color> Reaching rank E-4 grants medical clearance to requisition the Imperial Genetic Scanner to officially test your Genetic Aptitude for Super-Soldier Augmentations!");
             }
 
             if (currentSoldier.totalPromotionsEarned == 3 && !currentSoldier.isMarried)

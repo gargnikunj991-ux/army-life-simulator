@@ -112,8 +112,8 @@ namespace ArmyLife.Systems
                         GameEvents.OnPowerTierBreakthrough?.Invoke(1);
                         GameEvents.OnFeedEventLogged?.Invoke("BREAKTHROUGH",
                             $"<color=#FFD700>==================================================\n" +
-                            $"<b>[MORTAL TRANSCENDENCE • TIER 1 (EARLY) ACHIEVED!]</b>\n" +
-                            $"Having mastered all 4 preparatory mortal stages, your meridian core ignited! You have stepped into <b>Tier 1 Early ({PowerTierKnowledgeSystem.GetTierDesignation(1)})</b>!\n" +
+                            $"<b>[SUPER-SOLDIER TRANSCENDENCE • TIER 1 (MK I) ACHIEVED!]</b>\n" +
+                            $"Having completed all 4 preparatory sub-dermal conditioning stages, your augmentations activated! You stepped into <b>Tier 1 Mk I ({PowerTierKnowledgeSystem.GetTierDesignation(1)})</b>!\n" +
                             $"==================================================</color>");
                     }
 
@@ -126,13 +126,13 @@ namespace ArmyLife.Systems
                     soldier.tierProgressPercent = 50f;
                     soldier.health = Mathf.Max(25f, soldier.health - 20f);
                     GameEvents.OnFeedEventLogged?.Invoke("BOTTLENECK",
-                        $"<color=#FF6600>[PRE-TIER FOUNDATION STRAIN]</color> Qi circulation faltered! Stage {soldier.preTierStage} breakthrough failed (Meridian Dmg +15%). Progress reset to 50%.");
+                        $"<color=#FF6600>[SUB-DERMAL FRAMEWORK STRAIN]</color> Serum integration resisted! Stage {soldier.preTierStage} conditioning failed (+15% Neural Strain). Progress reset to 50%.");
                     GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
                     return false;
                 }
             }
 
-            // 2. Sub-Tier Advancement (Early -> Mid -> Late -> Peak) within current Tier
+            // 2. Sub-Tier Advancement (Mk I -> Mk II -> Mk III -> Apex) within current Tier
             if (soldier.subTier < PowerSubTier.Peak)
             {
                 float subDifficulty = PowerTierKnowledgeSystem.GetSubTierAdvancementDifficulty(soldier.powerTier, soldier.subTier);
@@ -155,7 +155,7 @@ namespace ArmyLife.Systems
 
                     string guardianTag = PowerTierKnowledgeSystem.IsNationalGuardian(soldier.powerTier) ? " <color=#FFD700>[NATIONAL GUARDIAN]</color>" : "";
                     GameEvents.OnFeedEventLogged?.Invoke("BREAKTHROUGH",
-                        $"<color=#00FFAA><b>[SUB-TIER ADVANCEMENT]</b></color> Your core condensed! You advanced from <b>Tier {soldier.powerTier} ({oldSubTier})</b> to <b>Tier {soldier.powerTier} ({soldier.subTier}) • {PowerTierKnowledgeSystem.GetTierDesignation(soldier.powerTier)}</b>{guardianTag} (+2 Fitness, +2 Combat)!");
+                        $"<color=#00FFAA><b>[AUGMENTATION UPGRADE]</b></color> Implant matrix synchronized! Advanced from <b>Tier {soldier.powerTier} ({PowerTierKnowledgeSystem.GetSubTierName(oldSubTier)})</b> to <b>Tier {soldier.powerTier} ({PowerTierKnowledgeSystem.GetSubTierName(soldier.subTier)}) • {PowerTierKnowledgeSystem.GetTierDesignation(soldier.powerTier)}</b>{guardianTag} (+2 Fitness, +2 Combat)!");
 
                     GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
                     return true;
@@ -166,7 +166,7 @@ namespace ArmyLife.Systems
                     soldier.tierProgressPercent = 45f;
                     soldier.health = Mathf.Max(20f, soldier.health - 25f);
                     GameEvents.OnFeedEventLogged?.Invoke("BOTTLENECK",
-                        $"<color=#FF8800>[SUB-TIER BOTTLENECK BLOCKED]</color> Qi turbulence recoiled while attempting to reach <b>{soldier.subTier + 1}</b> realm! Meridians strained (+15% Damage). Progress knocked back to 45%.");
+                        $"<color=#FF8800>[IMPLANT CALIBRATION FAULT]</color> Neural feedback surged while attempting to calibrate to <b>{PowerTierKnowledgeSystem.GetSubTierName(soldier.subTier + 1)}</b>! Neural strain (+15% Toxicity). Progress set back to 45%.");
 
                     GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
                     return false;
@@ -235,8 +235,8 @@ namespace ArmyLife.Systems
                     soldier.health = Mathf.Max(25f, soldier.health - 35f);
 
                     GameEvents.OnFeedEventLogged?.Invoke("BOTTLENECK",
-                        $"<color=#FF6600>[MAJOR BREAKTHROUGH FAILED - MERIDIAN STRAIN]</color> Realm barrier resisted! " +
-                        $"Your meridians suffered heavy strain (Damage +30%). Progress set back to 35%.");
+                        $"<color=#FF6600>[CALIBRATION FAULT - NEURAL STRAIN]</color> Augmentation barrier resisted! " +
+                        $"Your neural pathways suffered severe strain (+30% Toxicity). Calibration progress set back to 35%.");
                 }
                 else if (soldier.failedBreakthroughCount == 2)
                 {
@@ -246,8 +246,8 @@ namespace ArmyLife.Systems
                     soldier.health = Mathf.Max(10f, soldier.health - 45f);
 
                     GameEvents.OnFeedEventLogged?.Invoke("BOTTLENECK",
-                        "<color=#FF2200><b>[SEVERE RECOIL - MERIDIANS TORN!]</b></color> A violent energy storm erupted inside your chest! " +
-                        "Your meridians ruptured. Another consecutive failure will be FATAL!");
+                        "<color=#FF2200><b>[CRITICAL REJECTION - NEURAL OVERHEAT!]</b></color> A violent electrical feedback surge ruptured your spinal implants! " +
+                        "Neural toxicity critical. Another consecutive failure will be FATAL!");
                 }
                 else
                 {
@@ -257,11 +257,11 @@ namespace ArmyLife.Systems
                     {
                         soldier.isDead = true;
                         soldier.health = 0f;
-                        soldier.deathReason = $"Violent Energy Explosion attempting Tier {soldier.powerTier + 1} breakthrough";
+                        soldier.deathReason = $"Fatal Neural Core Overload attempting Tier {soldier.powerTier + 1} Augmentation";
 
                         GameEvents.OnFeedEventLogged?.Invoke("DEATH",
-                            $"<color=#FF0000><b>[FATAL MERIDIAN DETONATION]</b></color> Unable to contain the raging celestial power, your core violently exploded! " +
-                            $"You died at age {soldier.age:F1} during a desperate breakthrough attempt.");
+                            $"<color=#FF0000><b>[FATAL NEURAL CORE OVERLOAD]</b></color> Unable to stabilize the aetheric combat serum, your bio-cybernetic framework suffered catastrophic thermal meltdown! " +
+                            $"You died at age {soldier.age:F1} during a high-risk augmentation trial.");
 
                         GameEvents.OnImperialExecutionTriggered?.Invoke(soldier.deathReason);
                     }
@@ -283,9 +283,9 @@ namespace ArmyLife.Systems
                         soldier.tierProgressPercent = 0f;
 
                         GameEvents.OnFeedEventLogged?.Invoke("CRIPPLED",
-                            "<color=#AA0000><b>[CULTIVATION COLLAPSED]</b></color> Your foundation fractured! " +
-                            "To save your life, the military hospital burned away your damaged channels. " +
-                            $"You permanently dropped to Tier {soldier.powerTier} with 90% meridian scarring!");
+                            "<color=#AA0000><b>[AUGMENTATION COLLAPSE]</b></color> Your implant framework fractured! " +
+                            "To save your life, military cyber-surgeons purged the burning modules. " +
+                            $"You dropped down to Tier {soldier.powerTier} with 90% neural pathway scarring!");
                     }
                 }
 
@@ -308,9 +308,9 @@ namespace ArmyLife.Systems
                 soldier.unlockedTiers11And12 = true;
 
                 GameEvents.OnSecretCaveDiscovered?.Invoke();
-                GameEvents.OnFeedEventLogged?.Invoke("SECRET CAVE",
-                    "<color=#FFD700><b>[ANCIENT SECT REVELATION]</b></color> In the ruins of Sector 9, you breached the Primordial Sect Sanctuary! " +
-                    "Recognizing your pristine meridians and 180+ Heavenly Talent, the ancient spirit array granted you the Primordial Manual, unlocking <b>Tier 11 (500 Years)</b> and <b>Tier 12 (1,000 Years)</b>!");
+                GameEvents.OnFeedEventLogged?.Invoke("SECRET VAULT",
+                    "<color=#FFD700><b>[CLASSIFIED PROTOTYPE VAULT UNSEALED]</b></color> Deep in the bombarded ruins of Sector 9, you breached an uncharted pre-war black-ops bunker! " +
+                    "Recognizing your pristine neural pathways and 180+ Genetic Aptitude, the automated defense matrix authorized classified Singularity Operative blueprints, unlocking <b>Tier 11 (500-Year Life Extension)</b> and <b>Tier 12 (1,000-Year Life Extension)</b>!");
 
                 GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
                 return true;

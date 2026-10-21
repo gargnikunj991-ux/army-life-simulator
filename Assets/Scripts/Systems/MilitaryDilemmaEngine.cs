@@ -176,7 +176,7 @@ namespace ArmyLife.Systems
                         "Corrosive green Aether gas shells rupture across your trench! Your squadmate's gas mask filter cracked during the explosion.",
                         "Hand your own mask to the squadmate (Heroic sacrifice)",
                         "Seal yourself in the deep bunker airtight",
-                        "Channel Qi cultivation to filter toxins (Requires Tier 1+)",
+                        "Engage cyber-respiratory filter scrubbers (Requires Tier 1+)",
                         () =>
                         {
                             s.health = Mathf.Max(20f, s.health - 25f);
@@ -201,15 +201,15 @@ namespace ArmyLife.Systems
                             {
                                 s.tierProgressPercent = Mathf.Min(100f, s.tierProgressPercent + 20f);
                                 s.AddTrait("Aether-Forged Lungs");
-                                GameEvents.OnFeedEventLogged?.Invoke("QI PURIFY",
-                                    "<color=#FFD700><b>[QI PURIFICATION]</b></color> You circulated inner Qi to purge atmospheric poisons from your lungs, transmuting the aether vapor into cultivation fuel! (+20% Qi Progress, [Aether-Forged Lungs]).");
+                                GameEvents.OnFeedEventLogged?.Invoke("FILTERS",
+                                    "<color=#FFD700><b>[CYBER-RESPIRATORS ENGAGED]</b></color> Your Tier 1 sub-dermal cyber-respirators activated, neutralizing the toxic vapor automatically! (+20% Saturation, [Aether-Forged Lungs]).");
                             }
                             else
                             {
                                 s.health = Mathf.Max(15f, s.health - 35f);
                                 s.meridianDamage += 25f;
                                 GameEvents.OnFeedEventLogged?.Invoke("FAILED",
-                                    "<color=#FF4444>[PURIFICATION FAILED]</color> Without Tier 1 cultivation, the corrosive gas damaged your inner meridians severely (-35 Health, +25% Meridian Damage).");
+                                    "<color=#FF4444>[FILTRATION FAILED]</color> Without Tier 1 sub-dermal implants, the corrosive gas burned your lungs and neural pathways (-35 Health, +25% Neural Strain).");
                             }
                             GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                         }
@@ -369,21 +369,21 @@ namespace ArmyLife.Systems
                     break;
 
                 case 7:
-                    // Ancient Sect Underground Relic
+                    // Classified Pre-War Prototype Cache
                     GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
-                        "FORBIDDEN ARTIFACT",
-                        "The Unsealed Energy Vault",
-                        "A subterranean shell blast cracked open an ancient sealed stone chamber beneath the frontline trench. A glowing purple celestial crystal hums with immense power.",
-                        "Secretly absorb the ancient celestial crystal (Cultivation surge)",
+                        "PROTOTYPE VAULT",
+                        "The Unsealed Pre-War Bunker",
+                        "An artillery bunker-buster breached an uncharted pre-war military vault beneath the trench line. A glowing quantum aetheric battery hums with immense energy.",
+                        "Interface directly with the battery to supercharge augmentations",
                         "Requisition artifact to Imperial Aether Research (+Merit, +CMP)",
-                        "Pawn crystal shards to black market contacts (+$2,000 Cash)",
+                        "Pawn battery power-cells to black market contacts (+$2,000 Cash)",
                         () =>
                         {
                             s.knowsAboutCultivation = true;
                             s.tierProgressPercent = Mathf.Min(100f, s.tierProgressPercent + 40f);
-                            s.AddTrait("Ancient-Touched");
-                            GameEvents.OnFeedEventLogged?.Invoke("QI SURGE",
-                                "<color=#FFD700><b>[CELESTIAL ABSORPTION]</b></color> You meditated over the crystal in the dark. Vast primordial Qi flooded your meridians! (+40% Qi Progress, [Ancient-Touched]).");
+                            s.AddTrait("Pre-War Augmented");
+                            GameEvents.OnFeedEventLogged?.Invoke("AUGMENT SURGE",
+                                "<color=#FFD700><b>[DIRECT INTERFACE]</b></color> You synced your cyber-neural ports with the quantum battery. Raw power supercharged your implant framework! (+40% Saturation, [Pre-War Augmented]).");
                             GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                         },
                         () =>
@@ -564,9 +564,9 @@ namespace ArmyLife.Systems
                     GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                         "GARRISON DRAMA",
                         "The Black Market Supply Ring",
-                        "You discover your squadmate has been diverting military-grade Qi cultivation serums and selling them to civilians for massive profit.",
+                        "You discover your squadmate has been diverting military-grade super-soldier nanite serums and selling them to civilians for massive profit.",
                         "Report the smuggling ring to the Provost Marshal (+CO Favor, Squad Snitch)",
-                        "Buy black market cultivation serums at half price ($150)",
+                        "Buy black market super-soldier serums at half price ($150)",
                         "Demand a 25% cut of the profits to keep quiet (+$400 Cash)",
                         () =>
                         {
@@ -585,7 +585,7 @@ namespace ArmyLife.Systems
                                 s.tierProgressPercent = Mathf.Min(100f, s.tierProgressPercent + 20f);
                                 s.fitness = Mathf.Min(100f, s.fitness + 5f);
                                 GameEvents.OnFeedEventLogged?.Invoke("BOUGHT",
-                                    "<color=#FFD700>[BLACK MARKET SERUM]</color> You injected the high-potency Qi serum (-$150). Your vitality and cultivation soared (+20% Qi Progress, +5 Fitness)!");
+                                    "<color=#FFD700>[BLACK MARKET SERUM]</color> You injected the high-potency nanite serum (-$150). Your cyberware integration surged (+20% Saturation, +5 Fitness)!");
                             }
                             else
                             {
