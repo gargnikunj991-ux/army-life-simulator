@@ -260,6 +260,10 @@ namespace ArmyLife.Core
                     PowerCultivationEngine.CheckSecretCaveAnomaly(currentSoldier);
                 }
 
+                // Adult Life & Wartime Dilemma Evaluation (25+ Scenarios)
+                MilitaryDilemmaEngine.EvaluateAdultSemesterDilemma(currentSoldier, this);
+                if (currentSoldier.isDead) return;
+
                 // Payday: 6 months of compensation with tax and career rules
                 if (currentSoldier.isRetired)
                 {

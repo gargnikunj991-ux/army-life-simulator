@@ -212,13 +212,23 @@ namespace ArmyLife.UI
             if (intellectSlider != null) intellectSlider.value = s.intellect / 100f;
             if (intellectText != null) intellectText.text = $"Intellect: {s.intellect:F0}%";
 
-            // Dynastic Status
+            // Dynastic Status, Medals & Story Traits
             if (dynasticStatusText != null)
             {
                 string clanStatus = s.isClanHead ? "<color=#FFD700>Clan Patriarch (Duke / Head)</color>" : "Cadet Branch Member";
+
+                string traitsStr = (s.characterTraits != null && s.characterTraits.Count > 0)
+                    ? string.Join("  ", s.characterTraits.ConvertAll(t => $"<color=#00D4FF>[{t}]</color>"))
+                    : "<i>None acquired yet</i>";
+
+                string medalsStr = (s.earnedMedals != null && s.earnedMedals.Count > 0)
+                    ? string.Join("  ", s.earnedMedals.ConvertAll(m => $"<color=#FFD700>🏅 {m}</color>"))
+                    : "<i>No military decorations yet</i>";
+
                 dynasticStatusText.text = 
-                    $"<b>Noble House:</b> House {s.lastName} ({s.nobleTitle})\n" +
-                    $"<b>Succession Rank:</b> {clanStatus}   |   <b>Clan Succession Favor:</b> {s.clanSuccessionScore} pts";
+                    $"<b>Noble House:</b> House {s.lastName} ({s.nobleTitle})   |   <b>Succession:</b> {clanStatus} ({s.clanSuccessionScore} pts)\n" +
+                    $"<b>Story Traits:</b> {traitsStr}\n" +
+                    $"<b>Medals Rack:</b> {medalsStr}";
             }
 
             // Apply Theme Palette

@@ -61,6 +61,39 @@ namespace ArmyLife.Data
         public bool isTechnicalSchoolGraduate;  // Grants guaranteed Tech ($450) + Cyber ($350) stipends
         public bool isInCombatDeployment;       // True during frontline tours (+Hazard Pay)
         public int medalsEarnedCount;
+        public List<string> characterTraits = new List<string>();
+        public List<string> earnedMedals = new List<string>();
+
+        public void AddTrait(string traitName)
+        {
+            if (characterTraits == null) characterTraits = new List<string>();
+            if (!characterTraits.Contains(traitName))
+            {
+                characterTraits.Add(traitName);
+                GameEvents.OnFeedEventLogged?.Invoke("TRAIT", $"<color=#00D4FF><b>[NEW STORY TRAIT]</b></color> You acquired the trait: <b>{traitName}</b>!");
+            }
+        }
+
+        public bool HasTrait(string traitName)
+        {
+            return characterTraits != null && characterTraits.Contains(traitName);
+        }
+
+        public void AddMedal(string medalName)
+        {
+            if (earnedMedals == null) earnedMedals = new List<string>();
+            if (!earnedMedals.Contains(medalName))
+            {
+                earnedMedals.Add(medalName);
+                medalsEarnedCount = earnedMedals.Count;
+                GameEvents.OnFeedEventLogged?.Invoke("HONOR", $"<color=#FFD700><b>[MEDAL AWARDED]</b></color> You were decorated with the <b>{medalName}</b>!");
+            }
+        }
+
+        public bool HasMedal(string medalName)
+        {
+            return earnedMedals != null && earnedMedals.Contains(medalName);
+        }
 
         [Header("Career Track (Civilian vs Military Education & Employment)")]
         public CareerTrack careerTrack = CareerTrack.YouthStudent;

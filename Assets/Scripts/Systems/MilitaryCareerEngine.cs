@@ -89,6 +89,8 @@ namespace ArmyLife.Systems
                 soldier.isDead = true;
                 soldier.health = 0f;
                 soldier.deathReason = "Killed in Action defending an ancient energy fortress against enemy vanguard shock-troops";
+                soldier.AddMedal("Posthumous Valerian Star");
+                soldier.AddMedal("Imperial Purple Heart");
 
                 GameEvents.OnFeedEventLogged?.Invoke("DEATH",
                     $"<color=#FF0000><b>[KILLED IN ACTION (KIA)]</b></color> An enemy heavy energy barrage breached your defensive line in Sector 4! " +
@@ -103,10 +105,12 @@ namespace ArmyLife.Systems
                 soldier.health = Mathf.Max(20f, soldier.health - 35f);
                 soldier.meridianDamage = Mathf.Min(100f, soldier.meridianDamage + 25f);
                 soldier.fitness = Mathf.Max(25f, soldier.fitness - 15f);
+                soldier.AddMedal("Imperial Wound Star");
+                soldier.AddTrait("Scarred Veteran");
 
                 GameEvents.OnFeedEventLogged?.Invoke("CASUALTY",
                     "<color=#FF4444>[BATTLEFIELD CASUALTY]</color> You were wounded during an enemy counter-attack! " +
-                    "Shrapnel pierced your shoulder and bruised your energy meridians. Health and Fitness reduced.");
+                    "Shrapnel pierced your shoulder and bruised your energy meridians. Awarded <b>Imperial Wound Star</b> and trait <b>[Scarred Veteran]</b>.");
             }
             else
             {
@@ -115,6 +119,7 @@ namespace ArmyLife.Systems
                 soldier.meritRating = Mathf.Min(100f, soldier.meritRating + Random.Range(5f, 12f));
                 soldier.combatMeritPoints += Random.Range(350, 850);
                 soldier.squadRespect = Mathf.Min(100f, soldier.squadRespect + 8f);
+                soldier.AddTrait("Trench Veteran");
 
                 GameEvents.OnFeedEventLogged?.Invoke("COMBAT",
                     $"<color=#00FFAA><b>[MISSION ACCOMPLISHED]</b></color> Your unit repelled the enemy assault on the energy well! " +
