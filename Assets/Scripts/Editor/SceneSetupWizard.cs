@@ -968,6 +968,7 @@ namespace ArmyLife.Editor
             CreateFinanceModal(rootPanel.transform, hudView);
             CreateRelationshipsModal(rootPanel.transform, hudView);
             CreateActivitiesModal(rootPanel.transform, hudView);
+            CreateCareerDossierModal(rootPanel.transform, hudView);
 
             // Initial view states: Opening screen active, HUD hidden
             openingPanel.SetActive(true);
@@ -1786,6 +1787,123 @@ namespace ArmyLife.Editor
             var closeBtn = CreateButton("CloseBtn", box.transform, "CLOSE ACTIVITIES", new Color(0.35f, 0.40f, 0.45f));
             SetRect(closeBtn.GetComponent<RectTransform>(), 0.30f, 0.02f, 0.70f, 0.075f);
             ctrl.closeButton = closeBtn.GetComponent<Button>();
+
+            overlay.SetActive(false);
+            modalObj.SetActive(true);
+        }
+
+        private static void CreateCareerDossierModal(Transform parent, MainHUDView hudView)
+        {
+            var modalObj = CreateUIElement("CareerDossierModal", parent);
+            var ctrl = modalObj.AddComponent<CareerDossierModal>();
+            hudView.careerDossierModal = ctrl;
+
+            var overlay = CreateUIElement("DossierOverlay", modalObj.transform);
+            SetFullScreen(overlay.GetComponent<RectTransform>());
+            var dimBg = overlay.AddComponent<Image>();
+            dimBg.color = new Color(0.04f, 0.06f, 0.08f, 0.95f);
+            ctrl.modalRoot = overlay;
+            ctrl.modalBackdrop = dimBg;
+
+            var box = CreateUIElement("DossierBox", overlay.transform);
+            var boxRect = box.GetComponent<RectTransform>();
+            boxRect.anchorMin = new Vector2(0.05f, 0.05f);
+            boxRect.anchorMax = new Vector2(0.95f, 0.95f);
+            boxRect.offsetMin = Vector2.zero;
+            boxRect.offsetMax = Vector2.zero;
+            var boxBg = box.AddComponent<Image>();
+            boxBg.color = new Color(0.09f, 0.12f, 0.16f);
+
+            var title = CreateText("Title", box.transform, "OFFICIAL MILITARY SERVICE RECORD", 34, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.85f, 0.3f));
+            SetRect(title.GetComponent<RectTransform>(), 0.05f, 0.92f, 0.95f, 0.98f);
+            ctrl.headerTitleText = title;
+
+            var scrollObj = CreateUIElement("DossierScroll", box.transform);
+            SetRect(scrollObj.GetComponent<RectTransform>(), 0.04f, 0.10f, 0.96f, 0.91f);
+            var scroll = scrollObj.AddComponent<ScrollRect>();
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.scrollSensitivity = 35f;
+
+            var viewport = CreateUIElement("Viewport", scrollObj.transform);
+            SetFullScreen(viewport.GetComponent<RectTransform>());
+            viewport.AddComponent<RectMask2D>();
+            scroll.viewport = viewport.GetComponent<RectTransform>();
+
+            var content = CreateUIElement("Content", viewport.transform);
+            var contentRect = content.GetComponent<RectTransform>();
+            contentRect.anchorMin = new Vector2(0f, 1f);
+            contentRect.anchorMax = new Vector2(1f, 1f);
+            contentRect.pivot = new Vector2(0.5f, 1f);
+            contentRect.offsetMin = Vector2.zero;
+            contentRect.offsetMax = Vector2.zero;
+            scroll.content = contentRect;
+
+            var vLayout = content.AddComponent<VerticalLayoutGroup>();
+            vLayout.padding = new RectOffset(16, 16, 16, 16);
+            vLayout.spacing = 14f;
+            vLayout.childControlHeight = true;
+            vLayout.childControlWidth = true;
+            vLayout.childForceExpandHeight = false;
+            vLayout.childForceExpandWidth = true;
+
+            var fitter = content.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            // Soldier Name & Rank
+            var nameRank = CreateText("NameRankText", content.transform, "PRIVATE RECRUIT ETHAN VANCE (E-1)", 28, TextAlignmentOptions.Left, FontStyles.Bold, new Color(0f, 1f, 0.7f));
+            SetLayoutHeight(nameRank.gameObject, 45);
+            ctrl.soldierNameRankText = nameRank;
+
+            // Unit & Origin
+            var unit = CreateText("UnitText", content.transform, "Unit: 1st Infantry Division | Origin: Farmhand", 22, TextAlignmentOptions.Left, FontStyles.Normal, Color.white);
+            SetLayoutHeight(unit.gameObject, 38);
+            ctrl.unitAndOriginText = unit;
+
+            // Status Text
+            var status = CreateText("StatusText", content.transform, "[STATUS: ACTIVE SERVICE RECORD]", 24, TextAlignmentOptions.Left, FontStyles.Bold, new Color(1f, 0.4f, 0.4f));
+            SetLayoutHeight(status.gameObject, 55);
+            ctrl.serviceStatusText = status;
+
+            // Service Years & Finance
+            var stats = CreateText("ServiceStatsText", content.transform, "Years Served: 0.0 Years | Final Balance: $0", 22, TextAlignmentOptions.Left, FontStyles.Normal, new Color(0.85f, 0.90f, 0.95f));
+            SetLayoutHeight(stats.gameObject, 50);
+            ctrl.serviceYearsText = stats;
+
+            // Combat & Promotions
+            var combatStats = CreateText("CombatStatsText", content.transform, "Promotions: 0 | Combat: 35%", 22, TextAlignmentOptions.Left, FontStyles.Normal, new Color(0.85f, 0.90f, 0.95f));
+            SetLayoutHeight(combatStats.gameObject, 50);
+            ctrl.combatToursText = combatStats;
+
+            // Medals Section Title
+            var medalsTitle = CreateText("MedalsTitle", content.transform, "SERVICE DECORATIONS & HONORS:", 24, TextAlignmentOptions.Left, FontStyles.Bold, new Color(1f, 0.85f, 0.35f));
+            SetLayoutHeight(medalsTitle.gameObject, 36);
+
+            // Medals List
+            var medalsList = CreateText("MedalsListText", content.transform, "No decorations recorded.", 21, TextAlignmentOptions.Left, FontStyles.Normal, Color.white);
+            SetLayoutHeight(medalsList.gameObject, 110);
+            ctrl.medalsRackText = medalsList;
+
+            // Final Legacy Score
+            var scoreText = CreateText("ScoreText", content.transform, "CAREER LEGACY SCORE: 0 PTS", 26, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.85f, 0.25f));
+            SetLayoutHeight(scoreText.gameObject, 45);
+            ctrl.finalScoreText = scoreText;
+
+            // Buttons
+            var btnRow = CreateUIElement("BtnRow", box.transform);
+            SetRect(btnRow.GetComponent<RectTransform>(), 0.05f, 0.02f, 0.95f, 0.085f);
+            var hLayout = btnRow.AddComponent<HorizontalLayoutGroup>();
+            hLayout.spacing = 20f;
+            hLayout.childControlHeight = true;
+            hLayout.childControlWidth = true;
+            hLayout.childForceExpandHeight = true;
+            hLayout.childForceExpandWidth = true;
+
+            var enlistBtn = CreateButton("EnlistBtn", btnRow.transform, "ENLIST NEW RECRUIT", new Color(0.18f, 0.65f, 0.35f));
+            ctrl.enlistNewRecruitButton = enlistBtn.GetComponent<Button>();
+
+            var closeBtn = CreateButton("CloseBtn", btnRow.transform, "CLOSE RECORD", new Color(0.35f, 0.40f, 0.45f));
+            ctrl.closeDossierButton = closeBtn.GetComponent<Button>();
 
             overlay.SetActive(false);
             modalObj.SetActive(true);

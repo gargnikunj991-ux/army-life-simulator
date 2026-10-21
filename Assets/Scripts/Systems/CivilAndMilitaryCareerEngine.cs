@@ -61,7 +61,7 @@ namespace ArmyLife.Systems
                     "National Exam Honors (> 50%)",
                     $"National Exam Result: {soldier.examScore}/750 ({scorePercent:F1}%)\n" +
                     "High honors! You qualify for Imperial Military Academies or Prestigious University Degrees.",
-                    "THE WAR ACADEMY (4 Yrs, Paid from Start, MUST Reach Tier 1 Cultivation!)",
+                    "THE WAR ACADEMY (2 Yrs, $50k Tuition/Loan -> Direct O-1 Commission)",
                     "TECHNICAL / MEDICAL SCHOOL (2-3 Yrs, Paid after 1 Year)",
                     "IMPERIAL UNIVERSITY DEGREE ($100,000 Tuition -> High Civil Office)",
                     () => EnrollInWarAcademy(soldier),
@@ -147,18 +147,32 @@ namespace ArmyLife.Systems
             GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
         }
 
-        public static void EnrollInWarAcademy(SoldierProfile soldier)
+        public static void EnrollInWarAcademy(SoldierProfile soldier, bool takeLoan = false, float deductionPercent = 0.15f)
         {
             if (soldier == null) return;
             soldier.careerTrack = CareerTrack.MilitaryWarAcademy;
             soldier.militarySchoolSemestersCompleted = 0;
+            soldier.academySemestersCompleted = 0;
             soldier.assignedDepartment = "The Imperial War Academy";
             soldier.isInCombatDeployment = false;
 
-            GameEvents.OnFeedEventLogged?.Invoke("WAR ACADEMY",
-                "<color=#FFD700><b>[THE IMPERIAL WAR ACADEMY • 4 YEARS]</b></color> Admitted as an elite Officer Cadet! " +
-                "<b>Pay Policy: Paid from the very start ($300 / month cadet officer salary)</b>. " +
-                "<color=#FF4444><b>CRITICAL GRADUATION REQUIREMENT:</b> You MUST achieve at least <b>Tier 1 Super-Soldier Augmentation</b> to pass out and receive your Second Lieutenant (O-1) commission!</color>");
+            if (takeLoan)
+            {
+                soldier.academyTuitionDebt = SoldierProfile.ACADEMY_TUITION_COST;
+                soldier.academyLoanDeductionPercent = Mathf.Clamp(deductionPercent, 0.10f, 0.80f);
+                GameEvents.OnFeedEventLogged?.Invoke("WAR ACADEMY",
+                    $"<color=#FFD700><b>[THE IMPERIAL WAR ACADEMY • 2 YEARS]</b></color> You secured a limited seat in the Officer Cadet class! " +
+                    $"<b>Tuition: $50,000 Military Education Loan approved</b> at 9% annual interest. " +
+                    $"Monthly deduction set at <b>{soldier.academyLoanDeductionPercent * 100f:F0}%</b> of salary (min 10%).");
+            }
+            else
+            {
+                soldier.cashBalance = System.Math.Max(0, soldier.cashBalance - SoldierProfile.ACADEMY_TUITION_COST);
+                soldier.academyTuitionDebt = 0;
+                GameEvents.OnFeedEventLogged?.Invoke("WAR ACADEMY",
+                    $"<color=#FFD700><b>[THE IMPERIAL WAR ACADEMY • 2 YEARS]</b></color> You paid the $50,000 tuition upfront and secured your seat in the Officer Cadet class! " +
+                    "2 years of intensive tactical command and physical preparation begin.");
+            }
 
             GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
         }
@@ -277,50 +291,54 @@ namespace ArmyLife.Systems
                     }
                     break;
 
-                // 4. War Academy (4 years = 8 semesters) - MUST HAVE TIER 1 TO PASS OUT!
+                // 4. War Academy (2 years = 4 semesters)
                 case CareerTrack.MilitaryWarAcademy:
                     soldier.militarySchoolSemestersCompleted++;
-                    soldier.combatSkill = Mathf.Min(100f, soldier.combatSkill + 4f);
-                    soldier.fitness = Mathf.Min(100f, soldier.fitness + 3f);
-                    soldier.intellect = Mathf.Min(100f, soldier.intellect + 3f);
+                    soldier.academySemestersCompleted++;
+                    soldier.combatSkill = Mathf.Min(100f, soldier.combatSkill + 5f);
+                    soldier.fitness = Mathf.Min(100f, soldier.fitness + 5f);
+                    soldier.intellect = Mathf.Min(100f, soldier.intellect + 6f);
+                    soldier.leadership = Mathf.Min(100f, soldier.leadership + 6f);
+                    soldier.discipline = Mathf.Min(100f, soldier.discipline + 5f);
 
-                    if (soldier.militarySchoolSemestersCompleted >= 8)
+                    // Academic and tactical performance evaluation (0 - 100%)
+                    float currentSemesterGrade = (soldier.intellect * 0.35f) + (soldier.fitness * 0.25f) + (soldier.discipline * 0.20f) + (soldier.combatSkill * 0.20f);
+                    soldier.academyPerformanceScore = Mathf.Clamp(currentSemesterGrade, 0f, 100f);
+
+                    if (soldier.academySemestersCompleted == 2)
                     {
-                        // Check Tier 1 Cultivation requirement!
-                        if (soldier.powerTier >= 1)
+                        GameEvents.OnFeedEventLogged?.Invoke("WAR ACADEMY",
+                            $"<color=#00FFAA><b>[WAR ACADEMY • YEAR 1 COMPLETED]</b></color> You completed your first year of officer tactical command! Class Standing: <b>{soldier.academyPerformanceScore:F1}%</b>.");
+                    }
+                    else if (soldier.academySemestersCompleted == 3)
+                    {
+                        if (soldier.isAcademyTop10Percent && !soldier.isSpecialForces && !soldier.isSpecialForcesCandidate)
                         {
-                            soldier.graduatedWarAcademy = true;
-                            soldier.careerTrack = CareerTrack.MilitaryOfficer;
-                            soldier.currentRank = FindRank(gm, "O-1");
-                            soldier.timeInCurrentRankSemesters = 0;
-                            soldier.accumulatedPromotionPoints = 0;
-
-                            GameEvents.OnFeedEventLogged?.Invoke("GRADUATION",
-                                "<color=#FFD700><b>[WAR ACADEMY COMMISSION • SECOND LIEUTENANT O-1]</b></color> With 4 years of officer discipline and verified <b>Tier 1 Super-Soldier Augmentation</b>, " +
-                                "you passed out at the top of your class! Commissioned as an Imperial Officer (O-1).");
+                            GameEvents.OnFeedEventLogged?.Invoke("WAR ACADEMY",
+                                $"<color=#FFD700><b>[SPECIAL FORCES SELECTION QUALIFIED • TOP 10%]</b></color> In Year 2, your top 10% class standing (<b>{soldier.academyPerformanceScore:F1}%</b>) has officially qualified you to volunteer for elite 1-year <b>Special Forces Qualification & Training</b>!");
                         }
-                        else
+                    }
+                    else if (soldier.academySemestersCompleted >= 4)
+                    {
+                        soldier.graduatedWarAcademy = true;
+                        soldier.careerTrack = CareerTrack.MilitaryOfficer;
+                        soldier.currentRank = FindRank(gm, "O-1");
+                        soldier.timeInCurrentRankSemesters = 0;
+                        soldier.accumulatedPromotionPoints = 0;
+                        soldier.AddTrait("War Academy Graduate");
+                        soldier.AddTrait("Commissioned Officer");
+
+                        string honorsText = "";
+                        if (soldier.isAcademyTop10Percent)
                         {
-                            // Lacking Tier 1 Augmentation!
-                            if (soldier.militarySchoolSemestersCompleted >= 10)
-                            {
-                                // Grace period expired -> Discharged to enlisted
-                                soldier.careerTrack = CareerTrack.MilitaryEnlisted;
-                                soldier.currentRank = FindRank(gm, "E-1");
-                                soldier.timeInCurrentRankSemesters = 0;
-                                soldier.accumulatedPromotionPoints = 0;
-
-                                GameEvents.OnFeedEventLogged?.Invoke("DISMISSAL",
-                                    "<color=#FF4444><b>[WAR ACADEMY DISMISSAL • FAILED AUGMENTATION REQUIREMENT]</b></color> You failed to achieve Tier 1 Augmentation within the maximum grace period. " +
-                                    "The War Academy rejected your officer commission. You have been demoted and reassigned as an Enlisted Private (E-1).");
-                            }
-                            else
-                            {
-                                GameEvents.OnFeedEventLogged?.Invoke("BOTTLENECK",
-                                    "<color=#FFAA00><b>[COMMISSION DELAYED • TIER 1 AUGMENTATION REQUIRED]</b></color> You completed 4 years of academics, " +
-                                    "but the Imperial High Command refuses to commission you until you reach <b>Tier 1 Augmentation</b>! Calibrate soon in the Augmentation Pod or face enlisted demotion.");
-                            }
+                            soldier.AddMedal("Academy Honors Saber");
+                            honorsText = " Graduated in the <b>Top 10% with High Honors</b> and awarded the <i>Imperial Honors Saber</i>!";
                         }
+
+                        GameEvents.OnFeedEventLogged?.Invoke("GRADUATION",
+                            $"<color=#FFD700><b>[WAR ACADEMY GRADUATION • COMMISSIONED 2ND LIEUTENANT (O-1)]</b></color> " +
+                            $"You conquered the rigorous 2-year Imperial War Academy!{honorsText} " +
+                            $"Directly commissioned as an Imperial Officer <b>({soldier.currentRank?.rankName ?? "2nd Lieutenant"} O-1)</b> with full command authority and ${(soldier.currentRank?.baseMonthlySalary ?? 3800):N0}/mo base salary!");
                     }
                     break;
 

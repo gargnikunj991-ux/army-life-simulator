@@ -149,10 +149,14 @@ namespace ArmyLife.UI
                 else if (s.careerTrack == CareerTrack.MilitaryTechSchool || s.careerTrack == CareerTrack.MilitaryMedicalSchool || s.careerTrack == CareerTrack.MilitaryWarAcademy)
                 {
                     long pay = SalaryCalculator.CalculateGrossMonthlyPay(s);
-                    string payNote = pay > 0 ? $"+${pay:N0} / mo (Tax-Exempt Cadet Stipend)" : "$0 / mo (Year 1 Training Phase)";
+                    string payNote = pay > 0 ? $"+${pay:N0} / mo (Tax-Exempt Cadet Stipend)" : "$0 / mo (Cadet Trainee)";
+                    string loanLine = s.academyTuitionDebt > 0 
+                        ? $"\n<color=#FF8866><b>War Academy Tuition Debt:</b> ${s.academyTuitionDebt:N0} (9% Annual Interest | {s.academyLoanDeductionPercent * 100f:F0}% deduction rate)</color>" 
+                        : "";
+
                     monthlyBreakdownText.text = 
                         $"<b>Academy Cadet Status:</b> {s.assignedDepartment}\n" +
-                        $"<b>Cadet Monthly Stipend:</b> {payNote}\n" +
+                        $"<b>Cadet Monthly Stipend:</b> {payNote}{loanLine}\n" +
                         $"<i>Cadet educational stipends are fully exempt from the 40% Imperial War Tax during training.</i>";
                 }
                 else if (s.isRetired)
@@ -165,15 +169,21 @@ namespace ArmyLife.UI
                 {
                     long gross = SalaryCalculator.CalculateGrossMonthlyPay(s);
                     long net = SalaryCalculator.CalculateNetMonthlyPay(s);
-                    long tax = gross - net;
+                    long tax = SalaryCalculator.CalculateMonthlyTax(s);
+                    long loanDeduction = SalaryCalculator.CalculateMonthlyLoanDeduction(s);
 
-                    string tourBonus = s.isInCombatDeployment ? " (+$600 Combat Hazard Pay included)" : "";
+                    string sfLine = s.isSpecialForces ? "\n<color=#FFD700><b>Special Forces Hazard Stipend:</b> +$800 / mo included</color>" : "";
+                    string extTourLine = s.hasExtendedTourPayBonus ? "\n<color=#00FFAA><b>Extended Frontline Veteran Bonus:</b> +10% Gross Pay included</color>" : "";
+                    string tourBonus = s.isInCombatDeployment ? " (+$450 Hazard Pay)" : "";
+                    string loanLine = loanDeduction > 0 
+                        ? $"\n<color=#FF8866><b>War Academy Education Loan Repayment:</b> -${loanDeduction:N0} / mo (Remaining Debt: ${s.academyTuitionDebt:N0} @ 9% Int)</color>" 
+                        : "";
 
                     monthlyBreakdownText.text = 
-                        $"<b>Gross Military Salary:</b> ${gross:N0} / mo{tourBonus}\n" +
-                        $"<color=#FF6666><b>Mandatory Imperial War Tax (40%):</b> -${tax:N0} / mo</color>\n" +
+                        $"<b>Gross Military Salary:</b> ${gross:N0} / mo{tourBonus}{sfLine}{extTourLine}\n" +
+                        $"<color=#FF6666><b>Mandatory Imperial War Tax (40%):</b> -${tax:N0} / mo</color>{loanLine}\n" +
                         $"<color=#00FF88><b>Net Take-Home Pay:</b> +${net:N0} / mo</color>\n" +
-                        $"<i>Imperial Decree: 40% of all imperial soldiers' pay is deducted to fund frontline munitions, heavy artillery, and continental defense arrays.</i>";
+                        $"<i>Imperial Decree: 40% of military pay is deducted for wartime supply logistics. Loan deductions reduce education debt each pay cycle.</i>";
                 }
             }
 

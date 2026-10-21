@@ -44,7 +44,19 @@ namespace ArmyLife.Core
             {
                 currentSemester = 1;
                 currentYear++;
-                soldier.isInCombatDeployment = false; // Base refit & training tour
+                // If soldier volunteered for an extended tour, they remain on the battlefield!
+                soldier.isInCombatDeployment = soldier.isVoluntaryExtendedTour && !soldier.isYouthPhase;
+            }
+
+            // In-training or academy cadets, candidates, and civilians are not deployed on regular frontlines
+            if (soldier.careerTrack == CareerTrack.MilitaryWarAcademy || 
+                soldier.careerTrack == CareerTrack.MilitaryRecruitBasic || 
+                soldier.careerTrack == CareerTrack.MilitaryTechSchool || 
+                soldier.careerTrack == CareerTrack.MilitaryMedicalSchool || 
+                soldier.isSpecialForcesCandidate || 
+                soldier.isCivilian)
+            {
+                soldier.isInCombatDeployment = false;
             }
 
             string season;

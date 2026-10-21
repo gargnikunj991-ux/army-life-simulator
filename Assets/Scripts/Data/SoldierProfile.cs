@@ -1,9 +1,18 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using ArmyLife.Core;
 
 namespace ArmyLife.Data
 {
+    public enum SoldierOrigin
+    {
+        Farmhand,           // +15% Health, +15% Fitness, starting trait: "Country Grit"
+        StreetTough,        // +15% Combat Skill, -10% Discipline, starting trait: "Street Brawler"
+        WorkingMechanic,    // +15% Intellect (Tactics/Technical), +$200 Cash, starting trait: "Field Craftsman"
+        MilitaryLegacy      // +15% CO Favor, +15% Squad Respect, starting trait: "Soldier's Son"
+    }
+
     public enum CareerTrack
     {
         YouthStudent,           // Ages 0 to 18.0
@@ -28,6 +37,8 @@ namespace ArmyLife.Data
         public string characterName;
         public string firstName;
         public string lastName;
+        public SoldierOrigin origin = SoldierOrigin.Farmhand;
+        public string originTrait = "Country Grit";
         public string gender = "Male";
         public string birthCountry = "The Valerian Empire";
         public string birthState = "The Imperial Crownlands (Aethelgard)";
@@ -60,6 +71,10 @@ namespace ArmyLife.Data
         public string assignedDepartment;       // "Infantry", "Technical & Cyber", "Combat Medic", "Secret Branch"
         public bool isTechnicalSchoolGraduate;  // Grants guaranteed Tech ($450) + Cyber ($350) stipends
         public bool isInCombatDeployment;       // True during frontline tours (+Hazard Pay)
+        public bool isVoluntaryExtendedTour;    // If true, soldier volunteers to stay on the battlefield longer than 6 months
+        public int consecutiveCombatSemesters;  // Number of continuous 6-month frontline combat semesters
+        public bool hasExtendedTourPayBonus => consecutiveCombatSemesters >= 2; // True if continuously deployed >= 1 year (> 2 semesters)
+        public bool isOfficer => currentRank != null && currentRank.type == PaygradeType.Officer;
         public int medalsEarnedCount;
         public List<string> characterTraits = new List<string>();
         public List<string> earnedMedals = new List<string>();
@@ -108,6 +123,102 @@ namespace ArmyLife.Data
         public bool graduatedTechSchool;
         public bool graduatedMedicalSchool;
         public bool isCivilian => careerTrack == CareerTrack.CivilianWork || careerTrack == CareerTrack.CivilianCollege || careerTrack == CareerTrack.CivilianProfessional;
+
+        [Header("War Academy (2-Year Officer Program)")]
+        public int academySemestersCompleted;           // Exactly 4 semesters = 2 years
+        [Range(0f, 100f)]
+        public float academyPerformanceScore = 75f;     // 0-100 score; >= 90 is top 10%
+        public bool isAcademyTop10Percent => academyPerformanceScore >= 90f;
+        public long academyTuitionDebt;                 // Loan for $50,000 tuition
+        public float academyLoanDeductionPercent = 0.15f; // Min 10% (0.10f) of monthly salary
+        public const float AcademyLoanAnnualInterest = 0.09f; // 9% annual interest
+        public const long ACADEMY_TUITION_COST = 50000L;
+
+        [Header("Special Forces Program")]
+        public bool isSpecialForces;                    // Qualified elite operator (+$800 pay, higher risk)
+        public bool isSpecialForcesCandidate;           // In 1-year (2 semesters) training
+        public int specialForcesTrainingSemesters;       // 0 to 2 semesters
+        public bool hasCOSpecialForcesRecommendation;    // Direct enlisted recommendation from commanding officer
+        public int specialForcesMissionsSurvived;        // Tracks special operations completed
+
+        [Header("Brothers in Arms (Persistent Squadmates)")]
+        public List<SquadMate> squadMates = new List<SquadMate>();
+        public int squadMatesKIA;
+
+        [Header("PX Field Gear & Tactical Inventory")]
+        public List<MilitaryGearItem> inventory = new List<MilitaryGearItem>();
+        public bool hasSteelHelmet;         // -15% wound casualty chance
+        public bool hasBallisticVest;        // -20% wound casualty chance
+        public bool hasServiceSidearm;       // +10 close-quarters combat skill
+        public bool hasLuckyWatch;           // +10% survival roll bonus
+        public int fieldMedkitsCount = 1;    // Consumable to save self or comrade
+        public int cigarettesCount = 2;      // Consumable to raise morale & bond with squad
+
+        [Header("Theaters of War")]
+        public WarTheaterType currentTheater = WarTheaterType.WesternMudTrenches;
+        public int toursInCurrentTheater;
+
+        [Header("Post-Service Veteran Life & Politics")]
+        public VeteranCareer veteranCareer = VeteranCareer.None;
+        public long veteranPensionPerMonth = 1500L;
+        public int politicalInfluencePoints;
+
+        [Header("Generational Military Legacy")]
+        public int generationNumber = 1;
+        public ChildHeir childHeir;
+        public List<string> inheritedMedals = new List<string>();
+        public long inheritedFamilyWealth;
+
+        public void InitializeSquadMatesIfEmpty()
+        {
+            if (squadMates == null) squadMates = new List<SquadMate>();
+            if (squadMates.Count > 0) return;
+
+            squadMates.Add(new SquadMate("Arthur Harris", "Doc", SquadRole.CombatMedic, "Squad Field Medic", "Compassionate & Calm Under Fire", 70f));
+            squadMates.Add(new SquadMate("Miller Vance", "Deadeye", SquadRole.LeadScout, "Point Scout", "Cynical & Exceptionally Vigilant", 60f));
+            squadMates.Add(new SquadMate("Boran Kowalski", "Anvil", SquadRole.HeavyGunner, "Machine Gunner", "Gruff & Fearless", 55f));
+            squadMates.Add(new SquadMate("Tommy Higgins", "Rookie", SquadRole.RiflemanRookie, "Junior Rifleman", "Eager, Nervous Farmboy", 65f));
+        }
+
+        public bool HasGear(string itemId)
+        {
+            if (inventory == null) return false;
+            foreach (var item in inventory)
+            {
+                if (item != null && item.id == itemId) return true;
+            }
+            return false;
+        }
+
+        public void AddGear(MilitaryGearItem item)
+        {
+            if (inventory == null) inventory = new List<MilitaryGearItem>();
+            inventory.Add(item);
+
+            if (item.id == "gear_helmet") hasSteelHelmet = true;
+            else if (item.id == "gear_vest") hasBallisticVest = true;
+            else if (item.id == "gear_sidearm") hasServiceSidearm = true;
+            else if (item.id == "gear_watch") hasLuckyWatch = true;
+            else if (item.id == "gear_medkit") fieldMedkitsCount += item.count;
+            else if (item.id == "gear_cig") cigarettesCount += item.count;
+        }
+
+        public void HaveChild(string name = null, string gender = null)
+        {
+            if (string.IsNullOrEmpty(gender)) gender = UnityEngine.Random.value > 0.5f ? "Male" : "Female";
+            if (string.IsNullOrEmpty(name))
+            {
+                string[] maleNames = { "James", "Alexander", "Victor", "William", "Marcus", "Ethan" };
+                string[] femaleNames = { "Eleanor", "Clara", "Sophia", "Victoria", "Evelyn", "Grace" };
+                name = (gender == "Male") ? maleNames[UnityEngine.Random.Range(0, maleNames.Length)] : femaleNames[UnityEngine.Random.Range(0, femaleNames.Length)];
+            }
+
+            childHeir = new ChildHeir(name, gender, 0.5f);
+            childrenCount++;
+            GameEvents.OnFeedEventLogged?.Invoke("FAMILY",
+                $"<color=#00FFAA><b>[A CHILD IS BORN!]</b></color> Your spouse gave birth to a healthy baby {gender.ToLower()}, <b>{name} {lastName}</b>! " +
+                "You swear to survive the war and build a peaceful world for your child.");
+        }
 
         [Header("Power Cultivation (4 Pre-Tier Stages + 12 Tiers with 4 Sub-Tiers)")]
         [Range(1, 4)]
@@ -182,6 +293,8 @@ namespace ArmyLife.Data
 
         [Header("Childhood & Youth Development (Ages 0 to 18)")]
         [Range(0f, 100f)] public float intellect = 50f;
+        [Range(0f, 100f)] public float discipline = 60f;
+        [Range(0f, 100f)] public float leadership = 50f;
         [Range(0f, 100f)] public float foundationalTempering = 10f;
         public int examScore;
         public string siblingRivalName = "Lucian";
@@ -342,15 +455,22 @@ namespace ArmyLife.Data
         {
             characterName = name;
             lineage = initialLineage;
-            age = 0.0f; // Born as a baby into the world!
+            age = 18.0f; // Directly enlists at age 18 into active military service!
             totalSemestersLived = 0;
+            careerTrack = CareerTrack.MilitaryEnlisted;
             talentScore = rolledTalent;
             isRetired = false;
             isDead = false;
+            health = 100f;
+            fitness = 75f;
+            combatSkill = 35f;
+            meritRating = 50f;
+            intellect = 65f;
+            squadRespect = 50f;
+            coFavor = 50f;
+            cashBalance = 350L;
             failedBreakthroughCount = 0;
             meridianDamage = 0f;
-            intellect = 50f;
-            foundationalTempering = 10f;
             parentRelationship = 85f;
             siblingRelationship = 50f;
 

@@ -69,8 +69,8 @@ namespace ArmyLife.Systems
                         "Call danger-close friendly artillery (Intellect check)",
                         () =>
                         {
-                            float check = (s.combatSkill * 0.5f) + (s.fitness * 0.5f) + (s.powerTier * 10f);
-                            if (check >= 55f)
+                            float check = (s.combatSkill * 0.6f) + (s.fitness * 0.4f);
+                            if (check >= 45f)
                             {
                                 s.combatSkill = Mathf.Min(100f, s.combatSkill + 6f);
                                 s.combatMeritPoints += 450;
@@ -82,7 +82,6 @@ namespace ArmyLife.Systems
                             else
                             {
                                 s.health = Mathf.Max(20f, s.health - 35f);
-                                s.meridianDamage = Mathf.Min(100f, s.meridianDamage + 20f);
                                 s.AddMedal("Imperial Wound Star");
                                 s.AddTrait("Scarred Veteran");
                                 GameEvents.OnFeedEventLogged?.Invoke("CASUALTY",
@@ -176,11 +175,10 @@ namespace ArmyLife.Systems
                         "Corrosive green Aether gas shells rupture across your trench! Your squadmate's gas mask filter cracked during the explosion.",
                         "Hand your own mask to the squadmate (Heroic sacrifice)",
                         "Seal yourself in the deep bunker airtight",
-                        "Engage cyber-respiratory filter scrubbers (Requires Tier 1+)",
+                        "Fashion emergency charcoal filter (Intellect check)",
                         () =>
                         {
                             s.health = Mathf.Max(20f, s.health - 25f);
-                            s.meridianDamage = Mathf.Min(100f, s.meridianDamage + 15f);
                             s.squadRespect = Mathf.Min(100f, s.squadRespect + 35f);
                             s.AddTrait("Selfless Hero");
                             s.AddMedal("Valerian Merit Ribbon");
@@ -197,19 +195,18 @@ namespace ArmyLife.Systems
                         },
                         () =>
                         {
-                            if (s.powerTier >= 1)
+                            if (s.intellect >= 50f)
                             {
-                                s.tierProgressPercent = Mathf.Min(100f, s.tierProgressPercent + 20f);
-                                s.AddTrait("Aether-Forged Lungs");
+                                s.intellect = Mathf.Min(100f, s.intellect + 5f);
+                                s.AddTrait("Field Resourceful");
                                 GameEvents.OnFeedEventLogged?.Invoke("FILTERS",
-                                    "<color=#FFD700><b>[CYBER-RESPIRATORS ENGAGED]</b></color> Your Tier 1 sub-dermal cyber-respirators activated, neutralizing the toxic vapor automatically! (+20% Saturation, [Aether-Forged Lungs]).");
+                                    "<color=#FFD700><b>[CHARCOAL FILTER IMPROVISED]</b></color> You quickly fashioned an emergency charcoal filter from ordnance packs, safely weathering the toxic vapor! (+5 Intellect, [Field Resourceful]).");
                             }
                             else
                             {
                                 s.health = Mathf.Max(15f, s.health - 35f);
-                                s.meridianDamage += 25f;
                                 GameEvents.OnFeedEventLogged?.Invoke("FAILED",
-                                    "<color=#FF4444>[FILTRATION FAILED]</color> Without Tier 1 sub-dermal implants, the corrosive gas burned your lungs and neural pathways (-35 Health, +25% Neural Strain).");
+                                    "<color=#FF4444>[FILTRATION FAILED]</color> The improvised filter leaked. Corrosive gas burned your lungs (-35 Health).");
                             }
                             GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                         }
@@ -228,7 +225,7 @@ namespace ArmyLife.Systems
                         () =>
                         {
                             float rollCasualty = UnityEngine.Random.value;
-                            if (rollCasualty < 0.20f && s.powerTier == 0)
+                            if (rollCasualty < 0.25f && s.combatSkill < 55f)
                             {
                                 s.isDead = true;
                                 s.deathReason = "Killed leading a suicidal bayonet charge ordered by an aristocratic Major";
@@ -419,7 +416,7 @@ namespace ArmyLife.Systems
                         () =>
                         {
                             float rollCasualty = UnityEngine.Random.value;
-                            if (rollCasualty < 0.15f && s.powerTier == 0)
+                            if (rollCasualty < 0.20f && s.combatSkill < 45f)
                             {
                                 s.isDead = true;
                                 s.deathReason = "Killed in Action during a nighttime trench infiltration raid";
@@ -500,8 +497,8 @@ namespace ArmyLife.Systems
                         "Man the stationary anti-tank cannon under direct fire",
                         () =>
                         {
-                            float check = (s.combatSkill * 0.5f) + (s.fitness * 0.5f) + (s.powerTier * 12f);
-                            if (check >= 60f)
+                            float check = (s.combatSkill * 0.6f) + (s.fitness * 0.4f);
+                            if (check >= 50f)
                             {
                                 s.combatMeritPoints += 800;
                                 s.combatSkill = Mathf.Min(100f, s.combatSkill + 10f);
@@ -533,6 +530,46 @@ namespace ArmyLife.Systems
                             s.combatMeritPoints += 400;
                             GameEvents.OnFeedEventLogged?.Invoke("CANNON",
                                 "You loaded 75mm armor-piercing shells and disabled the lead tank's tracks (+400 CMP, +6 Combat).");
+                            GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        }
+                    );
+                    break;
+
+                case 11:
+                    // Frontline Rotation & Voluntary Tour Extension
+                    GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
+                        "TOUR ROTATION",
+                        "Relief Order & Voluntary Tour Extension",
+                        "Your battalion's scheduled 6-month frontline combat rotation has ended. Relief troops arrive at the trenches. Command asks if you want to rotate to base or volunteer to stay.",
+                        "Volunteer for Extended Combat Tour (Stay on battlefield > 6 mo)",
+                        "Accept rotation to Garrison Base (Rest & refit)",
+                        "Apply for War Academy Officer Commission (Direct O-1)",
+                        () =>
+                        {
+                            s.isVoluntaryExtendedTour = true;
+                            s.isInCombatDeployment = true;
+                            s.squadRespect = Mathf.Min(100f, s.squadRespect + 20f);
+                            s.coFavor = Mathf.Min(100f, s.coFavor + 20f);
+                            s.AddTrait("Frontline Stalwart");
+                            GameEvents.OnFeedEventLogged?.Invoke("EXTENDED TOUR",
+                                "<color=#FF4444><b>[VOLUNTEERED FOR EXTENDED TOUR]</b></color> You chose to stay on the battlefield! " +
+                                "Your comrades cheered your resolve (+20 Respect, +20 CO Favor). If you remain deployed past 1 year, your total pay will increase by <b>+10%</b>!");
+                            GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        },
+                        () =>
+                        {
+                            s.isVoluntaryExtendedTour = false;
+                            s.health = Mathf.Min(100f, s.health + 15f);
+                            GameEvents.OnFeedEventLogged?.Invoke("ROTATION",
+                                "<color=#00FFAA><b>[GARRISON ROTATION ACCEPTED]</b></color> You packed your kit and rotated back to Fort Valerius for warm barracks and physical recovery (+15 Health).");
+                            GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        },
+                        () =>
+                        {
+                            if (gm != null)
+                            {
+                                gm.ApplyForOfficerAcademy();
+                            }
                             GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                         }
                     );

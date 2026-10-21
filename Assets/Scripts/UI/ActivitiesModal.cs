@@ -485,30 +485,160 @@ namespace ArmyLife.UI
                     RefreshUI();
                 });
 
-            // 6. Frontline Deployment / Patrol
-            string tourLabel = s.isInCombatDeployment ? "Request Frontline Extraction (Rest)" : "Volunteer for Frontline Combat Tour";
-            CreateActivityCard(tourLabel,
-                s.isInCombatDeployment 
-                    ? "Rotate back to garrison base for rest and refit. Ceases combat hazard pay."
-                    : "Deploy to active combat sectors. High mortality risk, earns +$600 hazard pay and Combat Merit Points (CMP).",
-                new Color(0.75f, 0.20f, 0.20f), () =>
+            // 6. Extended Frontline Battlefield Deployment (> 6 Months)
+            string extStatus = s.isVoluntaryExtendedTour 
+                ? "<color=#FFD700>[EXTENDED COMBAT ACTIVE]</color>" 
+                : "<color=#94A3B8>[STANDARD 6-MONTH ROTATION]</color>";
+            string extBonusStatus = s.hasExtendedTourPayBonus 
+                ? "\n<color=#00FFAA><b>VETERAN COMBAT BONUS: +10% TOTAL PAY ACTIVE!</b></color>" 
+                : (s.isVoluntaryExtendedTour ? $"\n<color=#FFD700>Deployed {s.consecutiveCombatSemesters * 0.5f:F1}/1.0 yrs continuous toward +10% Pay Bonus</color>" : "");
+
+            string extLabel = s.isVoluntaryExtendedTour ? "Revoke Tour Extension (Rotate to Base)" : "Volunteer for Extended Frontline Tour";
+            string extDesc = $"Volunteer to remain in active combat longer than standard 6-month rotations. Continuous service past 1 year grants an exclusive <b>+10% Total Pay Increase</b> that stacks with all other earnings! Current: {extStatus}{extBonusStatus}";
+
+            CreateActivityCard(extLabel, extDesc, s.isVoluntaryExtendedTour ? new Color(0.70f, 0.45f, 0.15f) : new Color(0.80f, 0.25f, 0.20f), () =>
+            {
+                if (GameManager.Instance != null)
                 {
-                    s.isInCombatDeployment = !s.isInCombatDeployment;
-                    if (s.isInCombatDeployment)
+                    GameManager.Instance.ToggleExtendedCombatTour();
+                }
+                RefreshUI();
+            });
+
+            // 7. Officer Academy Admission (2-Year Program, $50,000 Tuition / 9% Loan)
+            if (!s.isOfficer && s.careerTrack != CareerTrack.MilitaryWarAcademy)
+            {
+                string academyReqs = $"Requires <b>55% Discipline</b> (Current: {s.intellect:F0}%) and <b>55% Physical Readiness</b> (Current: {s.fitness:F0}%). Limited seats quota. Graduates commissioned directly as <b>2nd Lieutenant (O-1)</b>. Year 2 Top 10% cadets qualify for Special Forces selection!";
+
+                if (s.cashBalance >= SoldierProfile.ACADEMY_TUITION_COST)
+                {
+                    CreateActivityCard("Apply for War Academy ($50,000 Cash Upfront)",
+                        $"Pay $50,000 tuition upfront in cash. {academyReqs}",
+                        new Color(0.20f, 0.60f, 0.40f), () =>
+                        {
+                            if (GameManager.Instance != null)
+                            {
+                                GameManager.Instance.ApplyForOfficerAcademy(takeLoan: false);
+                            }
+                            RefreshUI();
+                        });
+                }
+
+                CreateActivityCard($"Apply for War Academy (9% Loan, {s.academyLoanDeductionPercent * 100f:F0}% Pay Deduction)",
+                    $"Finance the $50,000 tuition with a 9% annual interest Military Education Loan (monthly deduction from salary, minimum 10%). {academyReqs}",
+                    new Color(0.20f, 0.50f, 0.85f), () =>
                     {
-                        GameEvents.OnFeedEventLogged?.Invoke("DEPLOYMENT",
-                            "<color=#FF4444><b>[DEPLOYED TO FRONT SECTOR]</b></color> You volunteered for active combat deployment against the enemy coalition! Hazard pay activated.");
+                        if (GameManager.Instance != null)
+                        {
+                            GameManager.Instance.ApplyForOfficerAcademy(takeLoan: true, s.academyLoanDeductionPercent);
+                        }
+                        RefreshUI();
+                    });
+            }
+
+            // 8. Academy Loan Repayment Rate Adjustment
+            if (s.academyTuitionDebt > 0)
+            {
+                long monthlyDeduction = SalaryCalculator.CalculateMonthlyLoanDeduction(s);
+                string loanDesc = $"Outstanding Debt: <b>${s.academyTuitionDebt:N0}</b> (9% annual interest). " +
+                                  $"Current Deduction: <b>{s.academyLoanDeductionPercent * 100f:F0}% of net salary (-${monthlyDeduction:N0}/mo)</b>. " +
+                                  $"Minimum 10% required. Click to cycle repayment rate (10%, 15%, 20%, 30%, 50%).";
+
+                CreateActivityCard($"Adjust Academy Loan Deduction ({s.academyLoanDeductionPercent * 100f:F0}%)",
+                    loanDesc,
+                    new Color(0.85f, 0.55f, 0.15f), () =>
+                    {
+                        float currentRate = s.academyLoanDeductionPercent;
+                        float nextRate = 0.10f;
+                        if (Mathf.Approximately(currentRate, 0.10f)) nextRate = 0.15f;
+                        else if (Mathf.Approximately(currentRate, 0.15f)) nextRate = 0.20f;
+                        else if (Mathf.Approximately(currentRate, 0.20f)) nextRate = 0.30f;
+                        else if (Mathf.Approximately(currentRate, 0.30f)) nextRate = 0.50f;
+                        else nextRate = 0.10f;
+
+                        if (GameManager.Instance != null)
+                        {
+                            GameManager.Instance.SetAcademyLoanDeductionPercent(nextRate);
+                        }
+                        RefreshUI();
+                    });
+            }
+
+            // 9. Special Forces Qualification Pathways
+            if (!s.isSpecialForces && !s.isSpecialForcesCandidate)
+            {
+                // Route A: Academy Cadet in Year 2 with Top 10% standing
+                if (s.careerTrack == CareerTrack.MilitaryWarAcademy && s.academySemestersCompleted >= 2)
+                {
+                    if (s.isAcademyTop10Percent)
+                    {
+                        CreateActivityCard("Volunteer for Special Forces Qualification (Top 10% Cadet)",
+                            $"Your stellar academic score of <b>{s.academyPerformanceScore:F1}%</b> qualifies you for the 1-year Special Forces Qualification Course! Earn <b>+$800/mo Elite Stipend</b> and high tactical experience, but face increased combat fatality risk.",
+                            new Color(0.75f, 0.20f, 0.25f), () =>
+                            {
+                                if (GameManager.Instance != null)
+                                {
+                                    GameManager.Instance.JoinSpecialForcesFromAcademy();
+                                }
+                                RefreshUI();
+                            });
                     }
                     else
                     {
-                        GameEvents.OnFeedEventLogged?.Invoke("DEPLOYMENT",
-                            "<color=#00FFAA><b>[GARRISON REASSIGNMENT]</b></color> You concluded your frontline combat tour and returned to garrison refit.");
+                        CreateActivityCard("Special Forces Selection (Top 10% Required)",
+                            $"Requires Year 2 Academy standing >= 90% (Top 10%). Current Standing: <b>{s.academyPerformanceScore:F1}%</b>. Train physical readiness and tactics to reach the top decile!",
+                            new Color(0.50f, 0.50f, 0.50f), () =>
+                            {
+                                GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
+                                    $"<color=#FF8800>[TOP 10% REQUIRED]</color> Special Forces recruitment is restricted to the top 10% of Year 2 cadets (Score >= 90%). Current score: <b>{s.academyPerformanceScore:F1}%</b>.");
+                                RefreshUI();
+                            });
                     }
-                    GameEvents.OnSoldierStatsUpdated?.Invoke(s);
-                    RefreshUI();
-                });
+                }
 
-            // 7. Barracks Mess Hall
+                // Route B: Enlisted Soldier Petitioning CO Recommendation
+                if (!s.isOfficer && s.careerTrack == CareerTrack.MilitaryEnlisted)
+                {
+                    string sfCODesc = $"Petition your Commanding Officer for direct recommendation to the 1-Year Special Forces Qualification Course. " +
+                                      $"Requires <b>CO Favor >= 70%</b> (Current: {s.coFavor:F0}%) and <b>Merit >= 60%</b> (Current: {s.meritRating:F0}%). " +
+                                      $"Operators draw <b>+$800/mo Elite Stipend</b>, but face high-lethality black ops!";
+
+                    CreateActivityCard("Petition CO for Special Forces Recommendation",
+                        sfCODesc,
+                        new Color(0.70f, 0.25f, 0.35f), () =>
+                        {
+                            if (GameManager.Instance != null)
+                            {
+                                GameManager.Instance.RequestCOSpecialForcesRecommendation();
+                            }
+                            RefreshUI();
+                        });
+                }
+            }
+            else if (s.isSpecialForcesCandidate)
+            {
+                CreateActivityCard("Special Forces Candidate Training Status",
+                    $"Currently undergoing the brutal 1-year Special Forces Qualification Course (Term <b>{s.specialForcesTrainingSemesters + 1} / 2</b>). Concentrating on elite mountain warfare, covert infiltration, and extreme survival.",
+                    new Color(0.80f, 0.40f, 0.15f), () =>
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES",
+                            $"<color=#FFD700>[SF CANDIDATE]</color> Qualification Term {s.specialForcesTrainingSemesters + 1}/2 in progress. Advance semester to complete training.");
+                        RefreshUI();
+                    });
+            }
+            else if (s.isSpecialForces)
+            {
+                CreateActivityCard("Special Forces Operator Service Record",
+                    $"Active Elite Operator. Covert Operations Survived: <b>{s.specialForcesMissionsSurvived}</b>. Drawing <b>+$800/mo Special Operations Hazard Pay</b>. Rapid experience scaling active across all military ranks.",
+                    new Color(0.15f, 0.55f, 0.35f), () =>
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES",
+                            $"<color=#00FFAA>[SPECIAL FORCES OPERATOR]</color> Service File: {s.specialForcesMissionsSurvived} covert operations survived. Armed with Special Forces Elite Beret.");
+                        RefreshUI();
+                    });
+            }
+
+            // 10. Barracks Mess Hall
             CreateActivityCard("Enlisted Mess Hall & Recreation",
                 "Blow off steam with squadmates, enjoy hot chow, and raise morale.",
                 new Color(0.30f, 0.55f, 0.45f), () =>
@@ -520,17 +650,298 @@ namespace ArmyLife.UI
                     RefreshUI();
                 });
 
-            // 8. Test Talent (Rank E-4+)
-            if (!s.isPersonalTalentRevealed)
+            // 11. PX Quartermaster & Field Gear Depot
+            string helmetStatus = s.hasSteelHelmet ? " <color=#00FFAA>[EQUIPPED]</color>" : " ($250)";
+            string vestStatus = s.hasBallisticVest ? " <color=#00FFAA>[EQUIPPED]</color>" : " ($500)";
+            string sidearmStatus = s.hasServiceSidearm ? " <color=#00FFAA>[EQUIPPED]</color>" : " ($400)";
+            string watchStatus = s.hasLuckyWatch ? " <color=#00FFAA>[EQUIPPED]</color>" : " ($350)";
+
+            string pxSummary = $"Inventory: <b>{s.fieldMedkitsCount} Medkits</b>, <b>{s.cigarettesCount} Cigarette Packs</b>. " +
+                               $"Protective Gear: Helmet{helmetStatus}, Flak Vest{vestStatus}, Sidearm{sidearmStatus}, Lucky Watch{watchStatus}.";
+
+            if (!s.hasSteelHelmet)
             {
-                CreateActivityCard("Genetic Aptitude Scanner (Rank E-4)",
-                    "Submit to the Imperial bio-resonance scanner to analyze and unlock your Genetic Aptitude score (0-200).",
-                    new Color(0.20f, 0.40f, 0.80f), () =>
+                CreateActivityCard("PX Store: Buy M1 Reinforced Steel Helmet ($250)",
+                    "Deflects mortar shrapnel and sniper ricochets. Lowers frontline fatality risk by 5%.",
+                    new Color(0.20f, 0.50f, 0.35f), () =>
                     {
-                        TalentTestingApparatus.PerformSelfApparatusTest(s);
-                        GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        if (GameManager.Instance != null)
+                        {
+                            GameManager.Instance.BuyGearItem(new MilitaryGearItem("gear_helmet", "M1 Reinforced Steel Helmet", "Military ballistic helmet.", GearCategory.Armor, 250L, 0.05f));
+                        }
                         RefreshUI();
                     });
+            }
+
+            if (!s.hasBallisticVest)
+            {
+                CreateActivityCard("PX Store: Buy Ballistic Flak Vest ($500)",
+                    "Heavy-duty protective body armor. Lowers frontline wound and fatality risk by 8%.",
+                    new Color(0.20f, 0.50f, 0.35f), () =>
+                    {
+                        if (GameManager.Instance != null)
+                        {
+                            GameManager.Instance.BuyGearItem(new MilitaryGearItem("gear_vest", "Ballistic Flak Vest", "Protective torso armor.", GearCategory.Armor, 500L, 0.08f));
+                        }
+                        RefreshUI();
+                    });
+            }
+
+            if (!s.hasServiceSidearm)
+            {
+                CreateActivityCard("PX Store: Buy Trench Service Sidearm ($400)",
+                    "Reliable close-quarters pistol. Adds +10 CQB combat skill during ambushes and room clearing.",
+                    new Color(0.55f, 0.35f, 0.20f), () =>
+                    {
+                        if (GameManager.Instance != null)
+                        {
+                            GameManager.Instance.BuyGearItem(new MilitaryGearItem("gear_sidearm", "Service Sidearm", "Close-quarters combat pistol.", GearCategory.Weapon, 400L, 0f, 10f));
+                        }
+                        RefreshUI();
+                    });
+            }
+
+            if (!s.hasLuckyWatch)
+            {
+                CreateActivityCard("PX Store: Buy Engraved Pocket Watch ($350)",
+                    "A keepsake lucky charm. Provides a permanent passive +4% boost to frontline survival rolls.",
+                    new Color(0.65f, 0.50f, 0.15f), () =>
+                    {
+                        if (GameManager.Instance != null)
+                        {
+                            GameManager.Instance.BuyGearItem(new MilitaryGearItem("gear_watch", "Engraved Pocket Watch", "Keepsake lucky charm.", GearCategory.Morale, 350L, 0.04f));
+                        }
+                        RefreshUI();
+                    });
+            }
+
+            CreateActivityCard($"PX Store: Buy Field Trauma Kit ($150) [Have: {s.fieldMedkitsCount}]",
+                "Emergency military trauma syrette. Automatically consumed to resuscitate yourself if you suffer a fatal wound!",
+                new Color(0.18f, 0.55f, 0.50f), () =>
+                {
+                    if (GameManager.Instance != null)
+                    {
+                        GameManager.Instance.BuyGearItem(new MilitaryGearItem("gear_medkit", "Emergency Field Trauma Kit", "Life-saving syrette.", GearCategory.Medical, 150L, consumable: true, count: 1));
+                    }
+                    RefreshUI();
+                });
+
+            CreateActivityCard($"PX Store: Buy Cigarette Pack ($50) [Have: {s.cigarettesCount}]",
+                "Wartime currency and camaraderie builder. Share with squadmates to boost loyalty and fireteam cohesion.",
+                new Color(0.45f, 0.40f, 0.30f), () =>
+                {
+                    if (GameManager.Instance != null)
+                    {
+                        GameManager.Instance.BuyGearItem(new MilitaryGearItem("gear_cig", "PX Cigarette Pack", "Camaraderie builder.", GearCategory.Morale, 50L, consumable: true, count: 1));
+                    }
+                    RefreshUI();
+                });
+
+            // 12. Brothers in Arms (Persistent Fireteam Squadmates)
+            s.InitializeSquadMatesIfEmpty();
+            foreach (var mate in s.squadMates)
+            {
+                if (mate.isDead)
+                {
+                    CreateActivityCard($"Brothers in Arms: {mate.GetDisplayName()} (KIA)",
+                        $"<color=#FF4444>Fallen Hero ({mate.roleTitle}). Died: {mate.deathReason}. Battles Survived: {mate.battlesSurvived}.</color>",
+                        new Color(0.40f, 0.15f, 0.15f), () =>
+                        {
+                            GameEvents.OnFeedEventLogged?.Invoke("MEMORIAL",
+                                $"<color=#FF8866>[FALLEN COMRADE MEMORIAL]</color> You visited the battlefield grave of {mate.GetDisplayName()}. You swore never to forget your squad brother.");
+                            RefreshUI();
+                        });
+                }
+                else
+                {
+                    string mateDesc = $"{mate.roleTitle} | Relationship: <b>{mate.relationship:F0}%</b> | Battles Survived: <b>{mate.battlesSurvived}</b> | Personality: <i>{mate.personalityTrait}</i>.";
+                    CreateActivityCard($"Fireteam: {mate.GetDisplayName()} (Share Smoke & Bond)",
+                        $"{mateDesc}\nSpend 1 Cigarette pack to share stories and raise fireteam loyalty (+15 Rel).",
+                        new Color(0.20f, 0.40f, 0.60f), () =>
+                        {
+                            if (GameManager.Instance != null)
+                            {
+                                GameManager.Instance.InteractWithSquadMate(mate, "ShareCigarettes");
+                            }
+                            RefreshUI();
+                        });
+
+                    CreateActivityCard($"Fireteam: {mate.GetDisplayName()} (Barracks Cards & Banter)",
+                        $"{mateDesc}\nPlay cards in the barracks mess hall to blow off steam (+8 Rel, +8 Happiness).",
+                        new Color(0.25f, 0.35f, 0.50f), () =>
+                        {
+                            if (GameManager.Instance != null)
+                            {
+                                GameManager.Instance.InteractWithSquadMate(mate, "BunkBanter");
+                            }
+                            RefreshUI();
+                        });
+                }
+            }
+
+            // 13. Theaters of War (Frontline Reassignment)
+            if (!s.isRetired && s.careerTrack != CareerTrack.MilitaryWarAcademy)
+            {
+                var curTheater = WarTheaterInfo.GetInfo(s.currentTheater);
+                CreateActivityCard($"Theater of War: {curTheater.theaterName}",
+                    $"Current Deployment: <b>{curTheater.theaterName}</b> ({curTheater.weatherAndEnvironment}). " +
+                    $"Tours Completed Here: <b>{s.toursInCurrentTheater}</b>. {curTheater.description}",
+                    new Color(0.60f, 0.20f, 0.20f), () =>
+                    {
+                        RefreshUI();
+                    });
+
+                // Transfer options
+                if (s.currentTheater != WarTheaterType.WesternMudTrenches)
+                {
+                    CreateActivityCard("Request Transfer: Western Mud Trenches",
+                        "Request deployment to Sector 7. Brutal artillery and mortar barrages with stagnant trench attrition.",
+                        new Color(0.45f, 0.35f, 0.25f), () =>
+                        {
+                            if (GameManager.Instance != null) GameManager.Instance.TransferWarTheater(WarTheaterType.WesternMudTrenches);
+                            RefreshUI();
+                        });
+                }
+
+                if (s.currentTheater != WarTheaterType.EasternFrozenSteppe)
+                {
+                    CreateActivityCard("Request Transfer: Eastern Frozen Steppe",
+                        "Request deployment to the Karkov Steppe. Sub-zero blizzards, frostbite hazards, and armored panzer counter-offensives.",
+                        new Color(0.25f, 0.45f, 0.65f), () =>
+                        {
+                            if (GameManager.Instance != null) GameManager.Instance.TransferWarTheater(WarTheaterType.EasternFrozenSteppe);
+                            RefreshUI();
+                        });
+                }
+
+                if (s.currentTheater != WarTheaterType.PacificJungleIslands)
+                {
+                    CreateActivityCard("Request Transfer: Pacific Jungle Atolls",
+                        "Request deployment to the Peleliu Jungle Islands. Mangrove swamps, spider-hole ambushes, and bunker flamethrowers.",
+                        new Color(0.25f, 0.55f, 0.30f), () =>
+                        {
+                            if (GameManager.Instance != null) GameManager.Instance.TransferWarTheater(WarTheaterType.PacificJungleIslands);
+                            RefreshUI();
+                        });
+                }
+
+                if (s.currentTheater != WarTheaterType.UrbanCitadel)
+                {
+                    CreateActivityCard("Request Transfer: The Citadel Siege (City Ruins)",
+                        "Request deployment to the shattered urban citadel. Sniper alleys, room clearing, and close-quarters rubble skirmishes.",
+                        new Color(0.50f, 0.25f, 0.45f), () =>
+                        {
+                            if (GameManager.Instance != null) GameManager.Instance.TransferWarTheater(WarTheaterType.UrbanCitadel);
+                            RefreshUI();
+                        });
+                }
+            }
+
+            // 14. Post-Service Veteran Careers & Civic Office (If Retired)
+            if (s.isRetired)
+            {
+                if (s.veteranCareer == VeteranCareer.None)
+                {
+                    CreateActivityCard("Post-Service: Attend University on GI Bill ($500/mo)",
+                        "Enroll in higher education funded by military veteran benefits. Earns $500/mo GI stipend and boosts intellect.",
+                        new Color(0.20f, 0.55f, 0.70f), () =>
+                        {
+                            if (GameManager.Instance != null) GameManager.Instance.StartVeteranCareer(VeteranCareer.UniversityGI);
+                            RefreshUI();
+                        });
+
+                    CreateActivityCard("Post-Service: Private Defense Logistics ($2,500/mo)",
+                        "Consult for arms manufacturing and tactical logistics firms. High civilian salary ($2,500/mo).",
+                        new Color(0.65f, 0.45f, 0.15f), () =>
+                        {
+                            if (GameManager.Instance != null) GameManager.Instance.StartVeteranCareer(VeteranCareer.DefenseContractor);
+                            RefreshUI();
+                        });
+
+                    if (s.medalsEarnedCount >= 2)
+                    {
+                        CreateActivityCard("Civic Ambition: Run for City Mayor ($4,000/mo)",
+                            "Use your military decorations and honorable record to run for Mayor of your hometown. Earns $4,000/mo.",
+                            new Color(0.20f, 0.65f, 0.40f), () =>
+                            {
+                                if (GameManager.Instance != null) GameManager.Instance.StartVeteranCareer(VeteranCareer.CityMayor);
+                                RefreshUI();
+                            });
+                    }
+
+                    if (s.isOfficer)
+                    {
+                        CreateActivityCard("Civic Ambition: Run for Provincial Governor ($8,000/mo)",
+                            "Leverage your commissioned officer command legacy to campaign for Provincial Governor. Earns $8,000/mo.",
+                            new Color(0.70f, 0.50f, 0.10f), () =>
+                            {
+                                if (GameManager.Instance != null) GameManager.Instance.StartVeteranCareer(VeteranCareer.RegionalGovernor);
+                                RefreshUI();
+                            });
+                    }
+
+                    if (s.currentRank != null && (s.currentRank.paygrade == "O-10" || s.currentRank.rankName.Contains("General")))
+                    {
+                        CreateActivityCard("Cabinet Post: Appointed Minister of Defense ($18,000/mo)",
+                            "Assume command of national military readiness and defense procurement as Minister of Defense ($18,000/mo).",
+                            new Color(0.85f, 0.20f, 0.25f), () =>
+                            {
+                                if (GameManager.Instance != null) GameManager.Instance.StartVeteranCareer(VeteranCareer.MinisterOfDefense);
+                                RefreshUI();
+                            });
+                    }
+                }
+                else
+                {
+                    CreateActivityCard($"Veteran Career Active: {s.veteranCareer}",
+                        $"You are actively serving in civilian society as <b>{s.veteranCareer}</b>. Your veteran pension ($1,500/mo) and career earnings continue every turn.",
+                        new Color(0.15f, 0.60f, 0.45f), () =>
+                        {
+                            RefreshUI();
+                        });
+                }
+            }
+
+            // 15. Generational Military Legacy ("The Soldier's Child")
+            if (s.childHeir == null)
+            {
+                CreateActivityCard("Family Legacy: Start a Family & Raise a Child",
+                    "Take leave to marry your sweetheart and raise a child. You can bequeath your war medals and savings to them!",
+                    new Color(0.75f, 0.40f, 0.60f), () =>
+                    {
+                        s.HaveChild();
+                        RefreshUI();
+                    });
+            }
+            else
+            {
+                string childDesc = $"Child: <b>{s.childHeir.childName} {s.lastName}</b> ({s.childHeir.gender}, Age {s.childHeir.age:F1}). " +
+                                   $"Status: {(s.childHeir.isEligibleForEnlistment ? "<color=#00FFAA>Eligible for Enlistment (Age 18+)</color>" : "<color=#FF8800>Growing Up</color>")}.";
+
+                if (s.childHeir.isEligibleForEnlistment)
+                {
+                    CreateActivityCard($"Pass the Torch: Enlist as {s.childHeir.childName} (Gen {s.generationNumber + 1})",
+                        $"{childDesc}\n<b>Continue your dynasty!</b> Enlist as your child on Day 1 with the <b>Military Legacy</b> origin, inheriting 50% family savings and your war medals!",
+                        new Color(0.85f, 0.65f, 0.15f), () =>
+                        {
+                            if (GameManager.Instance != null)
+                            {
+                                GameManager.Instance.ContinueAsChildHeir();
+                            }
+                            RefreshUI();
+                        });
+                }
+                else
+                {
+                    CreateActivityCard($"Family: Raising {s.childHeir.childName} (Age {s.childHeir.age:F1})",
+                        childDesc,
+                        new Color(0.55f, 0.35f, 0.50f), () =>
+                        {
+                            GameEvents.OnFeedEventLogged?.Invoke("FAMILY",
+                                $"<color=#00FFAA>[FAMILY TIME]</color> You spent leave teaching {s.childHeir.childName} discipline and sharing stories from the frontlines.");
+                            RefreshUI();
+                        });
+                }
             }
         }
 

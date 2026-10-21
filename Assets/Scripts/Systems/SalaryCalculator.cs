@@ -1,4 +1,5 @@
 using ArmyLife.Data;
+using UnityEngine;
 
 namespace ArmyLife.Systems
 {
@@ -87,17 +88,39 @@ namespace ArmyLife.Systems
             // Combat Deployment Hazard Pay
             if (soldier.isInCombatDeployment) total += 450L;
 
+            // Special Forces Operator Stipend (Higher pay for elite operators)
+            if (soldier.isSpecialForces) total += 800L;
+
+            // Extended Frontline Combat Tour Veteran Bonus:
+            // If the soldier stays continuously on the battlefield longer than 1 year (>= 2 semesters),
+            // total pay increases by 10%, independent of any other pay increases.
+            if (soldier.hasExtendedTourPayBonus && soldier.isInCombatDeployment)
+            {
+                long extendedCombatBonus = (long)(total * 0.10f);
+                total += extendedCombatBonus;
+            }
+
             return total;
         }
 
         /// <summary>
-        /// Calculates the net monthly take-home pay after tax deductions.
-        /// Military active duty pays 40% War Tax; civilians pay 50% Civil Tax; cadet trainees pay 0%.
+        /// Calculates the monthly academy tuition loan deduction (minimum 10% of take-home pay).
         /// </summary>
-        public static long CalculateNetMonthlyPay(SoldierProfile soldier)
+        public static long CalculateMonthlyLoanDeduction(SoldierProfile soldier)
+        {
+            if (soldier == null || soldier.academyTuitionDebt <= 0) return 0L;
+            long netBeforeLoan = CalculateNetMonthlyPayBeforeLoan(soldier);
+            if (netBeforeLoan <= 0) return 0L;
+
+            float rate = Mathf.Clamp(soldier.academyLoanDeductionPercent, 0.10f, 0.80f); // Minimum 10%
+            long deduction = (long)(netBeforeLoan * rate);
+            return System.Math.Min(deduction, soldier.academyTuitionDebt);
+        }
+
+        public static long CalculateNetMonthlyPayBeforeLoan(SoldierProfile soldier)
         {
             long gross = CalculateGrossMonthlyPay(soldier);
-            if (gross <= 0) return 0;
+            if (gross <= 0) return 0L;
 
             if (soldier.isCivilian)
             {
@@ -114,6 +137,16 @@ namespace ArmyLife.Systems
 
             long tax = (long)(gross * ImperialWarTaxRate);
             return gross - tax;
+        }
+
+        /// <summary>
+        /// Calculates the net monthly take-home pay after tax and academy loan deductions.
+        /// </summary>
+        public static long CalculateNetMonthlyPay(SoldierProfile soldier)
+        {
+            long net = CalculateNetMonthlyPayBeforeLoan(soldier);
+            long loanPayment = CalculateMonthlyLoanDeduction(soldier);
+            return System.Math.Max(0L, net - loanPayment);
         }
 
         public static long CalculateMonthlyTax(SoldierProfile soldier)

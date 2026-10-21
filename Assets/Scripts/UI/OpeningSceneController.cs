@@ -90,6 +90,14 @@ namespace ArmyLife.UI
 
         private List<FamilyLineageSO> availableLineages = new List<FamilyLineageSO>();
 
+        private static readonly (string title, string desc)[] Origins = 
+        {
+            ("Farmhand (Country Grit)", "Raised in rural agrarian provinces. Built with iron endurance and rustic toughness.\n<b>Bonus:</b> +15% Health, +15% Fitness | <b>Trait:</b> Country Grit"),
+            ("Street Tough (Street Brawler)", "Hardened in city alleyways, dockyards, and underground bare-knuckle rings.\n<b>Bonus:</b> +15% Combat Skill, -10% Discipline | <b>Trait:</b> Street Brawler"),
+            ("Working Mechanic (Field Craftsman)", "Apprenticed in motor pools, tank depots, and munition factories.\n<b>Bonus:</b> +15% Intellect (Tactics/Tech), +$200 Cash | <b>Trait:</b> Field Craftsman"),
+            ("Military Legacy (Soldier's Son)", "Born into a lineage of seasoned infantry veterans and drill sergeants.\n<b>Bonus:</b> +15% CO Favor, +15% Squad Respect | <b>Trait:</b> Soldier's Son")
+        };
+
         private static readonly (string name, string desc)[] Countries = 
         {
             ("The Valerian Empire", "Feudal military superpower. Masters of subterranean ancient sect ley-lines and noble martial dynasties."),
@@ -433,6 +441,8 @@ namespace ArmyLife.UI
 
         // ==================== CHARACTER CREATION ====================
 
+        public void OpenCharacterCreationModal() => OnCreateNewLifeClicked();
+
         private void OnCreateNewLifeClicked()
         {
             if (characterCreationModal != null)
@@ -494,15 +504,13 @@ namespace ArmyLife.UI
 
         private void OnPreviousLineageClicked()
         {
-            if (availableLineages.Count == 0) return;
-            selectedLineageIndex = (selectedLineageIndex - 1 + availableLineages.Count) % availableLineages.Count;
+            selectedLineageIndex = (selectedLineageIndex - 1 + Origins.Length) % Origins.Length;
             UpdateCreationUI();
         }
 
         private void OnNextLineageClicked()
         {
-            if (availableLineages.Count == 0) return;
-            selectedLineageIndex = (selectedLineageIndex + 1) % availableLineages.Count;
+            selectedLineageIndex = (selectedLineageIndex + 1) % Origins.Length;
             UpdateCreationUI();
         }
 
@@ -582,23 +590,10 @@ namespace ArmyLife.UI
             if (countryTitleText != null) countryTitleText.text = $"<color=#00FFAA><b>{country.name}</b></color>";
             if (countryDescText != null) countryDescText.text = country.desc;
 
-            // Lineage
-            if (availableLineages.Count > 0 && selectedLineageIndex < availableLineages.Count)
-            {
-                var lineage = availableLineages[selectedLineageIndex];
-                if (lineageTitleText != null) lineageTitleText.text = $"<color=#FFD700><b>{lineage.archetypeName}</b></color>";
-                if (lineageDetailsText != null)
-                {
-                    string noble = lineage.startingNobleRank.ToString();
-                    string wealth = $"${lineage.startingFamilyWealth:N0}";
-                    string tier = lineage.startingPowerTier > 0 ? $"Tier {lineage.startingPowerTier} (Early)" : "Pre-Tier (Mortal)";
-                    string stone = lineage.startingNobleRank > NobleRank.Commoner ? "Ancestral Stone (At Birth)" : "Army Resonance Chamber (Rank E-4)";
-
-                    lineageDetailsText.text = 
-                        $"<b>Father:</b> {lineage.fatherTitle} | <b>Title:</b> {noble}\n" +
-                        $"<b>Starting Vault:</b> {wealth} | <b>Cultivation:</b> {tier} | <b>Talent Stone:</b> {stone}";
-                }
-            }
+            // Background Origin
+            var origin = Origins[selectedLineageIndex % Origins.Length];
+            if (lineageTitleText != null) lineageTitleText.text = $"<color=#FFD700><b>{origin.title}</b></color>";
+            if (lineageDetailsText != null) lineageDetailsText.text = origin.desc;
 
             // Appearance Texts
             if (hairStyleText != null) hairStyleText.text = HairStyles[selectedHairStyleIndex];
@@ -613,14 +608,14 @@ namespace ArmyLife.UI
                 string last = (characterLastNameInput != null && !string.IsNullOrWhiteSpace(characterLastNameInput.text)) ? characterLastNameInput.text.Trim() : "Vance";
                 string genderIcon = (selectedGender == "Female") ? "[F]" : "[M]";
                 characterPreviewBadgeText.text = 
-                    $"<color=#00D4FF><b>{genderIcon} {first} {last}</b></color> (Newborn - Age 0.0)\n" +
-                    $"<b>Homeland:</b> {country.name}  |  <b>Lineage Fate:</b> 80% Commoner, 1% Grand Duke\n" +
-                    $"<b>Appearance:</b> {HairStyles[selectedHairStyleIndex]} - {HairColors[selectedHairColorIndex]} Hair - {EyeColors[selectedEyeColorIndex]} Eyes - {SkinTones[selectedSkinToneIndex]}";
+                    $"<color=#00D4FF><b>{genderIcon} {first} {last}</b></color> (Enlistment Age 18.0)\n" +
+                    $"<b>Service:</b> 1st Infantry Division  |  <b>Initial Rank:</b> Private Recruit (E-1)\n" +
+                    $"<b>Origin:</b> {origin.title}";
 
                 if (confirmStartLifeButton != null)
                 {
                     var confirmTxt = confirmStartLifeButton.GetComponentInChildren<TextMeshProUGUI>();
-                    if (confirmTxt != null) confirmTxt.text = $"START {first.ToUpper()}'S LIFE!";
+                    if (confirmTxt != null) confirmTxt.text = $"ENLIST {first.ToUpper()} INTO SERVICE!";
                 }
             }
         }
@@ -631,8 +626,8 @@ namespace ArmyLife.UI
             string last = (characterLastNameInput != null && !string.IsNullOrWhiteSpace(characterLastNameInput.text)) ? characterLastNameInput.text.Trim() : "Vance";
             string fullName = $"{first} {last}";
 
-            // Lineage is rolled by cosmic fate (80% Commoner, 1% Grand Duke) in GameManager.StartNewLife
             FamilyLineageSO chosenLineage = null;
+            SoldierOrigin chosenOrigin = (SoldierOrigin)(selectedLineageIndex % Origins.Length);
 
             string country = Countries[selectedCountryIndex].name;
             string hairStyle = HairStyles[selectedHairStyleIndex];
@@ -654,7 +649,9 @@ namespace ArmyLife.UI
                     hairColor, 
                     eyeColor, 
                     skinTone, 
-                    looks: 85f);
+                    looks: 85f,
+                    explicitTalent: null,
+                    origin: chosenOrigin);
             }
         }
 

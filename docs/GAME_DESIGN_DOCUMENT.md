@@ -1,161 +1,198 @@
-# Army Life Simulator - Game Design Document (GDD v4.0 Master Edition)
-*The Era of Energy Revival: Feudal Military Dynasties, Royal Court, Clan Succession, 12-Tier Power Ladder & The World War*
+# Army Life Simulator - Game Design Document (GDD v5.0 Master Edition)
+
+> **Core Focus:** Pure Military Life Simulation RPG (Option A)  
+> **Comps:** *BitLife* meets *Band of Brothers*, *Papers, Please*, and *Reigns*.  
+> **Target Audience:** Fans of career simulators, narrative dilemma games, and military history/fiction.  
+> **Engine:** Unity 6 (URP 2D)  
+> **Primary Philosophy:** Fast, punchy, high-stakes military drama with immediate playability and zero unnecessary bloat.
 
 ---
 
-## 1. High Concept & Setting Architecture
+## 1. High Concept & Creative Vision
+
+**Army Life Simulator** is an interactive, text-and-choice-driven military career simulator. The player enters active service on **Enlistment Day at Age 18**. 
+
+Over semiannual 6-month deployment cycles, the player navigates the harsh realities of service: drilling at garrison bases, surviving harrowing frontline firefights, managing comrades and commanding officers, and balancing duty against survival.
+
+Every choice carries immediate weight. Players can climb from a drafted **Private (E-1)** all the way to **4-Star General (O-10)**, survive decades to an **Honorable Retirement**, fall heroically in combat (**Killed in Action**), or end their career in disgrace (**Court-Martial**).
+
+---
+
+## 2. Core Design Pillars
+
+1. **Immediate Action (Zero Slog)**: The game skips childhood entirely. You create your recruit and start at boot camp on turn 1.
+2. **Every Choice Has Teeth**: Dilemmas present meaningful trade-offs (e.g., risk your life to rescue a squadmate, or protect your position; obey a reckless order, or use tactical initiative).
+3. **Transparent Progression**: Ranks, medals, salary, and stats are always visible, intuitive, and satisfying to grow.
+4. **Definitive Runs & High Replayability**: A single career takes 15–25 minutes, ending in a shareable **Career Dossier** summarizing your lifetime achievements.
+
+---
+
+## 3. End Points (Victory & Defeat Conditions)
 
 ```mermaid
 flowchart TD
-    subgraph WorldConflict["Global War for the Great Energy Revival"]
-        Valerian["The Valerian Empire<br>(Player's Nation • Feudal Military • Sect Cultivation)"]
-        IronFed["The Iron Federation<br>(Cyber-Nanite & Mech Superpower)"]
-        Ouroboros["The Ouroboros Dominion<br>(Beast Bloodline Cultivators)"]
-        
-        Valerian <-->|"War for Subterranean Sect Ley-Lines"| IronFed
-        Valerian <-->|"Border Wars for Energy Wells"| Ouroboros
-    end
-
-    subgraph InternalPower["The Imperial Aristocracy & Clan Ladder"]
-        Imperial["The Imperial Royal Family (Supreme Military House)"]
-        Dukes["Grand Duke Houses (Corps Command • Attends Royal Court)"]
-        Marquises["Marquis Houses (Division Command)"]
-        Counts["Count Houses (Regiment Command)"]
-        Viscounts["Viscount & Baron Houses (Battalion / Company)"]
-        Commoners["Commoner Military Grunts & Officers (Merit-climbing)"]
-        
-        Imperial --> Dukes --> Marquises --> Counts --> Viscounts --> Commoners
-    end
+    Enlist["Age 18: Recruit Enlistment"] --> Service["6-Month Active Duty Tours"]
+    Service --> Win1["🏆 Supreme Victory: 4-Star General (O-10)"]
+    Service --> Win2["🎖️ Career Victory: Honorable Retirement (20+ Years)"]
+    Service --> Loss1["🪦 Tragic Defeat: Killed in Action (0% Health)"]
+    Service --> Loss2["⚖️ Disgrace: Court-Martial / Discharge (0% Discipline)"]
+    Win1 --> Dossier["Official Career Dossier & Legacy Rating"]
+    Win2 --> Dossier
+    Loss1 --> Dossier
+    Loss2 --> Dossier
 ```
+
+### The 4 Endpoints
+
+1. **The 4-Star General (Supreme Victory)**: Reaching rank O-10 (General of the Army). Leads national defense, enters the military hall of fame.
+2. **The Honorable Veteran (Career Victory)**: Completing 20–30 years of active duty and retiring voluntarily with a full pension, decorations, and veteran respect.
+3. **Killed in Action (KIA)**: Health drops to 0% during combat. Receives a military funeral, posthumous medals (e.g. Purple Heart / Imperial Star), and a memorial tribute.
+4. **Court-Martial / Dishonorable Discharge**: Discipline drops to 0%, or caught committing mutiny, cowardice, or treason. Stripped of rank, medals, and benefits.
 
 ---
 
-## 2. Becoming Clan Head: Noble Title Inheritance & The Royal Court
+## 4. Character Creation (Age 18 Enlistment)
 
-When a player wins the **Clan Succession War** against their siblings, they don the ceremonial mantle of the **Patriarch / Clan Head** and officially inherit the family's hereditary noble rank.
+Players generate or customize their soldier with:
+* **Name & Appearance**: Buzzcut, eye color, uniform styling.
+* **Background Origin**:
+  * *Farmhand*: +15% Health, +10% Fitness, humble beginnings.
+  * *Street Tough*: +15% Combat Skill, -10% Starting Discipline, street smarts.
+  * *Working-Class Mechanic*: +15% Intellect, bonus technical stipends.
+  * *Military Family Legacy*: +15% Discipline, starting favor with NCOs.
+* **Aptitude Roll**: Baseline stats (Health, Morale, Discipline, Combat Skill, Intellect).
+
+---
+
+## 5. The 5 Core Soldier Stats
+
+```
++---------------------------------------------------------------+
+|  HEALTH [100%]  |  MORALE [85%]  |  DISC [70%]  |  COMBAT [45%]|
++---------------------------------------------------------------+
+```
+
+1. **Health (0–100%)**: Physical integrity. Depleted by combat wounds, artillery concussions, or disease. 0% = KIA.
+2. **Morale (0–100%)**: Psychological resolve. Depleted by prolonged trench warfare, loss of squadmates, or harsh punishments. Low morale causes panic or shell-shock.
+3. **Discipline (0–100%)**: Military conduct and adherence to regulations. High discipline impresses commanders and enables officer candidacy (OCS). Low discipline leads to KP duty, brig time, and court-martial.
+4. **Combat Skill (0–100%)**: Marksmanship, tactics, and reflex under fire. Decides success rates during frontline crises.
+5. **Cash ($)**: Savings from monthly salary, hazardous combat stipends, and dice games. Spent on PX gear, medical treatment, or squad drinks.
+
+---
+
+## 6. The 6-Month Semiannual Tour Loop
+
+Each turn represents 6 months (Spring/Summer Tour or Fall/Winter Tour):
 
 ```mermaid
-graph TD
-    WinSuccession["Player Wins Sibling Succession War"] --> InheritTitle["Inherits Noble Title (e.g. Duke / Marquis / Count)"]
-    
-    InheritTitle --> RoyalCourt["1. Seat at the Imperial Royal Court<br>• Sit with the Emperor & Grand Marshals<br>• Vote on national military campaigns<br>• Bid on newly conquered ancient energy wells"]
-    
-    InheritTitle --> ClanVault["2. Supreme Clan Vault Control<br>• Distribute monthly high-tier serums to children/relatives<br>• Starve rebellious or low-talent branch cousins<br>• Fund family research into ancient martial arts"]
-    
-    InheritTitle --> ClanMilitary["3. Command of the Clan Private Army<br>• Deploy Ducal Iron Guard to bolster battlefronts<br>• Guard family energy mines from rival noble house raids"]
-    
-    InheritTitle --> DynastyMarriage["4. Brokering Generational Marriages<br>• Arrange high-tier political alliances for children and siblings<br>• Merge bloodlines with other Duke / Marquis dynasties"]
+flowchart LR
+    TurnStart["1. Advance Tour\n(6 Months)"] --> Station["2. Deployment\n(Garrison vs Warfront)"]
+    Station --> Dilemma["3. High-Stakes Dilemma\n(2-Sentence Choice)"]
+    Dilemma --> Consequence["4. Resolution & Feed\n(Stats, Wounds, Medals)"]
+    Consequence --> Promotion["5. Board & Payday\n(Merit Check -> Rank Up)"]
+    Promotion --> TurnStart
 ```
 
-### The Royal Court Gameplay Interface
-As a titled Duke or Marquis, the player attends annual imperial sessions:
-- **War Council Petitions**: Lobby the Crown Prince to assign lucrative offensive campaigns to your house's corps.
-- **Energy Well Concessions**: Compete with rival Duke houses for exclusive rights to newly unearthed subterranean sect ruins.
-- **Imperial Decrees**: Propose policies (e.g., subsidizing military testing apparatus for promising commoners, or restricting high-grade serums strictly to noble houses).
+1. **Deployment Evaluation**:
+   * *Garrison Duty*: Weapons qualifications, barracks inspections, brawls, drill instructors, leave requests.
+   * *Frontline Combat*: Pinned down by snipers, breaching machine gun nests, calling airstrikes, night trench patrols, rescuing wounded comrades.
+2. **Dilemma Resolution**: 2–3 options with explicit risk/reward trade-offs.
+3. **Log & Feed**: Real-time story text displayed in the BitLife-style vertical activity log.
+4. **Promotion Board & Payday**: If Merit meets the promotion threshold and Discipline is acceptable, the player is promoted.
 
 ---
 
-## 3. The 6-Month Life Cycle & Day-to-Day Barracks Simulation
+## 7. Rank Progression Ladder
 
-Active military service alternates between **Operational Refit / Barracks Cycles** and **Frontline Combat Deployments**.
+### Enlisted Ranks
+* **Recruit (E-1)** — Basic training ($150/mo)
+* **Private (E-2)** — Line infantryman ($300/mo)
+* **Private First Class (E-3)** — Experienced rifleman ($450/mo)
+* **Corporal (E-4)** — Fireteam leader ($650/mo)
+* **Sergeant (E-5)** — Squad leader ($900/mo)
+* **Staff Sergeant (E-6)** — Platoon sergeant ($1,250/mo)
+* **Master Sergeant (E-7)** — Senior non-commissioned officer ($1,800/mo)
+* **Sergeant Major (E-9)** — Top enlisted authority ($2,600/mo)
 
-```mermaid
-sequenceDiagram
-    participant Player
-    participant Barracks as Military Base / PX
-    participant CO as Commanding Officer (CO)
-    participant Field as Combat Theater (Frontline)
-    participant Court as Royal Court / Clan
-
-    Note over Player: Turn 1: 6-Month Base & Training Cycle
-    Player->>Barracks: PT Excellence Drills (Boost Fitness for board)
-    Player->>Barracks: Base PX Shopping (Buy Muscle Car / Martial Armor)
-    Player->>CO: File Requisition / Build Relationship (Brown-nose or Honor)
-    Player->>Court: Manage Clan Affairs / Distribute Family Serums
-    
-    Note over Player: Turn 2: 6-Month Operational Deployment Tour
-    Player->>Field: Deploy to Sector 7 Frontline against Rival Superpower
-    Field-->>Player: Combat Encounters, CMP Bounties, Tactical Decisions
-    Note over Field: 1% Chance: Unearth THE SECRET ANCIENT CAVE!
-```
-
-### Day-to-Day Base Activities (Between Deployments)
-1. **PT & Combat Training**:
-   - High-Gravity Obstacle Courses, Marksmanship Qualification, CQB Sparring. Boosts **Fitness** and **Combat Skill**.
-2. **Barracks & Comrades Culture**:
-   - Gambling in the barracks with custom dice, smuggling contraband past the First Sergeant, resolving bar fights in off-base towns, forming deep brotherhood bonds (comrades who will take a bullet for you).
-3. **Commanding Officer (CO) Interactions**:
-   - **Salute & Obey**: Steady merit gains, solid NCOER evaluation.
-   - **Brown-Nose & Gift**: Spend cash or clan wine to boost CO favor, guaranteeing easy promotion recommendations.
-   - **Report Corruption**: If your CO is embezzling military serums, report him to the Inspector General (Risk: CO's faction targets you; Reward: Instant merit leap).
-4. **Off-Duty Recreation & Wealth Management**:
-   - Buying military muscle cars, purchasing private luxury villas off-base, investing savings in military defense contractors, visiting ancient artifact auction houses.
+### Officer Track (Commission via High Merit / OCS)
+* **2nd Lieutenant (O-1)** — Platoon commander ($1,500/mo)
+* **1st Lieutenant (O-2)** — Executive officer ($2,200/mo)
+* **Captain (O-3)** — Company commander ($3,200/mo)
+* **Major (O-4)** — Battalion operations officer ($4,800/mo)
+* **Lieutenant Colonel (O-5)** — Battalion commander ($6,500/mo)
+* **Colonel (O-6)** — Regimental commander ($9,000/mo)
+* **Brigadier General (O-7)** — Brigade commander ($13,000/mo)
+* **Major General (O-8)** — Division commander ($18,000/mo)
+* **Lieutenant General (O-9)** — Corps commander ($25,000/mo)
+* **General of the Army (O-10)** — Supreme Commander ($35,000/mo)
 
 ---
 
-## 4. The World War Map: The Three Rival Superpowers
+## 8. Military Medals & Ribbons
 
-The war is waged across the continent of **Aethelgard** over subterranean sect ley-lines:
-
-| Superpower | Doctrine & Power Source | Battlefield Profile | Special Threats |
-| :--- | :--- | :--- | :--- |
-| **The Valerian Empire** *(Player)* | Feudal military discipline + Reviving ancient sect cultivation + Noble dynasties | Balanced mixed arms: Mechanized infantry led by high-tier martial cultivators | Internal noble house rivalries; strict Imperial Tribunal executions |
-| **The Iron Federation** | Rejects organic cultivation; harvests energy wells to fuel cyber-nanites and mechanized walkers | Swarms of drone swarms, armored exo-titans, EMP orbital strikes | Cyber-disruption fields that temporarily suppress player Power Tiers |
-| **The Ouroboros Dominion** | Savage bloodline warlords who surgically fuse with mutated atmospheric beasts | Berserker shock-troops, monstrous chimera cavalry, biological venom | High physical damage, savage close-quarters combat, beast-pack ambushes |
-
-### The Frontline War Balance Meter (0% to 100%)
-- **70%–100% (Imperial Dominance)**: The Empire is winning. Troop bonuses, lower deployment risk, high CMP spoils.
-- **40%–69% (Grinding Stalemate)**: Standard frontline tours, frequent skirmishes, constant need for high-tier guardians.
-- **Below 40% (Frontline Collapse)**: Emergency draft, brutal defensive sieges, high casualty rates.
-- **The Treason Check**: If your unit surrenders a vital energy fortress because you sabotaged a sibling's supply line, the **Royal Imperial Tribunal** dispatches royal executioners to decapitate you!
+* 🩸 **Imperial Wound Star**: Surviving major wounds in combat.
+* 🎯 **Combat Infantry Badge**: Surviving your first active frontline tour.
+* 🌟 **Bronze Star of Valor**: Rescuing comrades under enemy fire.
+* ⚔️ **Silver Vanguard Cross**: Single-handedly destroying an enemy strongpoint.
+* 🛡️ **Distinguished Service Cross**: Holding the line against overwhelming odds.
+* 🎖️ **Grand Imperial Star / Medal of Honor**: Highest decoration for legendary battlefield heroism.
 
 ---
 
-## 5. Lifespans, Battlefield Injuries & Medical Systems
+## 9. After-Action Career Dossier (End Screen)
 
-### Lifespan Scaling by Power Tier
-As atmospheric energy transforms human physiology, biological aging slows dramatically:
-
-```mermaid
-graph LR
-    Tier1_3["Tiers 1–3 (Initiates)<br>Lifespan: 80–95 Years"] --> Tier4_6["Tiers 4–6 (Mortal Peak)<br>Lifespan: 110–140 Years"]
-    Tier4_6 --> Tier7_10["Tiers 7–10 (National Guardians)<br>Lifespan: 200–350 Years"]
-    Tier7_10 --> Tier11["Tier 11 (Primordial Immortal)<br>Lifespan: 500 Years!"]
-    Tier11 --> Tier12["Tier 12 (Apex Divinity)<br>Lifespan: 1,000 Years (Millennium Ancestor)!"]
-```
-
-| Stratum | Tiers | Lifespan | Biological State |
-| :--- | :--- | :--- | :--- |
-| **Mortal Initiates** | Tiers 1–3 | 80–95 Years | Standard enhanced human biology; normal aging |
-| **Mortal Peak** | Tiers 4–6 | 110–140 Years | Cellular rejuvenation; peak vitality retained into 80s |
-| **National Guardians** | Tiers 7–10 | 200–350 Years | Energy marrow transformation; outlives multiple mortal generations |
-| **Primordial Immortal** | **Tier 11** | **500 Years** | Half-millennium lifespan; guides dynasty across 15+ generations |
-| **Apex Divinity** | **Tier 12** | **1,000 Years** | Millennium Patriarch; living legendary pillar and ancient god-ancestor |
-
-### Battlefield Injuries & Treatment
-1. **Light Wounds**: Shrapnel scars, minor burns $\rightarrow$ Treated in field hospital; adds permanent battle scars (+Respect from grunts).
-2. **Shattered Meridians**: Sustained from taking a heavy hit from an enemy champion $\rightarrow$ Halves monthly cultivation speed until healed with rare medical school elixirs or ancient cave springs.
-3. **Severed Limbs**: Lost in explosions or energy blade clashes $\rightarrow$ Can be replaced with **Military Cybernetic Prosthetics** (boosts strength, but slightly hinders natural energy resonance) or **Bio-Regeneration Serums** (expensive clan vault resource).
+When the soldier retires, falls in battle, or is discharged, the **Career Dossier** displays:
+* **Final Rank & Title** (e.g. *General Ethan Vance* or *Private First Class Logan Cross*)
+* **Career Duration** (e.g. *Served 24 Years, 48 Tours of Duty*)
+* **Battles & Fronts Survived**
+* **Decorations Rack** (All ribbons and medals earned)
+* **Final Cause of Conclusion** (*Retired with Honors*, *Killed in Action at Sector 7*, or *Dishonorably Discharged*)
+* **Career Legacy Score** & High Scores Leaderboard.
 
 ---
 
-## 6. Endgames, Dynastic Legacies & Ultimate Victories
+## 10. The Imperial War Academy (2-Year Officer Program)
 
-A life in *Army Life Simulator* concludes either in tragedy or dynastic glory:
+The Officer Academy offers a direct commission into the commissioned officer ranks (O-1+):
+* **Duration**: Exactly **2 Years** (4 Semesters).
+* **Admission Standards & Limited Seats**:
+  * Admission is highly competitive with limited candidate seats per year.
+  * Candidates must possess at least **55% Discipline / Tactics** and **55% Physical Readiness**.
+  * A selection board scores candidate percentile (Legacy background provides a merit boost).
+* **Tuition & Loan Financing**:
+  * **Total Tuition**: **$50,000**.
+  * **Upfront Cash Option**: Paid upfront if savings permit.
+  * **Military Education Loan**: For cadets unable to afford $50,000 cash, an imperial education loan is approved at **9% annual interest** (4.5% accrued per 6-month semester).
+  * **Salary Deduction**: Repaid via automatic monthly salary deduction. The player freely selects the deduction percentage (minimum **10%** of monthly salary; adjustable up to 50%).
+* **Year 2 Special Forces Qualification**:
+  * In **Year 2** (Semesters 3 & 4), cadets ranking in the **Top 10%** of their class (`academyPerformanceScore >= 90%`) receive an invitation to join the elite **1-Year Special Forces Qualification Course**.
+* **Direct Commissioning**:
+  * Upon passing out at Semester 4, the cadet is **directly commissioned as a 2nd Lieutenant (O-1)** with full company command authority and officer pay. Cadets in the top 10% graduate with High Honors and receive the *Imperial Honors Saber*.
 
-```mermaid
-graph TD
-    CareerEnd["End of a Lifetime"]
+---
 
-    CareerEnd --> End1["1. Imperial Execution (Defeat / Treason)<br>Executed by Royal Family for losing a war sector.<br>Clan stripped of titles & resources."]
-    
-    CareerEnd --> End2["2. Fallen Hero (Killed in Action)<br>Heroic sacrifice on the frontline.<br>State funeral, posthumous Medal of Honor, clan prestige surges!"]
-    
-    CareerEnd --> End3["3. Honorable Retirement (Old Age)<br>Retires as a General / Duke.<br>Spends golden years directing clan affairs and mentoring grandchildren."]
-    
-    CareerEnd --> End4["4. The Transcendent Ascendant (Tier 12 Divinity)<br>Discovers Secret Cave, achieves Tier 12.<br>Surpasses the Royal Clan, ascends beyond mortal politics!"]
+## 11. Special Forces (Elite Covert Operations)
 
-    End2 --> Succession["Generational Succession: Reborn as Youngest Descendant"]
-    End3 --> Succession
-    End4 --> Godhood["Unlocks 'Immortal Ancestor' Mode: Guide your dynasty from the heavens!"]
-```
+Special Forces operators represent the deadliest, most specialized branch of the armed forces:
+* **Training Duration**: **1 Year** (2 Semesters of intensive qualification drills).
+* **Two Entry Pathways**:
+  1. **Academy Cadet Pathway**: Ranking in the **Top 10%** during Year 2 of the Imperial War Academy.
+  2. **Enlisted Soldier Pathway**: Direct recommendation from the soldier's **Commanding Officer (CO)**. Requires high CO standing (`coFavor >= 70%`) and exemplary combat service (`meritRating >= 60%`).
+* **Active Special Forces Perks & Risks**:
+  * **Higher Pay**: Full operators draw an exclusive **+$800 / month Elite Hazard Stipend** on top of standard pay.
+  * **Higher Fatality Risk**: Deployed on classified black-ops raids and deep-penetration missions behind enemy lines, carrying a significantly higher baseline casualty and KIA probability.
+  * **Experience Scaling**: As the operator climbs through the ranks, their tactical experience multiplies:
+    * Higher combat skill and merit gains per engagement.
+    * Veteran command experience mitigates frontline mortality hazards.
+    * Milestone decorations (Commando Ribbon, Silver Star with Valor, Legion of Merit).
+
+---
+
+## 12. Voluntary Extended Combat Tour & +10% Pay Bonus
+
+Soldiers assigned to frontline deployment can volunteer to remain in active combat:
+* **Voluntary Extension**: The player can volunteer to remain on the battlefield past the standard 6-month rotation instead of rotating back to base.
+* **Standard Pay Continuity**: Base pay and standard hazard stipends continue during initial extension.
+* **+10% Continuous Combat Veteran Bonus**:
+  * If a soldier stays continuously deployed on the frontline for **longer than 1 year** (>= 2 consecutive semesters), their **Total Pay increases by 10%**.
+  * This bonus stacks independently with all existing stipends and does not override or delay normal rank promotion raises.

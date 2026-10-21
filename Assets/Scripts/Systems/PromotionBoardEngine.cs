@@ -33,6 +33,13 @@ namespace ArmyLife.Systems
             float influenceBonus = (soldier.politicalInfluence / 100f) * 25f; // Lineage leverage
 
             int semesterPoints = Mathf.RoundToInt(ptPoints + combatPoints + meritPoints + timePoints + influenceBonus);
+            
+            // Special Forces operators gain accelerated tactical experience as they rank up
+            if (soldier.isSpecialForces)
+            {
+                semesterPoints = Mathf.RoundToInt(semesterPoints * 1.30f);
+            }
+
             soldier.accumulatedPromotionPoints += semesterPoints;
 
             // 2. Find next rank in progression
@@ -41,6 +48,16 @@ namespace ArmyLife.Systems
             MilitaryRankSO nextRank = GetNextRank(rankDatabase, currentOrder);
 
             if (nextRank == null) return; // Reached highest military rank (General)
+
+            // Enlisted cannot cross to Officer without attending the 2-Year War Academy
+            if (!soldier.isOfficer && nextRank.type == PaygradeType.Officer)
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("CAREER APEX",
+                    $"<color=#00FFAA><b>[ENLISTED CAREER APEX • {currentRank?.rankName?.ToUpper() ?? "COMMAND SERGEANT MAJOR"}]</b></color> " +
+                    "You have reached the apex of the enlisted paygrades! To earn an Officer Commission (O-1+), " +
+                    "regulations require completing the 2-Year Imperial War Academy.");
+                return;
+            }
 
             // 3. Time-in-Grade and Board Criteria Check
             int reqTime = (currentRank != null) ? GetRequiredTimeInGradeSemesters(currentRank.paygrade) : 1;

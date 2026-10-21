@@ -720,31 +720,49 @@ namespace ArmyLife.Editor
             Debug.Assert(medYear2Pay == 250L, $"Medical School Years 2-3 must pay $250/mo, got: {medYear2Pay}");
             Debug.Log($"[Medical School Test] Year 1 Pay: ${medYear1Pay}/mo, Years 2-3 Pay: ${medYear2Pay}/mo");
 
-            // 7. Test War Academy (4 years, paid from start $300/mo, Tier 1 required to graduate)
+            // 7. Test War Academy (2 years = 4 semesters, $50,000 loan option, Top 10% SF, direct O-1 commission)
             var warCadet = new SoldierProfile("Valerius Officer", null, 160)
             {
                 age = 18.0f
             };
-            CivilAndMilitaryCareerEngine.EnrollInWarAcademy(warCadet);
+            CivilAndMilitaryCareerEngine.EnrollInWarAcademy(warCadet, takeLoan: true, deductionPercent: 0.15f);
             Debug.Assert(warCadet.careerTrack == CareerTrack.MilitaryWarAcademy, "Should be in MilitaryWarAcademy track");
+            Debug.Assert(warCadet.academyTuitionDebt == 50000L, $"Tuition loan must be $50,000, got: {warCadet.academyTuitionDebt}");
+            Debug.Assert(Mathf.Approximately(warCadet.academyLoanDeductionPercent, 0.15f), "Loan deduction percent should be 15%");
+            
             long warAcademyPay = SalaryCalculator.CalculateGrossMonthlyPay(warCadet);
             Debug.Assert(warAcademyPay == 300L, $"War Academy cadet must be paid from day 1 ($300/mo), got: {warAcademyPay}");
-            Debug.Log($"[War Academy Test] Cadet Officer starting pay: ${warAcademyPay}/mo");
+            Debug.Log($"[War Academy Test] Cadet Officer starting pay: ${warAcademyPay}/mo, Debt: ${warCadet.academyTuitionDebt:N0}");
 
-            // Test pass-out without Tier 1 cultivation
-            warCadet.militarySchoolSemestersCompleted = 7;
-            warCadet.powerTier = 0; // Pre-tier
+            // Progress through Year 1 (Semesters 1 and 2)
             CivilAndMilitaryCareerEngine.AdvanceCareerTurn(warCadet, null);
-            Debug.Assert(warCadet.militarySchoolSemestersCompleted == 8, "Completed 8 semesters");
-            Debug.Assert(!warCadet.graduatedWarAcademy, "Must NOT graduate without Tier 1 Cultivation!");
-            Debug.Log($"[War Academy Passout Test 1] Lacking Tier 1 Cultivation: Commission blocked!");
+            CivilAndMilitaryCareerEngine.AdvanceCareerTurn(warCadet, null);
+            Debug.Assert(warCadet.academySemestersCompleted == 2, "Year 1 completed (2 semesters)");
+            Debug.Assert(!warCadet.graduatedWarAcademy, "Must NOT graduate at Year 1");
 
-            // Achieve Tier 1 Cultivation and graduate!
-            warCadet.powerTier = 1;
+            // Year 2, Semester 3: Top 10% check
+            warCadet.intellect = 95f;
+            warCadet.fitness = 95f;
+            warCadet.discipline = 95f;
+            warCadet.combatSkill = 95f;
             CivilAndMilitaryCareerEngine.AdvanceCareerTurn(warCadet, null);
-            Debug.Assert(warCadet.graduatedWarAcademy, "Must graduate once Tier 1 Cultivation is achieved!");
-            Debug.Assert(warCadet.careerTrack == CareerTrack.MilitaryOfficer, "Commissioned as MilitaryOfficer");
-            Debug.Log($"[War Academy Passout Test 2] Tier 1 Cultivation verified: Officer commission approved!");
+            Debug.Assert(warCadet.academySemestersCompleted == 3, "Year 2 Semester 3 reached");
+            Debug.Assert(warCadet.isAcademyTop10Percent, "Must qualify for Top 10% with 95+ stats");
+
+            // Year 2, Semester 4: Graduation and Direct Commission!
+            CivilAndMilitaryCareerEngine.AdvanceCareerTurn(warCadet, null);
+            Debug.Assert(warCadet.academySemestersCompleted == 4, "2-Year War Academy completed (4 semesters)");
+            Debug.Assert(warCadet.graduatedWarAcademy, "Must graduate after 4 semesters (2 years)!");
+            Debug.Assert(warCadet.careerTrack == CareerTrack.MilitaryOfficer, "Commissioned directly as MilitaryOfficer");
+            Debug.Log($"[War Academy Test] 2-Year program completed! Officer commission approved directly!");
+
+            // Test Special Forces Stipend & Extended Frontline +10% Pay Bonus
+            warCadet.isSpecialForces = true;
+            warCadet.isInCombatDeployment = true;
+            warCadet.consecutiveCombatSemesters = 2; // > 1 year continuously deployed
+            Debug.Assert(warCadet.hasExtendedTourPayBonus, "Must qualify for +10% veteran combat pay after 2 consecutive semesters");
+            long sfGrossPay = SalaryCalculator.CalculateGrossMonthlyPay(warCadet);
+            Debug.Log($"[Special Forces & Extended Tour Test] Gross Pay with SF +$800 and +10% Extended Frontline: ${sfGrossPay:N0}/mo");
 
             // 8. Test Promotion Points Reset & Time-in-Grade (E-1 6mo, E-2 1yr, E-3 at 2.5 yrs)
             int reqE1 = PromotionBoardEngine.GetRequiredTimeInGradeSemesters("E-1");

@@ -47,6 +47,7 @@ namespace ArmyLife.UI
         public ClanModal clanModal;
         public SchoolModal schoolModal;
         public YouthActivitiesModal youthActivitiesModal;
+        public CareerDossierModal careerDossierModal;
 
         [Header("5 Core Bottom Action Buttons")]
         public Button lifeButton;
@@ -130,6 +131,7 @@ namespace ArmyLife.UI
             if (clanModal == null) clanModal = ClanModal.Instance ?? FindAnyObjectByType<ClanModal>(FindObjectsInactive.Include);
             if (schoolModal == null) schoolModal = SchoolModal.Instance ?? FindAnyObjectByType<SchoolModal>(FindObjectsInactive.Include);
             if (youthActivitiesModal == null) youthActivitiesModal = YouthActivitiesModal.Instance ?? FindAnyObjectByType<YouthActivitiesModal>(FindObjectsInactive.Include);
+            if (careerDossierModal == null) careerDossierModal = CareerDossierModal.Instance ?? FindAnyObjectByType<CareerDossierModal>(FindObjectsInactive.Include);
 
             // 2. Bottom buttons auto-link
             var buttons = GetComponentsInChildren<Button>(true);
@@ -211,23 +213,37 @@ namespace ArmyLife.UI
 
             if (ageAndCalendarLabel != null)
             {
-                int year = TimeCycleManager.Instance != null ? TimeCycleManager.Instance.currentYear : 2008;
+                int year = TimeCycleManager.Instance != null ? TimeCycleManager.Instance.currentYear : 2026;
                 int sem = TimeCycleManager.Instance != null ? TimeCycleManager.Instance.currentSemester : 1;
                 
                 string status;
-                if (soldier.isDead) status = "<color=#FF0000>[DEAD]</color>";
-                else if (soldier.isRetired) status = "<color=#FFFF44>[VETERAN PENSION]</color>";
-                else if (soldier.isYouthPhase) status = "<color=#00D4FF>[YOUTH PHASE]</color>";
-                else if (soldier.careerTrack == CareerTrack.CivilianCollege) status = "<color=#FFAA00>[COLLEGE]</color>";
-                else if (soldier.isCivilian) status = "<color=#44DDFF>[CIVILIAN LIFE]</color>";
-                else if (soldier.careerTrack == CareerTrack.MilitaryRecruitBasic) status = "<color=#FFAA00>[BASIC TRAINING]</color>";
-                else if (soldier.careerTrack == CareerTrack.MilitaryTechSchool || soldier.careerTrack == CareerTrack.MilitaryMedicalSchool || soldier.careerTrack == CareerTrack.MilitaryWarAcademy) status = "<color=#AA88FF>[ACADEMY]</color>";
-                else status = soldier.isInCombatDeployment ? "<color=#FF4444>[FRONT TOUR]</color>" : "<color=#44FF44>[BASE]</color>";
+                if (soldier.isDead) status = "<color=#FF0000>[KIA / DECEASED]</color>";
+                else if (soldier.isRetired) status = "<color=#00FFAA>[RETIRED VETERAN]</color>";
+                else if (soldier.careerTrack == CareerTrack.MilitaryWarAcademy)
+                {
+                    string top10 = soldier.isAcademyTop10Percent ? " (TOP 10%)" : "";
+                    status = $"<color=#FFD700>[ACADEMY CADET Y{(soldier.academySemestersCompleted / 2) + 1}{top10}]</color>";
+                }
+                else if (soldier.isSpecialForcesCandidate)
+                {
+                    status = $"<color=#FF8800>[SF CANDIDATE T{soldier.specialForcesTrainingSemesters + 1}/2]</color>";
+                }
+                else if (soldier.isInCombatDeployment)
+                {
+                    string sf = soldier.isSpecialForces ? " [SPEC-OPS]" : "";
+                    string ext = soldier.hasExtendedTourPayBonus ? " [+10% PAY]" : (soldier.isVoluntaryExtendedTour ? " [EXTENDED]" : "");
+                    status = $"<color=#FF4444>[FRONTLINE{sf}{ext}]</color>";
+                }
+                else
+                {
+                    string sf = soldier.isSpecialForces ? " [SF BASE]" : "";
+                    status = $"<color=#44FF44>[GARRISON{sf}]</color>";
+                }
 
                 ageAndCalendarLabel.text = $"Age {soldier.age:F1} | Year {year} S{sem} {status}";
             }
 
-            // Rank & Nobility
+            // Rank & Origin
             if (rankLabel != null)
             {
                 string rankStr;
@@ -239,43 +255,17 @@ namespace ArmyLife.UI
                 {
                     rankStr = $"[RETIRED] {(soldier.currentRank != null ? soldier.currentRank.rankName : "Veteran")}";
                 }
-                else if (soldier.isYouthPhase)
-                {
-                    if (soldier.age < 2.0f) rankStr = "Infant";
-                    else if (soldier.age < 5.0f) rankStr = "Toddler";
-                    else if (soldier.age < 12.0f) rankStr = "Primary School Pupil";
-                    else rankStr = "Military Academy Cadet";
-                }
-                else if (soldier.careerTrack == CareerTrack.CivilianCollege)
-                {
-                    rankStr = $"Imperial College Student ({soldier.collegeDegreeName ?? "Imperial Studies"})";
-                }
-                else if (soldier.careerTrack == CareerTrack.CivilianWork)
-                {
-                    rankStr = $"Civilian: {soldier.civilianJobTitle}";
-                }
-                else if (soldier.careerTrack == CareerTrack.CivilianProfessional)
-                {
-                    rankStr = $"Professional: {soldier.civilianJobTitle}";
-                }
-                else if (soldier.careerTrack == CareerTrack.MilitaryRecruitBasic)
-                {
-                    rankStr = "Basic Combat Recruit (Unpaid)";
-                }
-                else if (soldier.careerTrack == CareerTrack.MilitaryTechSchool)
-                {
-                    int yr = (soldier.militarySchoolSemestersCompleted / 2) + 1;
-                    rankStr = $"Tech School Cadet (Year {Mathf.Min(2, yr)}/2)";
-                }
-                else if (soldier.careerTrack == CareerTrack.MilitaryMedicalSchool)
-                {
-                    int yr = (soldier.militarySchoolSemestersCompleted / 2) + 1;
-                    rankStr = $"Medical Cadet (Year {Mathf.Min(3, yr)}/3)";
-                }
                 else if (soldier.careerTrack == CareerTrack.MilitaryWarAcademy)
                 {
-                    int yr = (soldier.militarySchoolSemestersCompleted / 2) + 1;
-                    rankStr = $"War Academy Cadet (Year {Mathf.Min(4, yr)}/4)";
+                    rankStr = $"Officer Cadet (War Academy Year {(soldier.academySemestersCompleted / 2) + 1})";
+                }
+                else if (soldier.isSpecialForcesCandidate)
+                {
+                    rankStr = "Special Forces Candidate (Q-Course)";
+                }
+                else if (soldier.isSpecialForces)
+                {
+                    rankStr = $"[SF OPERATOR] {(soldier.currentRank != null ? $"{soldier.currentRank.rankName} ({soldier.currentRank.paygrade})" : "Private E-1")}";
                 }
                 else
                 {
@@ -288,8 +278,7 @@ namespace ArmyLife.UI
 
             if (nobleTitleLabel != null)
             {
-                string clanStatus = soldier.isClanHead ? " (Patriarch)" : "";
-                nobleTitleLabel.text = $"{soldier.nobleTitle}{clanStatus}";
+                nobleTitleLabel.text = $"Origin: {soldier.origin} ({soldier.originTrait})";
             }
 
             // Finances (Reflecting Taxes & Career Track)
@@ -340,68 +329,43 @@ namespace ArmyLife.UI
                 else
                 {
                     long net = SalaryCalculator.CalculateNetMonthlyPay(soldier);
-                    monthlyPayLabel.text = $"+${net:N0} / mo (40% Tax Deducted)";
+                    long loanDeduction = SalaryCalculator.CalculateMonthlyLoanDeduction(soldier);
+                    string bonus = soldier.hasExtendedTourPayBonus ? " <color=#FFD700>(+10% Combat Bonus)</color>" : "";
+                    string sfTag = soldier.isSpecialForces ? " <color=#FF8844>(+$800 SF)</color>" : "";
+                    string loanTag = loanDeduction > 0 ? $" <color=#FF8866>(-${loanDeduction:N0} Loan)</color>" : "";
+                    monthlyPayLabel.text = $"+${net:N0} / mo (40% Tax Deducted){bonus}{sfTag}{loanTag}";
                 }
             }
 
-            // Cultivation & Power Tier: HIDDEN FOR COMMONERS UNTIL UNLOCKED!
-            bool showCultivation = soldier.knowsAboutCultivation || soldier.nobleTitle > NobleRank.Commoner;
-            if (powerTierLabel != null)
-            {
-                powerTierLabel.gameObject.SetActive(showCultivation);
-                if (showCultivation)
-                {
-                    string damageWarning = soldier.meridianDamage > 20f 
-                        ? $" <color=#FF4444>[Dmg: {soldier.meridianDamage:F0}%]</color>" 
-                        : "";
+            // Cultivation & Talent: Hidden to focus on authentic military simulation
+            if (powerTierLabel != null) powerTierLabel.gameObject.SetActive(false);
+            if (cultivationProgressBar != null) cultivationProgressBar.gameObject.SetActive(false);
+            if (talentLabel != null) talentLabel.gameObject.SetActive(false);
 
-                    powerTierLabel.text = $"{PowerTierKnowledgeSystem.FormatSoldierPowerTier(soldier)}{damageWarning}";
-                }
-            }
-
-            if (cultivationProgressBar != null)
-            {
-                cultivationProgressBar.gameObject.SetActive(showCultivation);
-                if (showCultivation)
-                {
-                    cultivationProgressBar.value = soldier.tierProgressPercent / 100f;
-                }
-            }
-
-            // Talent Display: HIDDEN UNTIL TESTED AT E-4 (OR NOBLE BIRTH)!
-            if (talentLabel != null)
-            {
-                talentLabel.gameObject.SetActive(soldier.isPersonalTalentRevealed);
-                if (soldier.isPersonalTalentRevealed)
-                {
-                    talentLabel.text = $"Talent: {soldier.talentScore} / 200";
-                }
-            }
-
-            // Center Age Button label update
+            // Center Tour Advance Button label update
             if (advanceSemesterButton != null)
             {
                 var btnText = advanceSemesterButton.GetComponentInChildren<TextMeshProUGUI>();
                 if (btnText != null)
                 {
                     btnText.text = soldier.isDead 
-                        ? "REINCARNATE" 
-                        : (soldier.isYouthPhase ? "GROW UP (+)" : "AGE (+)");
+                        ? "VIEW DOSSIER" 
+                        : (soldier.isRetired ? "VETERAN TOUR (+)" : "ADVANCE TOUR (+)");
                 }
             }
 
-            // Stat Sliders & Clean Percentage Texts (NO EMOJIS TO PREVENT TOFU BOXES)
+            // Stat Sliders & Clean Percentage Texts
             if (healthSlider != null) healthSlider.value = soldier.health / 100f;
             if (healthBarText != null) healthBarText.text = $"Health: {soldier.health:F0}%";
 
             if (fitnessSlider != null) fitnessSlider.value = soldier.fitness / 100f;
-            if (fitnessBarText != null) fitnessBarText.text = $"Fitness: {soldier.fitness:F0}%";
+            if (fitnessBarText != null) fitnessBarText.text = $"Readiness: {soldier.fitness:F0}%";
 
             if (combatSkillSlider != null) combatSkillSlider.value = soldier.combatSkill / 100f;
             if (combatBarText != null) combatBarText.text = $"Combat: {soldier.combatSkill:F0}%";
 
             if (intellectSlider != null) intellectSlider.value = soldier.intellect / 100f;
-            if (intellectBarText != null) intellectBarText.text = $"Intellect: {soldier.intellect:F0}%";
+            if (intellectBarText != null) intellectBarText.text = $"Discipline: {soldier.intellect:F0}%";
 
             if (meritSlider != null) meritSlider.value = soldier.meritRating / 100f;
             if (influenceSlider != null) influenceSlider.value = soldier.politicalInfluence / 100f;
@@ -447,6 +411,22 @@ namespace ArmyLife.UI
 
         public void OnAdvanceSemesterClicked()
         {
+            if (GameManager.Instance != null && GameManager.Instance.currentSoldier != null)
+            {
+                if (GameManager.Instance.currentSoldier.isDead)
+                {
+                    if (careerDossierModal != null)
+                    {
+                        careerDossierModal.OpenDossier(GameManager.Instance.currentSoldier);
+                    }
+                    else if (CareerDossierModal.Instance != null)
+                    {
+                        CareerDossierModal.Instance.OpenDossier(GameManager.Instance.currentSoldier);
+                    }
+                    return;
+                }
+            }
+
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.AdvanceTurn();

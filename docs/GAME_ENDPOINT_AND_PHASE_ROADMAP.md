@@ -1,177 +1,149 @@
-# VALERIAN VANGUARD: Game Endpoint & Phased Investor Roadmap
+# ARMY LIFE SIMULATOR: Game Blueprint & Implementation Plan
 
-> **Target Identity:** An Imperial Military Life Simulation RPG  
-> **Comps:** *BitLife* meets *Warhammer 40,000: Imperial Guard*, *Suzerain*, and *Papers, Please*.  
-> **Platforms:** PC (Steam: $9.99–$12.99) & Mobile (iOS / Android F2P)
-
----
-
-## 1. The Game Endpoint: What is the Final Game?
-
-### 1.1 The High Concept
-The player is born into the brutal, diesel-aether war machine of the **Valerian Empire**. From a commoner grunt in the industrial slums to a scion of a noble martial dynasty, the player lives life turn-by-turn (6 months per semester). 
-
-Will they:
-* Score high on national exams and enter the **Imperial War Academy** as an aristocratic officer?
-* Get conscripted into the frontline trench infantry, surviving heavy bombardment and earning military honors?
-* Pursue civilian trade, enduring a 50% municipal tax while funding their family’s martial rise?
-* Die gloriously in battle, leaving medals, inheritance, and a legacy to their child in **Generation 2**?
-
-### 1.2 How It Looks and Feels (The Aesthetic)
-1. **Visual Style**:
-   * **Color Palette**: Tactical Dark Slate (`#101418`), Deep Navy (`#18202A`), Imperial Gold (`#FFD700`), Blood Crimson (`#FF4444`), and Aether Cyan (`#00D4FF`).
-   * **Paperwork & Bureaucracy Aesthetic**: Official military documents featuring red ink stamps (`[DRAFTED]`, `[COMMENDED]`, `[COURT MARTIAL]`, `[HONORABLY DISCHARGED]`) and wax seals.
-   * **The Service Jacket (Life Dossier)**: Instead of a wall of text, the player sees:
-     * Brass rank chevrons and sleeve patches indicating their current rank (Private E-1 to Warmaster General).
-     * A visual **Medal Rack** displaying ribbon bars and medals earned in combat.
-     * Battle scars and status badges (`[Decorated Veteran]`, `[One-Eyed Marksman]`, `[Shellshocked]`).
-2. **Audio & Atmosphere**:
-   * Heavy mechanical button clicks and typewriter-style text cadence.
-   * Atmospheric military soundtrack: muted snares, brass horns, and distant artillery rumbles during wartime deployments.
-3. **The Core Moment-to-Moment Interaction**:
-   * Turns take **10 to 20 seconds**.
-   * Reading is kept punchy: strictly adhering to the **Rule of 2 Sentences** for dilemmas.
-   * Every choice forces real tension: **Risk vs. Reward** (Morale vs. Cash, Duty vs. Survival, Squad vs. Promotion).
+> **Genre:** Military Life Simulation RPG  
+> **Inspirations:** *BitLife* meets *Band of Brothers*, *Papers, Please*, and *Reigns*.  
+> **Platform:** PC (Steam) & Mobile (iOS / Android)  
+> **Engine:** Unity 6 (URP 2D)  
+> **Guiding Principle:** Fast, playable, high-stakes military drama from the very first click.
 
 ---
 
-## 2. The Core 5-Button Gameplay Loop
+## 🎯 1. The End Point & Win/Loss Conditions
 
-The interface is anchored by **5 persistent bottom navigation buttons**:
-
-```
-+---------------------------------------------------------------+
-|                      [HEADER: Ethan Vance]                    |
-| Age 18.5 | Year 2026 S2 | Private (E-1) | Net: +$360/mo (40% Tax)|
-+---------------------------------------------------------------+
-|                                                               |
-|                   INTERACTIVE BITLIFE FEED                     |
-|                                                               |
-|   [FRONT TOUR] Artillery barrage hits Sector 7 bunker.        |
-|   You drag Sergeant Miller to safety under heavy fire!        |
-|   +15 Merit | Miller is now your Sworn Battlefield Comrade.   |
-|                                                               |
-+---------------------------------------------------------------+
-|  HEALTH [90%]  |  FITNESS [75%]  |  COMBAT [60%]  | INTEL [50%]|
-+---------------------------------------------------------------+
-|  [LIFE]  |  [FINANCE]  |  [GROW UP (+)]  |  [RELATIONS]  | [ACT]  |
-+---------------------------------------------------------------+
-```
-
-1. **`[LIFE]`**: View personal profile, physical health, medals rack, rank insignia, military disciplinary record, and dynastic traits.
-2. **`[FINANCE]`**: Manage liquid cash, send family remittances, buy Imperial War Bonds, view 40% military war tax or 50% civil tax deductions, and repay college tuition debt.
-3. **`[GROW UP (+)]` / `[AGE (+)]`**: The beating heart of the game. Advances the clock by 6 months, processes pay/taxes, triggers life events, checks promotions, and rolls wartime dilemmas.
-4. **`[RELATIONS]`**: Manage relationships with parents, martial siblings, squadmates, commanding officers, and noble clan elders.
-5. **`[ACTIVITIES]`**: Context-sensitive actions based on career stage:
-   * *Youth (0–18)*: Body tempering, academy exam prep, sparring, district odd jobs.
-   * *Cadet / Student*: Study tactics, flight simulator, night patrols, duel peer rivals.
-   * *Active Military*: Weapons range, weapon maintenance, squad gambling, challenge promotion board, volunteer for frontline hazardous duty.
-   * *Civilian*: Career overtime, trade licensing, municipal petitions, night school.
-
----
-
-## 3. Phased Implementation Roadmap
+Every playthrough represents a complete military career run. A run concludes with an **After-Action Career Dossier** presenting the soldier's final rank, years of service, combat tours survived, medals awarded, and ultimate legacy.
 
 ```mermaid
 flowchart TD
-    P1["Phase 1: Tactical Core & 15-Min Demo Loop\n(Weeks 1-2)"] --> P2["Phase 2: Narrative Drama & Visual Polish\n(Weeks 3-4)"]
-    P2 --> P3["Phase 3: Investor Pitch & Playtest Slice\n(Weeks 5-6)"]
-    P3 --> P4["Phase 4: Full Commercial 1.0 Release\n(Months 3-4 Post-Funding)"]
+    Start["Age 18: Enlistment / Boot Camp"] --> Career["Active Duty Career (6-Month Tours)"]
+    Career --> Victory1["🏆 4-Star General / Supreme Commander (O-10)"]
+    Career --> Victory2["🎖️ Honorable Retirement (20-30 Years Service)"]
+    Career --> Defeat1["🪦 Killed in Action (KIA at 0% Health)"]
+    Career --> Defeat2["⚖️ Court-Martial / Dishonorable Discharge (0% Discipline)"]
+    Victory1 --> Dossier["Final Career Dossier & Legacy Score"]
+    Victory2 --> Dossier
+    Defeat1 --> Dossier
+    Defeat2 --> Dossier
 ```
 
----
+### 1.1 The 4 Definitive End Points
 
-### Phase 1: Tactical Core & 15-Minute Replay Loop (Weeks 1–2)
-**Goal:** Create a rock-solid, bug-free core loop where a player can play one full military life in 15 minutes.
-
-- [x] **Tax & Economics Balance**:
-  - 40% Mandatory Imperial War Tax for active military duty.
-  - 50% Municipal Tax for civilian career tracks.
-  - Cadet stipends tax-exempt; recruit boot camp (6 mo) unpaid.
-- [x] **Responsive UI & Layering**:
-  - Modal sibling depth (`SetAsLastSibling()`) so all 5 modals open instantly without obstruction.
-  - Text clipping via `RectMask2D` on feed container to prevent text overflow or click-blocking.
-- [ ] **Tight Dilemma Deck (35 High-Impact Scenarios)**:
-  - 10 Youth & Exam Dilemmas (Age 10–18): Cheating on military exams, defending siblings, noble patron favors.
-  - 15 Frontline Wartime Dilemmas (Age 18–30): Trench artillery, sniper encounters, civilian hostages, insubordination vs following suicidal orders.
-  - 10 Base & Garrison Politics Dilemmas: Rivalry with aristocratic lieutenants, black market bootleg supply theft, promotion board interviews.
-- [ ] **Promotion Board System Integration**:
-  - Time-in-grade validation (E-1: 6mo, E-2: 1yr, E-3: 1.5yr).
-  - Clean promotion celebration screen when advancing rank.
+| Outcome | Classification | Condition | Outcome Screen |
+| :--- | :--- | :--- | :--- |
+| **"The 4-Star Legend"** | 🏆 **Supreme Victory** | Reach the highest rank (General of the Army / O-10) | Grand military parade, historical hall of fame, maximum legacy score. |
+| **"The Honorable Veteran"** | 🎖️ **Career Victory** | Complete 20+ years of active duty and choose honorable retirement | Veteran retirement ceremony, pension awarded, medal display case. |
+| **"Killed in Action (KIA)"** | 🪦 **Tragic / Heroic End** | Health reaches 0% during a combat engagement | Posthumous Purple Heart / Medal of Honor, fallen soldier epitaph. |
+| **"Dishonorable Discharge"** | ⚖️ **Defeat** | Discipline hits 0%, or convicted of desertion/mutiny | Court-martial tribunal verdict, loss of rank and benefits, exile/imprisonment. |
 
 ---
 
-### Phase 2: Narrative Drama & Visual Polish (Weeks 3–4)
-**Goal:** Replace dry numeric stat-swapping with permanent human drama, visual medals, and physical consequences.
+## 🔄 2. The Core Moment-to-Moment Loop
 
-1. **Reputation & Story Trait System**:
-   - Give soldiers permanent story tags based on event choices:
-     - `[Decorated Hero]`: +20% promotion board favor, respect from enlisted troops.
-     - `[Shellshocked]`: -10% composure in ambushes, requires apothecary nerve draughts.
-     - `[One-Eyed Veteran]`: Lost eye in combat deployment; unlocks unique intimidation dialog.
-     - `[Sworn Comrade: Miller]`: Miller assists during court-martial trials.
-     - `[Aristocrat's Enemy]`: Noble officers block easy promotions.
-2. **Visual Medals & Paperwork Assets**:
-   - Implement **Medal Rack** in `LifeModal`:
-     - *Imperial Wound Badge* (for surviving fatal wounds).
-     - *Iron Vanguard Star* (for volunteering for frontline hazard duty).
-     - *Crown Order of Merit* (for exceptional exam and tactical performance).
-   - Implement visual bureaucratic stamps on event resolution:
-     - Stamped in bold red/gold text: `[APPROVED]`, `[DRAFTED]`, `[PROMOTED]`, `[CASUALTY REPORT]`.
-3. **Sound Effects Pass**:
-   - Heavy tactile UI clicks for bottom buttons.
-   - Distinctive typewriter audio for incoming feed reports.
-   - Dramatic stingers for wartime breakthroughs, promotions, or death.
+Turns are paced in **6-Month Semiannual Tours** (Spring/Summer Tour & Fall/Winter Tour). Each turn takes **15 to 30 seconds** of snappy decision-making.
 
----
+```mermaid
+flowchart LR
+    A["1. Advance Tour\n(6 Months)"] --> B["2. Deployment\n(Garrison vs Frontline)"]
+    B --> C["3. Dilemma & Choice\n(Tactical / Barracks)"]
+    C --> D["4. Immediate Impact\n(Stats, Medals, Respect)"]
+    D --> E["5. Promotion Board\n& Payday"]
+    E --> A
+```
 
-### Phase 3: The Investor Pitch & Playtest Slice (Weeks 5–6)
-**Goal:** Assemble the playable demo, generate proof of retention, and create the pitch deck for publishers and investors.
+1. **Advance Tour**: Time ticks forward 6 months.
+2. **Deployment Roll**: 
+   * **Garrison Duty**: Base training, weapons qualifications, barracks inspections, off-duty gambling, CO politics.
+   * **Frontline Combat**: High-risk combat zone (Trench raid, urban siege, ambushes, desert patrol).
+3. **High-Impact Dilemma**: A 2-sentence scenario with 2 or 3 distinct choices (Risk vs. Safety, Duty vs. Survival, Squad Comrades vs. Career Advancement).
+4. **Immediate Consequence**: Stats update, feed logs the story event, wounds or medals are granted.
+5. **Promotion Board & Payday**: Collect military salary. If Merit and Time-in-Grade requirements are met, face the promotion board to earn the next rank.
 
-1. **Multi-Generational Dynasty & Succession**:
-   - When a soldier dies or retires, their accrued cash vault, noble title, and heirloom medal box pass to their designated heir.
-   - Player immediately begins Life #2 with higher starting advantages (The "One More Run" addiction factor).
-2. **20-Player Playtest & Retention Verification**:
-   - Host build on itch.io (private or unlisted).
-   - Collect session metrics:
-     - Average session playtime (Target: > 18 minutes).
-     - Replay rate / Life 2 start rate (Target: > 60%).
-3. **Publisher / Investor Pitch Deck (10 Slides)**:
-   - *Slide 1:* Title & Tagline (*The Gritty Military Life Simulator*).
-   - *Slide 2:* The Market Opportunity (*BitLife's 100M+ downloads + Warhammer 40k's passionate demographic*).
-   - *Slide 3:* Core Gameplay Pillars (Fast Turns, High Stakes, Dynastic Succession).
-   - *Slide 4:* 15-Minute Playable Vertical Slice link.
-   - *Slide 5:* Playtester Retention Metrics (Proof that players love it).
-   - *Slide 6:* Monetization Model (Steam Premium + Mobile cosmetic battle passes).
-   - *Slide 7:* Content Roadmap (Full 10-rank officer tree, 3 warring empires).
-   - *Slide 8:* Production Budget & Schedule ($50k–$80k for complete audio, custom portraits, and localization).
-   - *Slide 9:* Team & Capabilities.
-   - *Slide 10:* The Ask (Funding terms & milestones).
+### 2.1 Voluntary Extended Frontline Tours & +10% Pay Bonus
+* **Voluntary Tour Extension**: Players can choose to remain deployed in active combat zones longer than the standard 6-month tour instead of returning to garrison base for rest.
+* **Pay Continuity**: Standard base pay and combat hazard pay ($450/mo) continue as normal during the tour.
+* **The +10% Continuous Frontline Bonus**: If a soldier stays continuously deployed on the battlefield for **longer than 1 year** (2+ consecutive semesters), their **Total Pay increases by 10%**.
+  * This bonus is calculated as a direct +10% boost on total pay and stacks independently without affecting or overriding any rank promotions or standard raises.
 
 ---
 
-### Phase 4: Full Commercial 1.0 Release (Months 3–4 Post-Funding)
-**Goal:** Expand the vertical slice into a massive, commercially competitive PC and mobile game.
+## 📊 3. The 5 Core Soldier Stats
 
-1. **Three-Nation Continental Warfare**:
-   - Fight for the **Valerian Empire** (feudal mechanized imperial army), **Iron Federation** (cybernetic industrial democracy), or **Ouroboros Dominion** (mutated beast warlords).
-2. **Commissioned Officer & High Command Track**:
-   - Advance beyond Enlisted (E-1 to E-9) into Officer ranks (Second Lieutenant O-1 up to Warmaster General O-10).
-   - Command platoons, artillery batteries, and continental airships; allocate ammo and decide operational battle plans.
-3. **Dynastic Marriage & High Society**:
-   - Arrange marriages with noble houses, negotiate dowries, purchase imperial manor estates, and participate in imperial court politics.
-4. **Platform Integration**:
-   - Steam Achievements, Cloud Saves, Steam Deck full compatibility.
-   - Localization into 6 languages (English, German, French, Simplified Chinese, Russian, Spanish).
+All complex multi-tier math and continuous nutrient burn systems are replaced with 5 clean, intuitive meters:
+
+* **Health (0–100%)**: Physical condition. Wounds reduce health; rest, field medics, or hospital leave restores it. Hitting 0% results in **KIA**.
+* **Morale (0–100%)**: Psychological stamina and will to fight. Low morale triggers battle fatigue, depression, or panic under fire.
+* **Discipline (0–100%)**: Standing with commanding officers and military police. High discipline qualifies for officer track (OCS); zero discipline results in the brig or **Court-Martial**.
+* **Combat Skill (0–100%)**: Marksmanship, tactical awareness, and hand-to-hand proficiency. Directly determines success rates in life-or-death battlefield encounters.
+* **Cash ($)**: Savings from monthly salary, combat pay, hazard stipends, or gambling. Spent on better field kit, bribes, squad drinks, or sending money home to family.
 
 ---
 
-## 4. Pitch Summary Cheat Sheet
+## 🪖 4. The Rank Progression Ladder
 
-| Question | Winning Answer |
-| :--- | :--- |
-| **What is the game?** | A turn-based imperial military life simulator where commoners and nobles survive frontline trench wars and dynastic politics. |
-| **Why is it fun?** | Fast 15-second turns, ruthless dilemmas, permanent battle scars/medals, and generational succession. |
-| **Who will buy it?** | Fans of *BitLife*, *Warhammer 40k*, *Suzerain*, *Reigns*, and *Crusader Kings*. |
-| **How long to invest-ready demo?** | 4 to 6 weeks. |
-| **How long to full commercial release?** | 3 to 4 months following funding. |
+A clear, satisfying ladder of progression where each promotion unlocks higher pay, greater authority, and command decisions:
+
+### Enlisted Path
+1. **Recruit (E-1)** — Basic training recruit ($150/mo).
+2. **Private (E-2)** — Standard line infantry grunt ($300/mo).
+3. **Private First Class (E-3)** — Experienced rifleman ($450/mo).
+4. **Corporal (E-4)** — Fireteam leader, first leadership responsibilities ($650/mo).
+5. **Sergeant (E-5)** — Squad leader, manages squad morale and discipline ($900/mo).
+6. **Staff Sergeant (E-6)** — Platoon sergeant, battlefield tactician ($1,250/mo).
+7. **Master Sergeant (E-7)** — Senior non-commissioned officer ($1,800/mo).
+8. **Sergeant Major (E-9)** — Highest enlisted authority; advisor to the commander ($2,600/mo).
+
+### Officer Commission Track (Via 2-Year War Academy)
+> **The Imperial War Academy**: A prestigious 2-year (4-semester) officer commissioning program:
+> * **Limited Seats & Admission Board**: Requires 55% Discipline and 55% Physical Readiness.
+> * **$50,000 Tuition / 9% Loan**: Pay upfront cash or take a 9% annual interest loan with monthly deduction of minimum 10% of salary (customizable).
+> * **Top 10% Special Forces Pathway**: In Year 2, cadets with top 10% standing (score >= 90%) qualify to enter elite 1-year Special Forces selection!
+> * **Direct O-1 Commission**: Graduating the 2-year academy directly commissions the cadet as a **2nd Lieutenant (O-1)**!
+
+1. **2nd Lieutenant (O-1)** — Platoon commander ($3,800/mo).
+2. **1st Lieutenant (O-2)** — Executive officer ($4,500/mo).
+3. **Captain (O-3)** — Company commander ($5,800/mo).
+4. **Major (O-4)** — Battalion operations officer ($7,200/mo).
+5. **Lieutenant Colonel (O-5)** — Battalion commander ($9,500/mo).
+6. **Colonel (O-6)** — Regimental commander ($12,000/mo).
+7. **Brigadier General (O-7)** — Brigade commander ($16,000/mo).
+8. **Major General (O-8)** — Division commander ($22,000/mo).
+9. **Lieutenant General (O-9)** — Corps commander ($28,000/mo).
+10. **General of the Army (O-10)** — Supreme Commander ($35,000/mo).
+
+### ⚡ Special Forces Program (Elite Commando Operations)
+* **Training**: 1-Year Qualification Course (2 Semesters).
+* **Two Pathways**:
+  1. **Academy Year 2 Top 10%**: Academic honors cadets invited directly to selection.
+  2. **Enlisted CO Recommendation**: High-performing enlisted soldiers (CO Favor >= 70%, Merit >= 60%) recommended directly by their commander.
+* **Perks & Hazards**:
+  * **+$800 / mo Elite Hazard Stipend** on top of all other earnings.
+  * **Higher Lethality Risk**: Black-ops missions and night raids carry elevated casualty/mortality rates.
+  * **Experience Scaling**: Gathers enhanced combat skill, leadership, and operational experience as rank climbs.
+
+---
+
+## 🏅 5. Military Decorations & Medals
+
+Medals are earned through specific heroic deeds during frontline dilemmas:
+* **Imperial Wound Star / Purple Heart**: Awarded for surviving major shrapnel or gunshot wounds in combat.
+* **Combat Infantry Badge**: Awarded after surviving your first direct enemy engagement.
+* **Bronze Star of Valor**: Awarded for rescuing wounded comrades under heavy enemy fire.
+* **Silver Vanguard Cross**: Awarded for single-handedly neutralizing an enemy bunker or sniper nest.
+* **Distinguished Service Cross**: Awarded for holding an overrun defensive position against superior forces.
+* **The Grand Imperial Star / Medal of Honor**: The nation's highest military decoration for extraordinary battlefield heroism.
+
+---
+
+## 🛠️ 6. Implementation Roadmap
+
+```mermaid
+flowchart TD
+    S1["Sprint 1: The Fast Enlistment Start\n• Spawn character directly at Age 18\n• 4 Background Origins\n• Clean UI stat bar bindings"] --> S2["Sprint 2: Frontline Combat & Dilemma Engine\n• 30 high-impact military dilemmas\n• Wounds, casualty checks & medals\n• BitLife feed log integration"]
+    S2 --> S3["Sprint 3: Promotion Boards & Officer Track\n• Time-in-grade validation\n• Enlisted-to-Officer transition\n• Payday & gear spending"]
+    S3 --> S4["Sprint 4: End Game Dossier & Victory Screens\n• 4-Star General Victory celebration\n• Honorable Retirement ceremony\n• KIA headstone & Dossier card"]
+```
+
+### Phase Summary
+1. **Phase 1 (Immediate Playability)**: Start at Age 18 in boot camp. Remove the 0-18 childhood phase and cultivation code. Wire the 5 stats directly to the existing HUD sliders.
+2. **Phase 2 (Dynamic Dilemmas & Combat)**: Connect frontline and barracks dilemmas with real risk/reward and medal awards.
+3. **Phase 3 (Progression & Promotion)**: Promotion board checks, salary calculation, and equipment purchasing.
+4. **Phase 4 (End of Service)**: The Career Dossier screen showing final medals, battles, cause of death/retirement, and legacy score.
