@@ -128,9 +128,28 @@ namespace ArmyLife.UI
             // Service Statistics
             float years = soldier.totalSemestersLived * 0.5f;
             int tours = soldier.totalSemestersLived;
+            string wealthTitle = "Modest Commoner";
+            if (soldier.cashBalance >= 10000000L || soldier.familyHouseTier == FamilyHouseTier.ImperialDynasticSeat)
+                wealthTitle = "<color=#FFD700><b>The Gilded Sovereign Myth (Apex Dynasty)</b></color>";
+            else if (soldier.cashBalance >= 2500000L || soldier.familyHouseTier == FamilyHouseTier.SovereignImperialChateau)
+                wealthTitle = "<color=#FFAA00><b>Sovereign Royal Powerbroker</b></color>";
+            else if (soldier.cashBalance >= 500000L || soldier.familyHouseTier == FamilyHouseTier.DucalPalaceCitadel)
+                wealthTitle = "<color=#00FFAA><b>Grand Provincial Oligarch</b></color>";
+            else if (soldier.cashBalance >= 100000L || soldier.familyHouseTier == FamilyHouseTier.AncestralEstate)
+                wealthTitle = "<color=#00D4FF><b>Prominent Patrician Nobility</b></color>";
+            else if (soldier.cashBalance >= 25000L)
+                wealthTitle = "Comfortable Veteran";
+
+            string estateName = soldier.familyHouseTier != FamilyHouseTier.None
+                ? $"\n<b>Dynastic Estate:</b> {EconomyData.GetFamilyHouseDisplayName(soldier.familyHouseTier)}"
+                : "";
+            string bizName = soldier.ownedBusiness != CommercialBusiness.None
+                ? $"\n<b>Commercial Empire:</b> {EconomyData.GetBusinessDisplayName(soldier.ownedBusiness)}"
+                : "";
+
             if (serviceYearsText != null)
             {
-                serviceYearsText.text = $"<b>Years Served:</b> {years:F1} Years ({tours} Tours of Duty)\n<b>Final Bank Balance:</b> ${soldier.cashBalance:N0}";
+                serviceYearsText.text = $"<b>Years Served:</b> {years:F1} Years ({tours} Tours of Duty)\n<b>Final Bank Balance:</b> ${soldier.cashBalance:N0} ({wealthTitle}){estateName}{bizName}";
             }
 
             if (combatToursText != null)
@@ -184,7 +203,25 @@ namespace ArmyLife.UI
             int victoryBonus = (soldier.currentRank != null && soldier.currentRank.paygrade == "O-10") ? 10000 : (soldier.isRetired ? 3000 : 0);
             int sfBonus = soldier.isSpecialForces ? (2000 + (soldier.specialForcesMissionsSurvived * 500)) : 0;
             int academyBonus = soldier.graduatedWarAcademy ? 1500 : 0;
-            int totalScore = (rankOrder * 750) + medalScore + tourScore + bankScore + victoryBonus + sfBonus + academyBonus;
+
+            int estateBonus = 0;
+            switch (soldier.familyHouseTier)
+            {
+                case FamilyHouseTier.AncestralEstate: estateBonus = 1500; break;
+                case FamilyHouseTier.DucalPalaceCitadel: estateBonus = 5000; break;
+                case FamilyHouseTier.SovereignImperialChateau: estateBonus = 12000; break;
+                case FamilyHouseTier.ImperialDynasticSeat: estateBonus = 30000; break;
+            }
+
+            int empireBonus = 0;
+            switch (soldier.ownedBusiness)
+            {
+                case CommercialBusiness.DefenseMunitionsConglomerate: empireBonus = 4000; break;
+                case CommercialBusiness.ImperialShippingCartel: empireBonus = 10000; break;
+                case CommercialBusiness.CentralBankingHouseAndMint: empireBonus = 25000; break;
+            }
+
+            int totalScore = (rankOrder * 750) + medalScore + tourScore + bankScore + victoryBonus + sfBonus + academyBonus + estateBonus + empireBonus;
 
             if (finalScoreText != null)
             {

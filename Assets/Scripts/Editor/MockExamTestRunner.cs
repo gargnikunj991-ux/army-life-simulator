@@ -948,6 +948,29 @@ namespace ArmyLife.Editor
             Debug.Assert(heir.warBondsOwned == 10, "Heir should inherit 10 war bonds");
             Debug.Log($"[Dynasty Test 7] Dynastic inheritance passed 100%! Heir inherited ${heir.inheritedFamilyWealth:N0} and family estate.");
 
+            // 8. Test Apex Multi-Millionaire Tiers ($500k, $2.5M, $10M)
+            var oligarch = new SoldierProfile("Dynasty Emperor", null, 200) { cashBalance = 25000000L };
+            
+            // Purchase Ducal Palace Citadel ($500k)
+            bool ducalSuccess = EconomyEngine.BuyFamilyHouse(oligarch, FamilyHouseTier.DucalPalaceCitadel);
+            Debug.Assert(ducalSuccess && oligarch.familyHouseTier == FamilyHouseTier.DucalPalaceCitadel, "Should buy Ducal Citadel");
+
+            // Purchase Sovereign Imperial Chateau ($2.5M)
+            bool chateauSuccess = EconomyEngine.BuyFamilyHouse(oligarch, FamilyHouseTier.SovereignImperialChateau);
+            Debug.Assert(chateauSuccess && oligarch.familyHouseTier == FamilyHouseTier.SovereignImperialChateau, "Should buy Chateau");
+
+            // Purchase Apex Dynastic Mountain Citadel ($10,000,000)
+            bool citadelSuccess = EconomyEngine.BuyFamilyHouse(oligarch, FamilyHouseTier.ImperialDynasticSeat);
+            Debug.Assert(citadelSuccess && oligarch.familyHouseTier == FamilyHouseTier.ImperialDynasticSeat, "Should buy $10M Dynastic Mountain Citadel");
+
+            // Purchase The Imperial Bank & Sovereign Mint ($5,000,000)
+            bool mintSuccess = EconomyEngine.PurchaseBusiness(oligarch, CommercialBusiness.CentralBankingHouseAndMint);
+            Debug.Assert(mintSuccess && oligarch.ownedBusiness == CommercialBusiness.CentralBankingHouseAndMint, "Should buy $5M Sovereign Mint");
+            long mintYield = EconomyEngine.CalculateSemesterBusinessRevenue(oligarch);
+            Debug.Assert(mintYield >= 750000L, $"Mint base yield should be >= $750k/sem, got {mintYield}");
+
+            Debug.Log($"[Apex Wealth Test 8] Multi-millionaire $10M citadel and $5M mint verified! Bank: ${oligarch.cashBalance:N0}");
+
             Debug.Log("<color=#00FFAA>========== ALL IN-GAME ECONOMY & CRIME TESTS PASSED 100%! ==========</color>");
         }
     }

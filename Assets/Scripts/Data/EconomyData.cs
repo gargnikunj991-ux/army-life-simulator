@@ -31,7 +31,8 @@ namespace ArmyLife.Data
         BarracksOrSlums = 0,    // Spartan military barracks bunk or civilian slum tenement ($250/sem)
         ModestApartment = 1,    // Clean modest city apartment with running water ($600/sem)
         ComfortableHome = 2,    // Comfortable standalone private villa with garden ($1,800/sem)
-        NobleEstate = 3         // Grand aristocratic ancestral manor with domestic staff ($5,000/sem)
+        NobleEstate = 3,        // Grand aristocratic ancestral manor with domestic staff ($5,000/sem)
+        ImperialPalaceWing = 4  // Sovereign imperial palace wing with royal guard and banquet halls ($25,000/sem)
     }
 
     /// <summary>
@@ -40,10 +41,13 @@ namespace ArmyLife.Data
     public enum CommercialBusiness
     {
         None = 0,
-        Workshop = 1,               // Artisan Blacksmith & Craft Workshop ($5,000 purchase)
-        Tavern = 2,                 // Garrison Tavern & Travelers Inn ($12,000 purchase)
-        MerchantCaravan = 3,        // Inter-State Merchant Caravan Fleet ($25,000 purchase)
-        PrivateSecurityAgency = 4   // Elite Private Security Consulting Agency ($50,000 purchase)
+        Workshop = 1,                           // Artisan Blacksmith & Craft Workshop ($5,000 purchase)
+        Tavern = 2,                             // Garrison Tavern & Travelers Inn ($12,000 purchase)
+        MerchantCaravan = 3,                    // Inter-State Merchant Caravan Fleet ($25,000 purchase)
+        PrivateSecurityAgency = 4,              // Elite Private Security Consulting Agency ($50,000 purchase)
+        DefenseMunitionsConglomerate = 5,        // Industrial cannon & small-arms manufacturing conglomerate ($250,000 purchase)
+        ImperialShippingCartel = 6,              // Transcontinental naval fleet & armored rail logistics cartel ($1,000,000 purchase)
+        CentralBankingHouseAndMint = 7          // Imperial mint & sovereign bond banking house ($5,000,000 purchase)
     }
 
     /// <summary>
@@ -52,9 +56,12 @@ namespace ArmyLife.Data
     public enum FamilyHouseTier
     {
         None = 0,
-        RuralHomestead = 1,     // $5,000 purchase: Stable country farmland and stone cottage
-        CityTownhouse = 2,      // $25,000 purchase: Multi-story townhouse in provincial capital
-        AncestralEstate = 3     // $100,000 purchase: Magnificent ancestral manor with sprawling grounds
+        RuralHomestead = 1,              // $5,000 purchase: Stable country farmland and stone cottage
+        CityTownhouse = 2,               // $25,000 purchase: Multi-story townhouse in provincial capital
+        AncestralEstate = 3,             // $100,000 purchase: Magnificent ancestral manor with sprawling grounds
+        DucalPalaceCitadel = 4,          // $500,000 purchase: High-walled ducal citadel with private garrison
+        SovereignImperialChateau = 5,    // $2,500,000 purchase: Sprawling royal chateau with private vineyards
+        ImperialDynasticSeat = 6         // $10,000,000 purchase: The Eternal Mountain Citadel, pinnacle of dynastic dynasty
     }
 
     /// <summary>
@@ -171,11 +178,12 @@ namespace ArmyLife.Data
             long cost;
             switch (tier)
             {
-                case HousingTier.BarracksOrSlums: cost = 250L; break;
-                case HousingTier.ModestApartment: cost = 600L; break;
-                case HousingTier.ComfortableHome: cost = 1800L; break;
-                case HousingTier.NobleEstate:     cost = 5000L; break;
-                default:                          cost = 250L; break;
+                case HousingTier.BarracksOrSlums:    cost = 250L; break;
+                case HousingTier.ModestApartment:    cost = 600L; break;
+                case HousingTier.ComfortableHome:    cost = 1800L; break;
+                case HousingTier.NobleEstate:        cost = 5000L; break;
+                case HousingTier.ImperialPalaceWing: cost = 25000L; break;
+                default:                             cost = 250L; break;
             }
 
             // Air Force base housing provides 20% discount on quarters upkeep
@@ -196,11 +204,12 @@ namespace ArmyLife.Data
 
             switch (tier)
             {
-                case HousingTier.BarracksOrSlums: return "Barracks / Slum Tenement";
-                case HousingTier.ModestApartment: return "City Apartment";
-                case HousingTier.ComfortableHome: return "Comfortable Private Villa";
-                case HousingTier.NobleEstate:     return "Noble Ancestral Manor";
-                default:                          return "Standard Quarters";
+                case HousingTier.BarracksOrSlums:    return "Barracks / Slum Tenement";
+                case HousingTier.ModestApartment:    return "City Apartment";
+                case HousingTier.ComfortableHome:    return "Comfortable Private Villa";
+                case HousingTier.NobleEstate:        return "Noble Ancestral Manor";
+                case HousingTier.ImperialPalaceWing: return "Sovereign Imperial Palace Wing";
+                default:                             return "Standard Quarters";
             }
         }
 
@@ -221,6 +230,8 @@ namespace ArmyLife.Data
                     return "Spacious standalone villa with private courtyard and study ($1,800/sem). Excellent recovery and family comfort.";
                 case HousingTier.NobleEstate:
                     return "Grand aristocratic estate staffed by groundskeepers and domestic retinue ($5,000/sem). Unlocks immense clan prestige.";
+                case HousingTier.ImperialPalaceWing:
+                    return "Grand sovereign palace wing with marble colonnades, royal praetorian guard, and banquet halls ($25,000/sem). The absolute pinnacle of imperial lifestyle.";
                 default:
                     return "Standard quarters.";
             }
@@ -238,11 +249,14 @@ namespace ArmyLife.Data
         {
             switch (business)
             {
-                case CommercialBusiness.Workshop:              return 5000L;
-                case CommercialBusiness.Tavern:                return 12000L;
-                case CommercialBusiness.MerchantCaravan:       return 25000L;
-                case CommercialBusiness.PrivateSecurityAgency: return 50000L;
-                default:                                       return 0L;
+                case CommercialBusiness.Workshop:                     return 5000L;
+                case CommercialBusiness.Tavern:                       return 12000L;
+                case CommercialBusiness.MerchantCaravan:              return 25000L;
+                case CommercialBusiness.PrivateSecurityAgency:        return 50000L;
+                case CommercialBusiness.DefenseMunitionsConglomerate: return 250000L;
+                case CommercialBusiness.ImperialShippingCartel:       return 1000000L;
+                case CommercialBusiness.CentralBankingHouseAndMint:   return 5000000L;
+                default:                                              return 0L;
             }
         }
 
@@ -250,11 +264,14 @@ namespace ArmyLife.Data
         {
             switch (business)
             {
-                case CommercialBusiness.Workshop:              return 800L;
-                case CommercialBusiness.Tavern:                return 2000L;
-                case CommercialBusiness.MerchantCaravan:       return 4500L;
-                case CommercialBusiness.PrivateSecurityAgency: return 10000L;
-                default:                                       return 0L;
+                case CommercialBusiness.Workshop:                     return 800L;
+                case CommercialBusiness.Tavern:                       return 2000L;
+                case CommercialBusiness.MerchantCaravan:              return 4500L;
+                case CommercialBusiness.PrivateSecurityAgency:        return 10000L;
+                case CommercialBusiness.DefenseMunitionsConglomerate: return 45000L;
+                case CommercialBusiness.ImperialShippingCartel:       return 160000L;
+                case CommercialBusiness.CentralBankingHouseAndMint:   return 750000L;
+                default:                                              return 0L;
             }
         }
 
@@ -264,11 +281,14 @@ namespace ArmyLife.Data
         {
             switch (business)
             {
-                case CommercialBusiness.Workshop:              return "Artisan Craft & Blacksmith Workshop";
-                case CommercialBusiness.Tavern:                return "Garrison Tavern & Travelers Inn";
-                case CommercialBusiness.MerchantCaravan:       return "Inter-State Merchant Caravan Fleet";
-                case CommercialBusiness.PrivateSecurityAgency: return "Elite Private Security Consulting Agency";
-                default:                                       return "None";
+                case CommercialBusiness.Workshop:                     return "Artisan Craft & Blacksmith Workshop";
+                case CommercialBusiness.Tavern:                       return "Garrison Tavern & Travelers Inn";
+                case CommercialBusiness.MerchantCaravan:              return "Inter-State Merchant Caravan Fleet";
+                case CommercialBusiness.PrivateSecurityAgency:        return "Elite Private Security Consulting Agency";
+                case CommercialBusiness.DefenseMunitionsConglomerate: return "Imperial Munitions & Cannon Foundry";
+                case CommercialBusiness.ImperialShippingCartel:       return "Transcontinental Armored Logistics Cartel";
+                case CommercialBusiness.CentralBankingHouseAndMint:   return "The Imperial Bank & Sovereign Mint";
+                default:                                              return "None";
             }
         }
 
@@ -286,6 +306,12 @@ namespace ArmyLife.Data
                     return "Caravan fleet hauling exotic spices, silks, and military metals between provincial hubs ($25k cost, ~$4,500/sem).";
                 case CommercialBusiness.PrivateSecurityAgency:
                     return "High-end private tactical consulting firm safeguarding noble estates, banks, and merchant VIPs ($50k cost, ~$10,000/sem).";
+                case CommercialBusiness.DefenseMunitionsConglomerate:
+                    return "Sprawling industrial complex manufacturing heavy siege howitzers, armor plating, and munitions ($250k cost, ~$45,000/sem). Massive yields backed by war contracts.";
+                case CommercialBusiness.ImperialShippingCartel:
+                    return "Transcontinental syndicate of merchant rail fleets and armored naval convoys ($1,000,000 cost, ~$160,000/sem). Controls essential wartime trade arteries.";
+                case CommercialBusiness.CentralBankingHouseAndMint:
+                    return "The absolute summit of oligarchic supremacy ($5,000,000 cost, ~$750,000/sem). Mints imperial coin, finances national war bonds, and wields kingmaker authority.";
                 default:
                     return "No commercial business owned.";
             }
@@ -296,10 +322,13 @@ namespace ArmyLife.Data
         {
             switch (tier)
             {
-                case FamilyHouseTier.RuralHomestead:   return 5000L;
-                case FamilyHouseTier.CityTownhouse:    return 25000L;
-                case FamilyHouseTier.AncestralEstate:  return 100000L;
-                default:                               return 0L;
+                case FamilyHouseTier.RuralHomestead:           return 5000L;
+                case FamilyHouseTier.CityTownhouse:            return 25000L;
+                case FamilyHouseTier.AncestralEstate:          return 100000L;
+                case FamilyHouseTier.DucalPalaceCitadel:       return 500000L;
+                case FamilyHouseTier.SovereignImperialChateau: return 2500000L;
+                case FamilyHouseTier.ImperialDynasticSeat:     return 10000000L;
+                default:                                       return 0L;
             }
         }
 
@@ -307,10 +336,13 @@ namespace ArmyLife.Data
         {
             switch (tier)
             {
-                case FamilyHouseTier.RuralHomestead:   return "Rural Family Homestead";
-                case FamilyHouseTier.CityTownhouse:    return "City Family Townhouse";
-                case FamilyHouseTier.AncestralEstate:  return "Ancestral Aristocratic Manor";
-                default:                               return "None (Rationed Tenement)";
+                case FamilyHouseTier.RuralHomestead:           return "Rural Family Homestead";
+                case FamilyHouseTier.CityTownhouse:            return "City Family Townhouse";
+                case FamilyHouseTier.AncestralEstate:          return "Ancestral Aristocratic Manor";
+                case FamilyHouseTier.DucalPalaceCitadel:       return "High Ducal Palace Citadel";
+                case FamilyHouseTier.SovereignImperialChateau: return "Sovereign Royal Château & Vineyards";
+                case FamilyHouseTier.ImperialDynasticSeat:     return "The Eternal Dynastic Mountain Citadel";
+                default:                                       return "None (Rationed Tenement)";
             }
         }
 
@@ -324,6 +356,12 @@ namespace ArmyLife.Data
                     return "A stylish brick townhouse in the provincial merchant district ($25,000). Gives your family high social standing and access to elite municipal academies.";
                 case FamilyHouseTier.AncestralEstate:
                     return "A sprawling aristocratic manor with manicured gardens and ancestral gatehouse ($100,000). Solidifies your family lineage as permanent regional nobility.";
+                case FamilyHouseTier.DucalPalaceCitadel:
+                    return "A fortified private citadel perched on high cliffs overlooking the capital ($500,000). Commands a private house guard and elevates your family to sovereign ducal standing.";
+                case FamilyHouseTier.SovereignImperialChateau:
+                    return "A legendary royal chateau sprawling across rolling vineyards and private estates ($2,500,000). Unlocks sovereign court privileges and historic generational dominance.";
+                case FamilyHouseTier.ImperialDynasticSeat:
+                    return "The legendary mountain redoubt carved into sheer granite cliffs ($10,000,000). The nearly unachievable zenith of multi-generational power, cementing your bloodline as immortal rulers of the realm.";
                 default:
                     return "Your family lives in precarious wartime civilian housing.";
             }

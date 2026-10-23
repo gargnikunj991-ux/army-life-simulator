@@ -184,7 +184,7 @@ namespace ArmyLife.Systems
         {
             if (CurrentState.activeShock == MacroEconomicShock.ArmsIndustryRequisitionBoom)
             {
-                if (business == CommercialBusiness.Workshop || business == CommercialBusiness.PrivateSecurityAgency)
+                if (business == CommercialBusiness.Workshop || business == CommercialBusiness.PrivateSecurityAgency || business == CommercialBusiness.DefenseMunitionsConglomerate)
                 {
                     return Math.Max(0L, (long)Math.Round(baseRevenue * 1.60f));
                 }

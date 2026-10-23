@@ -1111,7 +1111,7 @@ namespace ArmyLife.UI
             else if (s.housingTier == HousingTier.ComfortableHome)
             {
                 CreateActivityCard("Acquire Grand Noble Estate & Manor ($35,000 Buy)",
-                    "Acquire a sprawling gated estate with private security staff and wine cellars. Upkeep: $12,000/sem. Perks: +50% Morale, +30% Health, +15 Clan Favor, +10 Prestige.",
+                    "Acquire a sprawling gated estate with private security staff and wine cellars. Upkeep: $5,000/sem. Perks: +50% Morale, +30% Health, +15 Clan Favor, +10 Prestige.",
                     new Color(0.75f, 0.55f, 0.15f), () =>
                     {
                         if (s.cashBalance < 35000)
@@ -1125,6 +1125,27 @@ namespace ArmyLife.UI
                         s.clanFavor = 100f;
                         GameEvents.OnFeedEventLogged?.Invoke("HOUSING",
                             "<color=#FFD700><b>[NOBLE ESTATE ACQUIRED]</b></color> You acquired a grand aristocratic manor! (+15 Political Influence, Maximum Clan Respect).");
+                        GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        RefreshUI();
+                    });
+            }
+            else if (s.housingTier == HousingTier.NobleEstate)
+            {
+                CreateActivityCard("Acquire Sovereign Imperial Palace Wing ($150,000 Buy)",
+                    "Move into a grand imperial palace wing with private Praetorian guards and banqueting halls. Upkeep: $25,000/sem. Perks: Supreme Sovereign Prestige, +50 Political Influence.",
+                    new Color(0.85f, 0.70f, 0.20f), () =>
+                    {
+                        if (s.cashBalance < 150000)
+                        {
+                            GameEvents.OnFeedEventLogged?.Invoke("HOUSING", "<color=#FF4444>[INSUFFICIENT FUNDS]</color> Imperial Palace Wing acquisition costs $150,000.");
+                            return;
+                        }
+                        s.cashBalance -= 150000;
+                        s.housingTier = HousingTier.ImperialPalaceWing;
+                        s.politicalInfluence = 100f;
+                        s.clanFavor = 100f;
+                        GameEvents.OnFeedEventLogged?.Invoke("HOUSING",
+                            "<color=#FFD700><b>[IMPERIAL PALACE WING ACQUIRED • SOVEREIGN PRESTIGE]</b></color> You moved into the Sovereign Palace Wing! (Maximum Political Sway & Royal Standing).");
                         GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                         RefreshUI();
                     });
@@ -1161,6 +1182,94 @@ namespace ArmyLife.UI
                         RefreshUI();
                     });
             }
+            else if (s.familyHouseTier == FamilyHouseTier.AncestralEstate)
+            {
+                CreateActivityCard("Erect High Ducal Palace Citadel ($500,000)",
+                    "Build a towering clifftop ducal fortress commanding a private house guard! (+100 Succession Score, +50 Political Influence).",
+                    new Color(0.85f, 0.65f, 0.15f), () =>
+                    {
+                        EconomyEngine.BuyFamilyHouse(s, FamilyHouseTier.DucalPalaceCitadel);
+                        RefreshUI();
+                    });
+            }
+            else if (s.familyHouseTier == FamilyHouseTier.DucalPalaceCitadel)
+            {
+                CreateActivityCard("Acquire Sovereign Royal Château ($2,500,000)",
+                    "Purchase a legendary sovereign palace and rolling vineyards. (+250 Succession Score, Max 100 Political Influence, Sovereign Royalty).",
+                    new Color(0.90f, 0.70f, 0.20f), () =>
+                    {
+                        EconomyEngine.BuyFamilyHouse(s, FamilyHouseTier.SovereignImperialChateau);
+                        RefreshUI();
+                    });
+            }
+            else if (s.familyHouseTier == FamilyHouseTier.SovereignImperialChateau)
+            {
+                CreateActivityCard("Found The Eternal Mountain Citadel ($10,000,000)",
+                    "Carve an unassailable sovereign fortress into the imperial mountains! The ultimate pinnacle of multi-generational dynasty (+1000 Succession).",
+                    new Color(1.0f, 0.85f, 0.20f), () =>
+                    {
+                        EconomyEngine.BuyFamilyHouse(s, FamilyHouseTier.ImperialDynasticSeat);
+                        RefreshUI();
+                    });
+            }
+
+            // Commercial Business Acquisition Menu
+            BuildCommercialBusinessActivities(s);
+        }
+
+        private void BuildCommercialBusinessActivities(SoldierProfile s)
+        {
+            if (s.ownedBusiness == CommercialBusiness.None)
+            {
+                CreateBusinessCard(s, CommercialBusiness.Workshop, new Color(0.60f, 0.45f, 0.25f));
+                CreateBusinessCard(s, CommercialBusiness.Tavern, new Color(0.70f, 0.40f, 0.20f));
+                CreateBusinessCard(s, CommercialBusiness.MerchantCaravan, new Color(0.25f, 0.55f, 0.65f));
+                CreateBusinessCard(s, CommercialBusiness.PrivateSecurityAgency, new Color(0.35f, 0.50f, 0.35f));
+                CreateBusinessCard(s, CommercialBusiness.DefenseMunitionsConglomerate, new Color(0.75f, 0.25f, 0.20f));
+                CreateBusinessCard(s, CommercialBusiness.ImperialShippingCartel, new Color(0.20f, 0.55f, 0.80f));
+                CreateBusinessCard(s, CommercialBusiness.CentralBankingHouseAndMint, new Color(0.90f, 0.75f, 0.15f));
+            }
+            else
+            {
+                string curName = EconomyData.GetBusinessDisplayName(s.ownedBusiness);
+                long curYield = EconomyData.GetBusinessBaseSemesterRevenue(s.ownedBusiness);
+                CreateActivityCard($"Current Enterprise: {curName} (Yield: ~${curYield:N0}/sem)",
+                    $"You already own {curName}. To acquire a higher-tier empire, you can divest or purchase a more prestigious conglomerate.",
+                    new Color(0.40f, 0.55f, 0.40f), () =>
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("COMMERCE",
+                            $"<b>[ENTERPRISE STATUS]</b> You currently operate <b>{curName}</b> distributing ~${curYield:N0} dividends each semester.");
+                    });
+
+                // Option to upgrade to apex tiers if not already at the mint
+                if (s.ownedBusiness < CommercialBusiness.DefenseMunitionsConglomerate)
+                {
+                    CreateBusinessCard(s, CommercialBusiness.DefenseMunitionsConglomerate, new Color(0.75f, 0.25f, 0.20f));
+                }
+                if (s.ownedBusiness < CommercialBusiness.ImperialShippingCartel)
+                {
+                    CreateBusinessCard(s, CommercialBusiness.ImperialShippingCartel, new Color(0.20f, 0.55f, 0.80f));
+                }
+                if (s.ownedBusiness < CommercialBusiness.CentralBankingHouseAndMint)
+                {
+                    CreateBusinessCard(s, CommercialBusiness.CentralBankingHouseAndMint, new Color(0.90f, 0.75f, 0.15f));
+                }
+            }
+        }
+
+        private void CreateBusinessCard(SoldierProfile s, CommercialBusiness b, Color cardColor)
+        {
+            long cost = EconomyData.GetBusinessPurchaseCost(b);
+            string name = EconomyData.GetBusinessDisplayName(b);
+            string desc = EconomyData.GetBusinessDescription(b);
+
+            CreateActivityCard($"Acquire {name} (${cost:N0})",
+                desc,
+                cardColor, () =>
+                {
+                    EconomyEngine.PurchaseBusiness(s, b);
+                    RefreshUI();
+                });
         }
 
         // ==================== HOSPITAL & MEDICAL SPENDING ====================

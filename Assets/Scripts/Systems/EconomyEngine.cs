@@ -204,7 +204,7 @@ namespace ArmyLife.Systems
             }
         }
 
-        private static long CalculateSemesterBusinessRevenue(SoldierProfile soldier)
+        public static long CalculateSemesterBusinessRevenue(SoldierProfile soldier)
         {
             if (soldier.ownedBusiness == CommercialBusiness.None) return 0L;
 
@@ -224,6 +224,15 @@ namespace ArmyLife.Systems
                     break;
                 case CommercialBusiness.PrivateSecurityAgency:
                     efficiency = 1.0f + ((soldier.combatSkill + soldier.leadership) / 2f - 50f) * 0.010f;
+                    break;
+                case CommercialBusiness.DefenseMunitionsConglomerate:
+                    efficiency = 1.0f + ((soldier.intellect + soldier.combatSkill) / 2f - 50f) * 0.012f;
+                    break;
+                case CommercialBusiness.ImperialShippingCartel:
+                    efficiency = 1.0f + ((soldier.intellect + soldier.politicalInfluence) / 2f - 50f) * 0.015f;
+                    break;
+                case CommercialBusiness.CentralBankingHouseAndMint:
+                    efficiency = 1.0f + (soldier.politicalInfluence - 50f) * 0.020f;
                     break;
             }
 
@@ -342,6 +351,27 @@ namespace ArmyLife.Systems
                     soldier.clanFavor = 100f;
                     soldier.clanSuccessionScore += 40;
                     soldier.politicalInfluence = Math.Min(100f, soldier.politicalInfluence + 25f);
+                    break;
+                case FamilyHouseTier.DucalPalaceCitadel:
+                    soldier.familyLivingCondition = 100f;
+                    soldier.parentRelationship = 100f;
+                    soldier.clanFavor = 100f;
+                    soldier.clanSuccessionScore += 100;
+                    soldier.politicalInfluence = Math.Min(100f, soldier.politicalInfluence + 50f);
+                    break;
+                case FamilyHouseTier.SovereignImperialChateau:
+                    soldier.familyLivingCondition = 100f;
+                    soldier.parentRelationship = 100f;
+                    soldier.clanFavor = 100f;
+                    soldier.clanSuccessionScore += 250;
+                    soldier.politicalInfluence = 100f;
+                    break;
+                case FamilyHouseTier.ImperialDynasticSeat:
+                    soldier.familyLivingCondition = 100f;
+                    soldier.parentRelationship = 100f;
+                    soldier.clanFavor = 100f;
+                    soldier.clanSuccessionScore += 1000;
+                    soldier.politicalInfluence = 100f;
                     break;
             }
 
