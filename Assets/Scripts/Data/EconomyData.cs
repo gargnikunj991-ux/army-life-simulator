@@ -127,10 +127,10 @@ namespace ArmyLife.Data
         public const float COLLEGE_LOAN_SEMESTER_INTEREST = 0.025f; // 5% annual = 2.5% per semester
 
         // ==================== BRANCH BALANCE & ACADEMY METRICS ====================
-        // Army: Faster 6-month boot camp, 2-year Academy ($50k), Ground Bounties & Plunder
+        // Army: Faster 6-month boot camp, 2-year Academy ($100k), Ground Bounties & Plunder
         public const int ARMY_BASIC_TRAINING_SEMESTERS = 1;         // 6 Months
         public const int ARMY_WAR_ACADEMY_SEMESTERS = 4;            // 2 Years (4 semesters)
-        public const long ARMY_ACADEMY_TUITION_COST = 50000L;       // $50,000
+        public const long ARMY_ACADEMY_TUITION_COST = 100000L;      // $100,000
 
         // Air Force: Longer 1-year training, 3-year Academy ($200k), Flight Pay +15%, Better Quarters
         public const int AIRFORCE_BASIC_TRAINING_SEMESTERS = 2;     // 1 Year (2 semesters)

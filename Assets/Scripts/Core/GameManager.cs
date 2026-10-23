@@ -509,6 +509,29 @@ namespace ArmyLife.Core
                 PromotionBoardEngine.EvaluatePromotionBoard(currentSoldier, militaryRankDatabase);
             }
 
+            // 5b. Annual Longevity Pay Step (Awarded each full year of service, unless promoted that year)
+            if (currentSoldier.totalSemestersLived > 0 && currentSoldier.totalSemestersLived % 2 == 0)
+            {
+                if (currentSoldier.wasPromotedThisYear)
+                {
+                    // Soldier was promoted during this service year: promotion already provided rank pay jump
+                    currentSoldier.wasPromotedThisYear = false;
+                }
+                else if (!currentSoldier.isRetired && !currentSoldier.isCivilian && currentSoldier.careerTrack != CareerTrack.MilitaryWarAcademy && !currentSoldier.isYouthPhase)
+                {
+                    // Soldier served a full year without promotion: award annual military longevity step raise!
+                    long baseSalary = (currentSoldier.currentRank != null) ? currentSoldier.currentRank.baseMonthlySalary : 600L;
+                    long annualRaise = System.Math.Max(150L, (long)(baseSalary * 0.05f));
+                    currentSoldier.longevityMonthlyPayBonus += annualRaise;
+                    currentSoldier.annualLongevityRaisesEarned++;
+
+                    GameEvents.OnFeedEventLogged?.Invoke("PAYDAY",
+                        $"<color=#00FFAA><b>[ANNUAL SERVICE PAY RAISE]</b></color> You completed a full year of military service without rank promotion. " +
+                        $"Imperial regulations awarded you an annual longevity pay raise of <b>+${annualRaise:N0}/mo</b>! " +
+                        $"(Total Accumulated Longevity Pay: +${currentSoldier.longevityMonthlyPayBonus:N0}/mo).");
+                }
+            }
+
             // 6. Check Victory Condition: 4-Star General (O-10)
             if (currentSoldier.currentRank != null && (currentSoldier.currentRank.paygrade == "O-10" || currentSoldier.currentRank.rankName.Contains("General")))
             {
@@ -892,6 +915,8 @@ namespace ArmyLife.Core
             currentSoldier.totalPromotionsEarned++;
             currentSoldier.accumulatedPromotionPoints = 0;
             currentSoldier.timeInCurrentRankSemesters = 0;
+            currentSoldier.wasPromotedThisYear = true;
+            currentSoldier.longevityMonthlyPayBonus = 0L;
 
             GameEvents.OnFeedEventLogged?.Invoke("PROMOTION",
                 $"<color=#00FFAA><b>[PROMOTION APPROVED!]</b></color> You have been promoted to <b>{nextRank.rankName} ({nextRank.paygrade})</b>! " +

@@ -160,9 +160,9 @@ The Officer Academy offers a direct commission into the commissioned officer ran
   * Candidates must possess at least **55% Discipline / Tactics** and **55% Physical Readiness**.
   * A selection board scores candidate percentile (Legacy background provides a merit boost).
 * **Tuition & Loan Financing**:
-  * **Total Tuition**: **$50,000**.
+  * **Total Tuition**: **$100,000**.
   * **Upfront Cash Option**: Paid upfront if savings permit.
-  * **Military Education Loan**: For cadets unable to afford $50,000 cash, an imperial education loan is approved at **9% annual interest** (4.5% accrued per 6-month semester).
+  * **Military Education Loan**: For cadets unable to afford $100,000 cash, an imperial education loan is approved at **9% annual interest** (4.5% accrued per 6-month semester).
   * **Salary Deduction**: Repaid via automatic monthly salary deduction. The player freely selects the deduction percentage (minimum **10%** of monthly salary; adjustable up to 50%).
 * **Year 2 Special Forces Qualification**:
   * In **Year 2** (Semesters 3 & 4), cadets ranking in the **Top 10%** of their class (`academyPerformanceScore >= 90%`) receive an invitation to join the elite **1-Year Special Forces Qualification Course**.

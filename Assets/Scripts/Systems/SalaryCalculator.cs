@@ -77,9 +77,10 @@ namespace ArmyLife.Systems
             // 4. Active Military Duty
             long total = 0;
 
-            // Rank Base Pay
+            // Rank Base Pay & Annual Longevity Step Raises (Non-Promotion Years)
             long basePay = (soldier.currentRank != null) ? soldier.currentRank.baseMonthlySalary : 600L;
             total += basePay;
+            total += soldier.longevityMonthlyPayBonus;
 
             // Air Force Flight Duty Aviation Pay (+15% Aviation Flight Pay Bonus on base salary)
             if (soldier.isFlightDuty)

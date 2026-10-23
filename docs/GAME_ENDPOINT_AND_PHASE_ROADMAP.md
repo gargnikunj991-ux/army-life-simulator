@@ -94,7 +94,7 @@ A clear, satisfying ladder of progression where each promotion unlocks higher pa
 ### Officer Commission Track (Via 2-Year War Academy)
 > **The Imperial War Academy**: A prestigious 2-year (4-semester) officer commissioning program:
 > * **Limited Seats & Admission Board**: Requires 55% Discipline and 55% Physical Readiness.
-> * **$50,000 Tuition / 9% Loan**: Pay upfront cash or take a 9% annual interest loan with monthly deduction of minimum 10% of salary (customizable).
+> * **$100,000 Tuition / 9% Loan**: Pay upfront cash or take a 9% annual interest loan with monthly deduction of minimum 10% of salary (customizable).
 > * **Top 10% Special Forces Pathway**: In Year 2, cadets with top 10% standing (score >= 90%) qualify to enter elite 1-year Special Forces selection!
 > * **Direct O-1 Commission**: Graduating the 2-year academy directly commissions the cadet as a **2nd Lieutenant (O-1)**!
 

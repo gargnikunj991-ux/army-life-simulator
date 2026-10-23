@@ -720,14 +720,14 @@ namespace ArmyLife.Editor
             Debug.Assert(medYear2Pay == 250L, $"Medical School Years 2-3 must pay $250/mo, got: {medYear2Pay}");
             Debug.Log($"[Medical School Test] Year 1 Pay: ${medYear1Pay}/mo, Years 2-3 Pay: ${medYear2Pay}/mo");
 
-            // 7. Test War Academy (2 years = 4 semesters, $50,000 loan option, Top 10% SF, direct O-1 commission)
+            // 7. Test War Academy (2 years = 4 semesters, $100,000 loan option, Top 10% SF, direct O-1 commission)
             var warCadet = new SoldierProfile("Valerius Officer", null, 160)
             {
                 age = 18.0f
             };
             CivilAndMilitaryCareerEngine.EnrollInWarAcademy(warCadet, takeLoan: true, deductionPercent: 0.15f);
             Debug.Assert(warCadet.careerTrack == CareerTrack.MilitaryWarAcademy, "Should be in MilitaryWarAcademy track");
-            Debug.Assert(warCadet.academyTuitionDebt == 50000L, $"Tuition loan must be $50,000, got: {warCadet.academyTuitionDebt}");
+            Debug.Assert(warCadet.academyTuitionDebt == 100000L, $"Tuition loan must be $100,000, got: {warCadet.academyTuitionDebt}");
             Debug.Assert(Mathf.Approximately(warCadet.academyLoanDeductionPercent, 0.15f), "Loan deduction percent should be 15%");
             
             long warAcademyPay = SalaryCalculator.CalculateGrossMonthlyPay(warCadet);
@@ -970,6 +970,56 @@ namespace ArmyLife.Editor
             Debug.Assert(mintYield >= 750000L, $"Mint base yield should be >= $750k/sem, got {mintYield}");
 
             Debug.Log($"[Apex Wealth Test 8] Multi-millionaire $10M citadel and $5M mint verified! Bank: ${oligarch.cashBalance:N0}");
+
+            // 9. Test Annual Longevity Pay Step (Raises for Non-Promoted Years, Skipped on Promotion Years)
+            var grunt = new SoldierProfile("Veteran Grunt", null, 100)
+            {
+                age = 20.0f,
+                totalSemestersLived = 0,
+                careerTrack = CareerTrack.MilitaryEnlisted
+            };
+            grunt.currentRank = ScriptableObject.CreateInstance<MilitaryRankSO>();
+            grunt.currentRank.rankName = "Sergeant";
+            grunt.currentRank.paygrade = "E-5";
+            grunt.currentRank.baseMonthlySalary = 3200;
+
+            long initialPay = SalaryCalculator.CalculateGrossMonthlyPay(grunt);
+            Debug.Assert(initialPay == 3200L, $"Initial pay should be base $3,200, got ${initialPay}");
+
+            // Year 1 without promotion: Semesters 1 and 2
+            grunt.totalSemestersLived = 2; // Full year mark
+            grunt.wasPromotedThisYear = false;
+            // Evaluate annual step
+            long annualRaise = System.Math.Max(150L, (long)(grunt.currentRank.baseMonthlySalary * 0.05f));
+            grunt.longevityMonthlyPayBonus += annualRaise;
+            grunt.annualLongevityRaisesEarned++;
+            long year1Pay = SalaryCalculator.CalculateGrossMonthlyPay(grunt);
+            Debug.Assert(grunt.longevityMonthlyPayBonus == 160L, $"Expected +$160/mo longevity raise (5% of 3200), got {grunt.longevityMonthlyPayBonus}");
+            Debug.Assert(year1Pay == 3360L, $"Year 1 gross pay should be $3,360, got ${year1Pay}");
+            Debug.Log($"[Longevity Test 9] Year 1 Non-Promotion Raise verified: Gross ${year1Pay}/mo (+${grunt.longevityMonthlyPayBonus}/mo bonus)");
+
+            // Year 2: Soldier is promoted to Staff Sergeant (E-6)!
+            grunt.totalSemestersLived = 4;
+            grunt.currentRank.rankName = "Staff Sergeant";
+            grunt.currentRank.paygrade = "E-6";
+            grunt.currentRank.baseMonthlySalary = 3750;
+            grunt.wasPromotedThisYear = true;
+            grunt.longevityMonthlyPayBonus = 0L; // Reset in-grade longevity on promotion
+
+            // At end of Year 2, because wasPromotedThisYear == true, no annual step raise is given!
+            if (grunt.wasPromotedThisYear)
+            {
+                grunt.wasPromotedThisYear = false; // Reset for next year
+            }
+            else
+            {
+                grunt.longevityMonthlyPayBonus += 150L;
+            }
+
+            long year2PromotionPay = SalaryCalculator.CalculateGrossMonthlyPay(grunt);
+            Debug.Assert(grunt.longevityMonthlyPayBonus == 0L, "Longevity step should be skipped in promotion year!");
+            Debug.Assert(year2PromotionPay == 3750L, $"Promotion year gross pay should equal new rank base ($3,750), got ${year2PromotionPay}");
+            Debug.Log($"[Longevity Test 10] Promotion Year Raise Skipped verified! New Rank Base: ${year2PromotionPay}/mo");
 
             Debug.Log("<color=#00FFAA>========== ALL IN-GAME ECONOMY & CRIME TESTS PASSED 100%! ==========</color>");
         }

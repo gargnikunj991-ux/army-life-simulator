@@ -204,10 +204,15 @@ namespace ArmyLife.Data
         [Range(0f, 100f)]
         public float academyPerformanceScore = 75f;     // 0-100 score; >= 90 is top 10%
         public bool isAcademyTop10Percent => academyPerformanceScore >= 90f;
-        public long academyTuitionDebt;                 // Loan for $50,000 tuition
+        public long academyTuitionDebt;                 // Loan for $100,000 tuition
         public float academyLoanDeductionPercent = 0.15f; // Min 10% (0.10f) of monthly salary
         public const float AcademyLoanAnnualInterest = 0.09f; // 9% annual interest
-        public const long ACADEMY_TUITION_COST = 50000L;
+        public const long ACADEMY_TUITION_COST = 100000L;
+
+        [Header("Annual Longevity Pay Step (Raises for Non-Promoted Years)")]
+        public bool wasPromotedThisYear = false;        // Tracked over the 2-semester service year
+        public long longevityMonthlyPayBonus = 0L;      // Accumulated step increases on monthly gross pay
+        public int annualLongevityRaisesEarned = 0;     // Number of annual step raises earned
 
         [Header("Special Forces Program")]
         public bool isSpecialForces;                    // Qualified elite operator (+$800 pay, higher risk)
