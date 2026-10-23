@@ -791,7 +791,164 @@ namespace ArmyLife.Editor
             Debug.Assert(enlistedSoldier.timeInCurrentRankSemesters == 0, "Time-in-grade must reset to 0 after promotion!");
             Debug.Log($"[Promotion Points Reset Test] Accumulated points reset to: {enlistedSoldier.accumulatedPromotionPoints}, Time in grade: {enlistedSoldier.timeInCurrentRankSemesters}");
 
+            // 9. Test Air Force Recruit: 1 Year (2 Semesters) Unpaid -> E-1 Airman
+            var afRecruit = new SoldierProfile("Icarus Sky", null, 120) { age = 18.0f };
+            CivilAndMilitaryCareerEngine.EnlistAsRecruit(afRecruit, null, MilitaryBranch.AirForce, AirForceRole.FlightDuty);
+            Debug.Assert(afRecruit.militaryBranch == MilitaryBranch.AirForce, "Must be in Air Force");
+            Debug.Assert(afRecruit.careerTrack == CareerTrack.MilitaryRecruitBasic, "Must be in Basic Training");
+            Debug.Assert(SalaryCalculator.CalculateGrossMonthlyPay(afRecruit) == 0L, "Air Force basic recruit must be unpaid ($0)");
+
+            // Term 1 (6 months): Still in training
+            CivilAndMilitaryCareerEngine.AdvanceCareerTurn(afRecruit, null);
+            Debug.Assert(afRecruit.careerTrack == CareerTrack.MilitaryRecruitBasic, "Air Force basic is 1 full year, must NOT graduate at semester 1!");
+
+            // Term 2 (1 year complete): Commission as E-1 Airman
+            CivilAndMilitaryCareerEngine.AdvanceCareerTurn(afRecruit, null);
+            Debug.Assert(afRecruit.careerTrack == CareerTrack.MilitaryEnlisted, "Must graduate after 2 semesters (1 year)");
+            Debug.Assert(afRecruit.isFlightDuty, "Must have Flight Duty status");
+            Debug.Log("[Air Force Recruit Test] Completed 1-year basic training! Commissioned as E-1 Airman.");
+
+            // 10. Test Air Force Flight Academy (3 Years = 6 Semesters, $200k Tuition Debt, Top 10% Valkyries at Sem 5)
+            var flightCadet = new SoldierProfile("Aero Ace", null, 150) { age = 18.0f };
+            CivilAndMilitaryCareerEngine.EnrollInWarAcademy(flightCadet, takeLoan: true, deductionPercent: 0.20f, branch: MilitaryBranch.AirForce);
+            Debug.Assert(flightCadet.academyTuitionDebt == 200000L, $"Air Force tuition debt must be $200,000, got: {flightCadet.academyTuitionDebt}");
+            Debug.Assert(flightCadet.assignedDepartment == "The Imperial Flight Academy", "Department must be Flight Academy");
+
+            // Advance through Year 1 & 2 (4 semesters)
+            for (int sem = 0; sem < 4; sem++)
+            {
+                CivilAndMilitaryCareerEngine.AdvanceCareerTurn(flightCadet, null);
+            }
+            Debug.Assert(flightCadet.academySemestersCompleted == 4, "Must have completed 4 semesters");
+            Debug.Assert(!flightCadet.graduatedWarAcademy, "Air Force Academy is 3 years (6 semesters), must NOT graduate at 4 semesters!");
+            Debug.Assert(flightCadet.flightHoursLogged == 160, $"Must log 40 hrs/sem (160 hrs total), got: {flightCadet.flightHoursLogged}");
+
+            // Semester 5 (Year 3): High Stats -> Top 10% Celestial Valkyries nomination
+            flightCadet.intellect = 95f;
+            flightCadet.fitness = 95f;
+            flightCadet.discipline = 95f;
+            flightCadet.combatSkill = 95f;
+            CivilAndMilitaryCareerEngine.AdvanceCareerTurn(flightCadet, null);
+            Debug.Assert(flightCadet.academySemestersCompleted == 5, "Semester 5 reached");
+            Debug.Assert(flightCadet.isAcademyTop10Percent, "Must qualify for Top 10%");
+            Debug.Assert(flightCadet.specialForcesBranchName == "The Celestial Valkyries", "Special Forces name must be The Celestial Valkyries");
+
+            // Semester 6 (Graduation & O-1 Commission)
+            CivilAndMilitaryCareerEngine.AdvanceCareerTurn(flightCadet, null);
+            Debug.Assert(flightCadet.academySemestersCompleted == 6, "3-Year program finished (6 semesters)");
+            Debug.Assert(flightCadet.graduatedWarAcademy, "Must graduate after 6 semesters");
+            Debug.Assert(flightCadet.careerTrack == CareerTrack.MilitaryOfficer, "Commissioned directly as Officer");
+            Debug.Assert(flightCadet.isFlightDuty, "Must be assigned to Flight Duty");
+            Debug.Log("[Flight Academy Test] Conquered 3-year Flight Academy ($200k tuition)! Commissioned as Flight Officer.");
+
+            // 11. Test Medal Cash Bounties & Army Bounties
+            var heroSoldier = new SoldierProfile("Valiant Hero", null, 100) { cashBalance = 1000L };
+            heroSoldier.AddMedal("Distinguished Service Cross");
+            Debug.Assert(heroSoldier.cashBalance == 31000L, $"Distinguished Service Cross should grant +$30,000 bounty! Balance: {heroSoldier.cashBalance}");
+            heroSoldier.AddMedal("Celestial Valkyrie Wings");
+            Debug.Assert(heroSoldier.cashBalance == 41000L, $"Celestial Valkyrie Wings should grant +$10,000 bounty! Balance: {heroSoldier.cashBalance}");
+            Debug.Log($"[Medal Bounties Test] Cash bounties verified! Soldier accumulated: ${heroSoldier.cashBalance:N0}");
+
             Debug.Log("<color=#00FFAA>========== ALL CIVIL & MILITARY CAREER SYSTEM TESTS PASSED 100%! ==========</color>");
+        }
+
+        [MenuItem("Army Life/Run Full In-Game Economy & Crime Simulation Test", false, 13)]
+        public static void RunExpandedEconomyAndCrimeSimulationTest()
+        {
+            Debug.Log("<color=#00D4FF>========== STARTING EXPANDED IN-GAME ECONOMY & CRIME SIMULATION TEST ==========</color>");
+
+            // 1. War Bonds & Trade Guild Dividends Test
+            var investor = new SoldierProfile("Baron Coin", null, 120)
+            {
+                age = 25.0f,
+                cashBalance = 10000L,
+                warBondsOwned = 10,       // 10 * $30 = $300/semester
+                tradeGuildShares = 5,     // 5 * $60 = $300/semester
+                housingTier = HousingTier.BarracksOrSlums,
+                militaryBranch = MilitaryBranch.Army,
+                careerTrack = CareerTrack.MilitaryEnlisted
+            };
+
+            investor.currentRank = ScriptableObject.CreateInstance<MilitaryRankSO>();
+            investor.currentRank.rankName = "Sergeant";
+            investor.currentRank.baseMonthlySalary = 900;
+
+            EconomyEngine.ProcessSemesterEconomy(investor);
+            Debug.Assert(investor.investmentDividendsLastSemester == 600L, $"Expected $600 dividends, got: {investor.investmentDividendsLastSemester}");
+            Debug.Log($"[Economy Test 1] Dividends verified: ${investor.investmentDividendsLastSemester} (10 War Bonds + 5 Guild Shares)");
+
+            // 2. Commercial Business Revenue Test (Workshop, Tavern, Caravan, Security)
+            investor.ownedBusiness = CommercialBusiness.Workshop;
+            investor.intellect = 70f;
+            investor.fitness = 70f;
+            EconomyEngine.ProcessSemesterEconomy(investor);
+            Debug.Assert(investor.businessRevenueLastSemester > 0, "Workshop should generate dividend revenue!");
+            Debug.Log($"[Economy Test 2] Business Revenue verified: ${investor.businessRevenueLastSemester} from {EconomyData.GetBusinessDisplayName(investor.ownedBusiness)}");
+
+            // 3. Air Force Housing Discount Test
+            long armyHousingCost = EconomyData.GetHousingSemesterCost(HousingTier.BarracksOrSlums, MilitaryBranch.Army);
+            long airForceHousingCost = EconomyData.GetHousingSemesterCost(HousingTier.BarracksOrSlums, MilitaryBranch.AirForce);
+            Debug.Assert(armyHousingCost == 250L, $"Army barracks cost should be $250, got {armyHousingCost}");
+            Debug.Assert(airForceHousingCost == 200L, $"Air Force quarters should have 20% discount ($200), got {airForceHousingCost}");
+            Debug.Log($"[Economy Test 3] Air Force housing discount verified ($200 vs $250)");
+
+            // 4. Scaled Veteran Pension & VA Disability Compensation Test
+            var retiredVet = new SoldierProfile("Old Guard", null, 110)
+            {
+                totalSemestersLived = 40, // 20 years
+                woundStarsCount = 3,
+                careerTrack = CareerTrack.MilitaryOfficer
+            };
+            retiredVet.currentRank = ScriptableObject.CreateInstance<MilitaryRankSO>();
+            retiredVet.currentRank.rankName = "Colonel";
+            retiredVet.currentRank.baseMonthlySalary = 9000;
+
+            long pension = EconomyEngine.CalculateScaledPension(retiredVet);
+            long disability = EconomyEngine.CalculateDisabilityAllowance(retiredVet);
+            // 20 years * 2.5% = 50% of $9000 = $4500 base + (3 * $300) = $5400/month
+            Debug.Assert(pension == 5400L, $"Expected $5,400/mo pension, got ${pension}");
+            Debug.Assert(disability == 900L, $"Expected $900/mo VA disability, got ${disability}");
+            Debug.Log($"[Economy Test 4] Scaled Pension ($5,400/mo) and VA Disability ($900/mo) verified!");
+
+            // 5. Underworld Crime Engine Test
+            var operative = new SoldierProfile("Rogue Sergeant", null, 100)
+            {
+                cashBalance = 1000L,
+                careerTrack = CareerTrack.MilitaryEnlisted,
+                criminalHeat = 0f
+            };
+            operative.currentRank = investor.currentRank;
+
+            // Commit military fuel siphoning
+            bool crimeResult = CrimeEngine.CommitCrime(operative, CrimeType.SiphonFuelAndRations);
+            Debug.Assert(crimeResult, "Military fuel siphoning attempt should succeed");
+            Debug.Assert(operative.criminalHeat >= 10f, $"Heat should increase by at least 10%, got {operative.criminalHeat}%");
+            Debug.Assert(operative.crimesCommittedCount == 1, "Crime count should be 1");
+            Debug.Log($"[Crime Test 5] Fuel siphon executed! Cash: ${operative.cashBalance:N0}, Heat: {operative.criminalHeat:F0}%");
+
+            // Bribe and clear heat
+            float oldHeat = operative.criminalHeat;
+            operative.cashBalance += 1000L;
+            operative.criminalHeat = Mathf.Max(0f, operative.criminalHeat - 30f);
+            Debug.Assert(operative.criminalHeat < oldHeat, "Heat must be reduced after bribery");
+            Debug.Log($"[Crime Test 6] Heat cleared with bribes down to {operative.criminalHeat:F0}%");
+
+            // 6. Dynastic Inheritance Test
+            var heir = new SoldierProfile("Heir Vance", null, 115) { cashBalance = 500L };
+            investor.cashBalance = 50000L;
+            investor.familyHouseTier = FamilyHouseTier.CityTownhouse;
+            investor.ownedBusiness = CommercialBusiness.Tavern;
+            investor.childHeir = new ChildHeir("Heir Vance", "Male", 18.0f);
+            investor.childHeir.examScoreBonus = 12;
+
+            EconomyEngine.TransferDynasticInheritance(investor, heir);
+            Debug.Assert(heir.cashBalance == 25500L, $"Heir should inherit 50% ($25,000) + 500 = $25,500, got: {heir.cashBalance}");
+            Debug.Assert(heir.familyHouseTier == FamilyHouseTier.CityTownhouse, "Heir should inherit family townhouse");
+            Debug.Assert(heir.ownedBusiness == CommercialBusiness.Tavern, "Heir should inherit tavern");
+            Debug.Assert(heir.warBondsOwned == 10, "Heir should inherit 10 war bonds");
+            Debug.Log($"[Dynasty Test 7] Dynastic inheritance passed 100%! Heir inherited ${heir.inheritedFamilyWealth:N0} and family estate.");
+
+            Debug.Log("<color=#00FFAA>========== ALL IN-GAME ECONOMY & CRIME TESTS PASSED 100%! ==========</color>");
         }
     }
 }

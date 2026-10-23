@@ -225,11 +225,33 @@ namespace ArmyLife.Systems
                         () =>
                         {
                             float rollCasualty = UnityEngine.Random.value;
-                            if (rollCasualty < 0.25f && s.combatSkill < 55f)
+                            float casualtyChance = 0.25f;
+                            if (s.hasSteelHelmet) casualtyChance *= 0.85f;
+                            if (s.hasBallisticVest) casualtyChance *= 0.80f;
+
+                            if (rollCasualty < casualtyChance && s.combatSkill < 55f)
                             {
-                                s.isDead = true;
-                                s.deathReason = "Killed leading a suicidal bayonet charge ordered by an aristocratic Major";
-                                GameEvents.OnImperialExecutionTriggered?.Invoke(s.deathReason);
+                                if (s.fieldMedkitsCount > 0)
+                                {
+                                    s.fieldMedkitsCount--;
+                                    s.health = 20f;
+                                    s.AddMedal("Imperial Wound Star");
+                                    GameEvents.OnFeedEventLogged?.Invoke("GEAR SAVED LIFE",
+                                        $"<color=#00FFAA><b>[EMERGENCY MEDKIT CONSUMED]</b></color> High-explosive shrapnel pierced your chest during the bayonet charge! You injected your PX emergency trauma syrette (-1 Medkit). Survived with 20% Health!");
+                                }
+                                else if (s.hasBallisticVest && UnityEngine.Random.value < 0.40f)
+                                {
+                                    s.health = 25f;
+                                    s.AddMedal("Imperial Wound Star");
+                                    GameEvents.OnFeedEventLogged?.Invoke("ARMOR DEFLECTION",
+                                        "<color=#00FFAA><b>[BALLISTIC VEST DEFLECTION]</b></color> A machine gun burst struck your chest, but your <b>Ballistic Flak Vest</b> absorbed the impact! Knocked down with fractured ribs, but alive!");
+                                }
+                                else
+                                {
+                                    s.isDead = true;
+                                    s.deathReason = "Killed leading a suicidal bayonet charge ordered by an aristocratic Major";
+                                    GameEvents.OnImperialExecutionTriggered?.Invoke(s.deathReason);
+                                }
                             }
                             else
                             {
@@ -416,11 +438,33 @@ namespace ArmyLife.Systems
                         () =>
                         {
                             float rollCasualty = UnityEngine.Random.value;
-                            if (rollCasualty < 0.20f && s.combatSkill < 45f)
+                            float casualtyChance = 0.20f;
+                            if (s.hasSteelHelmet) casualtyChance *= 0.85f;
+                            if (s.hasBallisticVest) casualtyChance *= 0.80f;
+
+                            if (rollCasualty < casualtyChance && s.combatSkill < 45f)
                             {
-                                s.isDead = true;
-                                s.deathReason = "Killed in Action during a nighttime trench infiltration raid";
-                                GameEvents.OnImperialExecutionTriggered?.Invoke(s.deathReason);
+                                if (s.fieldMedkitsCount > 0)
+                                {
+                                    s.fieldMedkitsCount--;
+                                    s.health = 20f;
+                                    s.AddMedal("Imperial Wound Star");
+                                    GameEvents.OnFeedEventLogged?.Invoke("GEAR SAVED LIFE",
+                                        $"<color=#00FFAA><b>[EMERGENCY MEDKIT CONSUMED]</b></color> You were shot during exfiltration! You quickly jammed your emergency PX trauma kit into the wound (-1 Medkit). Survived with 20% Health!");
+                                }
+                                else if (s.hasSteelHelmet && UnityEngine.Random.value < 0.35f)
+                                {
+                                    s.health = 22f;
+                                    s.AddMedal("Imperial Wound Star");
+                                    GameEvents.OnFeedEventLogged?.Invoke("ARMOR DEFLECTION",
+                                        "<color=#00FFAA><b>[STEEL HELMET DEFLECTION]</b></color> A sniper round grazed your <b>M1 Steel Helmet</b>, ringing your skull and leaving a deep dent, but sparing your life!");
+                                }
+                                else
+                                {
+                                    s.isDead = true;
+                                    s.deathReason = "Killed in Action during a nighttime trench infiltration raid";
+                                    GameEvents.OnImperialExecutionTriggered?.Invoke(s.deathReason);
+                                }
                             }
                             else
                             {

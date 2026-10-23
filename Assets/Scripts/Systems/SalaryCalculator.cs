@@ -9,14 +9,41 @@ namespace ArmyLife.Systems
         public const float CivilMunicipalTaxRate = 0.50f; // 50% Civil Municipal Tax for civilian jobs
 
         /// <summary>
-        /// Calculates the gross monthly compensation before taxation.
+        /// Calculates the gross monthly compensation before taxation across Military, Civilian, and Veteran phases.
         /// </summary>
         public static long CalculateGrossMonthlyPay(SoldierProfile soldier)
         {
             if (soldier == null || soldier.isDead) return 0;
             if (soldier.isYouthPhase) return 0; // Dependent students receive no monthly salary
 
-            // 1. Civilian Employment Tracks
+            // Imprisoned convicts receive no civilian or military payroll
+            if (soldier.isImprisoned || soldier.militaryBrigSemestersRemaining > 0) return 0L;
+
+            // 1. Post-Military Honorable Retirement & Veteran Careers
+            if (soldier.isRetired)
+            {
+                long pension = soldier.calculatedPensionPerMonth > 0 
+                    ? soldier.calculatedPensionPerMonth 
+                    : (soldier.veteranPensionPerMonth > 0 ? soldier.veteranPensionPerMonth : 1500L);
+
+                long disability = soldier.vaDisabilityAllowancePerMonth > 0
+                    ? soldier.vaDisabilityAllowancePerMonth
+                    : EconomyEngine.CalculateDisabilityAllowance(soldier);
+
+                long veteranCareerWage = 0L;
+                switch (soldier.veteranCareer)
+                {
+                    case VeteranCareer.UniversityGI:       veteranCareerWage = 500L; break;   // GI Bill Education Stipend
+                    case VeteranCareer.DefenseContractor:  veteranCareerWage = 2500L; break;  // Security Consulting Pay
+                    case VeteranCareer.CityMayor:          veteranCareerWage = 4000L; break;  // Municipal Governance
+                    case VeteranCareer.RegionalGovernor:   veteranCareerWage = 8000L; break;  // Provincial Leadership
+                    case VeteranCareer.MinisterOfDefense:  veteranCareerWage = 18000L; break; // Supreme Cabinet Salary
+                }
+
+                return pension + disability + veteranCareerWage;
+            }
+
+            // 2. Civilian Employment Tracks
             if (soldier.careerTrack == CareerTrack.CivilianWork || soldier.careerTrack == CareerTrack.CivilianProfessional)
             {
                 return soldier.civilianSalaryPerMonth > 0 ? soldier.civilianSalaryPerMonth : 150L;
@@ -26,7 +53,7 @@ namespace ArmyLife.Systems
                 return 0L; // Full-time college student
             }
 
-            // 2. Military Training Schools
+            // 3. Military Training Schools
             if (soldier.careerTrack == CareerTrack.MilitaryRecruitBasic)
             {
                 return 0L; // Basic training (6 months): no pay, no salary
@@ -47,17 +74,18 @@ namespace ArmyLife.Systems
                 return 300L;
             }
 
-            // 3. Active Military Duty
+            // 4. Active Military Duty
             long total = 0;
 
             // Rank Base Pay
-            if (soldier.currentRank != null)
+            long basePay = (soldier.currentRank != null) ? soldier.currentRank.baseMonthlySalary : 600L;
+            total += basePay;
+
+            // Air Force Flight Duty Aviation Pay (+15% Aviation Flight Pay Bonus on base salary)
+            if (soldier.isFlightDuty)
             {
-                total += soldier.currentRank.baseMonthlySalary;
-            }
-            else
-            {
-                total += 600; // Recruit / unranked
+                long aviationBonus = (long)(basePay * EconomyData.AVIATION_FLIGHT_PAY_BONUS);
+                total += aviationBonus;
             }
 
             // Power Tier Cultivation Stipend ($750 per tier)
@@ -122,21 +150,8 @@ namespace ArmyLife.Systems
             long gross = CalculateGrossMonthlyPay(soldier);
             if (gross <= 0) return 0L;
 
-            if (soldier.isCivilian)
-            {
-                long civilTax = (long)(gross * CivilMunicipalTaxRate);
-                return gross - civilTax;
-            }
-
-            if (soldier.careerTrack == CareerTrack.MilitaryTechSchool || 
-                soldier.careerTrack == CareerTrack.MilitaryMedicalSchool || 
-                soldier.careerTrack == CareerTrack.MilitaryWarAcademy)
-            {
-                return gross; // Cadet stipends are exempt from wartime income tax
-            }
-
-            long tax = (long)(gross * ImperialWarTaxRate);
-            return gross - tax;
+            long tax = CalculateMonthlyTax(soldier);
+            return System.Math.Max(0L, gross - tax);
         }
 
         /// <summary>
@@ -151,6 +166,25 @@ namespace ArmyLife.Systems
 
         public static long CalculateMonthlyTax(SoldierProfile soldier)
         {
+            if (soldier == null || soldier.isDead || soldier.isYouthPhase) return 0;
+            if (soldier.isImprisoned || soldier.militaryBrigSemestersRemaining > 0) return 0;
+
+            // Retired veterans: Military pension and VA disability are 100% tax-exempt!
+            // Only civilian post-service employment wages are subject to municipal tax.
+            if (soldier.isRetired)
+            {
+                long careerWage = 0L;
+                switch (soldier.veteranCareer)
+                {
+                    case VeteranCareer.DefenseContractor: careerWage = 2500L; break;
+                    case VeteranCareer.CityMayor:         careerWage = 4000L; break;
+                    case VeteranCareer.RegionalGovernor:  careerWage = 8000L; break;
+                    case VeteranCareer.MinisterOfDefense: careerWage = 18000L; break;
+                    default:                              careerWage = 0L; break; // GI Bill is tax-exempt scholarship
+                }
+                return (long)(careerWage * CivilMunicipalTaxRate);
+            }
+
             long gross = CalculateGrossMonthlyPay(soldier);
             if (gross <= 0) return 0;
 
@@ -159,6 +193,7 @@ namespace ArmyLife.Systems
                 return (long)(gross * CivilMunicipalTaxRate);
             }
 
+            // Cadet educational stipends are exempt from wartime income tax
             if (soldier.careerTrack == CareerTrack.MilitaryTechSchool || 
                 soldier.careerTrack == CareerTrack.MilitaryMedicalSchool || 
                 soldier.careerTrack == CareerTrack.MilitaryWarAcademy)

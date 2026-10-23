@@ -30,7 +30,7 @@ namespace ArmyLife.Data
     }
 
     [Serializable]
-    public class SoldierProfile
+    public partial class SoldierProfile
     {
         [Header("Identity & Background")]
         public string lifeId;
@@ -64,11 +64,15 @@ namespace ArmyLife.Data
         public bool isClanHead;                 // True if player won Clan Head seat (inherits Duke/Marquis title)
         public int clanSuccessionScore;         // Evaluated against siblings by Clan Elders
 
-        [Header("Military Standing")]
+        [Header("Military Standing & Branch")]
+        public MilitaryBranch militaryBranch = MilitaryBranch.Army;
+        public AirForceRole airForceRole = AirForceRole.None;
+        public bool isFlightDuty => militaryBranch == MilitaryBranch.AirForce && airForceRole == AirForceRole.FlightDuty;
+        public int flightHoursLogged = 0;
         public MilitaryRankSO currentRank;
         public int totalPromotionsEarned;       // At 3 promotions -> Triggers Arranged Marriage!
         public int accumulatedPromotionPoints;  // Earned through PT tests, combat tours, and merit
-        public string assignedDepartment;       // "Infantry", "Technical & Cyber", "Combat Medic", "Secret Branch"
+        public string assignedDepartment;       // "Infantry", "Technical & Cyber", "Combat Medic", "Aviation Squadron", "Air Defense"
         public bool isTechnicalSchoolGraduate;  // Grants guaranteed Tech ($450) + Cyber ($350) stipends
         public bool isInCombatDeployment;       // True during frontline tours (+Hazard Pay)
         public bool isVoluntaryExtendedTour;    // If true, soldier volunteers to stay on the battlefield longer than 6 months
@@ -101,13 +105,53 @@ namespace ArmyLife.Data
             {
                 earnedMedals.Add(medalName);
                 medalsEarnedCount = earnedMedals.Count;
-                GameEvents.OnFeedEventLogged?.Invoke("HONOR", $"<color=#FFD700><b>[MEDAL AWARDED]</b></color> You were decorated with the <b>{medalName}</b>!");
+                if (medalName != null && medalName.Contains("Wound Star"))
+                {
+                    woundStarsCount++;
+                }
+
+                // Imperial Treasury Medal Cash Bounty
+                long bounty = EconomyData.GetMedalCashReward(medalName);
+                if (bounty > 0)
+                {
+                    cashBalance += bounty;
+                    GameEvents.OnFeedEventLogged?.Invoke("HONOR",
+                        $"<color=#FFD700><b>[MEDAL AWARDED • IMPERIAL BOUNTY]</b></color> You were decorated with the <b>{medalName}</b>! " +
+                        $"The Imperial Treasury awarded you an official cash honorarium of <color=#00FFAA><b>+${bounty:N0}</b></color>!");
+                }
+                else
+                {
+                    GameEvents.OnFeedEventLogged?.Invoke("HONOR", $"<color=#FFD700><b>[MEDAL AWARDED]</b></color> You were decorated with the <b>{medalName}</b>!");
+                }
             }
         }
+
+        public string specialForcesBranchName => (militaryBranch == MilitaryBranch.AirForce) 
+            ? EconomyData.AIRFORCE_SPECIAL_FORCES_NAME 
+            : EconomyData.ARMY_SPECIAL_FORCES_NAME;
+
+        public string specialForcesRoleTitle => (militaryBranch == MilitaryBranch.AirForce) 
+            ? EconomyData.AIRFORCE_SPECIAL_FORCES_ROLE 
+            : EconomyData.ARMY_SPECIAL_FORCES_ROLE;
 
         public bool HasMedal(string medalName)
         {
             return earnedMedals != null && earnedMedals.Contains(medalName);
+        }
+
+        public int GetWoundStarsCount()
+        {
+            int count = woundStarsCount;
+            if (earnedMedals != null)
+            {
+                int starCount = 0;
+                foreach (var m in earnedMedals)
+                {
+                    if (m != null && m.Contains("Wound Star")) starCount++;
+                }
+                if (starCount > count) count = starCount;
+            }
+            return count;
         }
 
         [Header("Career Track (Civilian vs Military Education & Employment)")]
@@ -123,6 +167,37 @@ namespace ArmyLife.Data
         public bool graduatedTechSchool;
         public bool graduatedMedicalSchool;
         public bool isCivilian => careerTrack == CareerTrack.CivilianWork || careerTrack == CareerTrack.CivilianCollege || careerTrack == CareerTrack.CivilianProfessional;
+
+        [Header("Dynamic Economy, Housing & Investments")]
+        public HousingTier housingTier = HousingTier.BarracksOrSlums;
+        public FamilyHouseTier familyHouseTier = FamilyHouseTier.None;
+        public int warBondsOwned = 0;
+        public int tradeGuildShares = 0;
+        public CommercialBusiness ownedBusiness = CommercialBusiness.None;
+        public long businessRevenueLastSemester = 0;
+        public long investmentDividendsLastSemester = 0;
+        public long combatBountiesEarned = 0;
+        public long vaDisabilityAllowancePerMonth = 0;
+        public long calculatedPensionPerMonth = 0;
+        public bool heirHasPrivateTutor = false;
+        public bool isHeirTutoringEnrolled { get => heirHasPrivateTutor; set => heirHasPrivateTutor = value; }
+        public bool hasBionicProsthetics = false;
+        public int woundStarsCount = 0;
+        public long totalMedicalExpensesPaid = 0;
+        public long totalHousingExpensesPaid = 0;
+        public long totalEducationExpensesPaid = 0;
+        public long totalBusinessInvestment = 0;
+
+        [Header("Underworld Crime & Law Enforcement Heat")]
+        [Range(0f, 100f)] public float criminalHeat = 0f;
+        public bool hasCriminalRecord = false;
+        public bool isImprisoned = false;
+        public int prisonSemestersRemaining = 0;
+        public int militaryBrigSemestersRemaining = 0;
+        public int crimesCommittedCount = 0;
+        public int totalCrimesCommitted { get => crimesCommittedCount; set => crimesCommittedCount = value; }
+        public long totalCrimeEarnings = 0;
+        public bool committedCrimeThisSemester = false;
 
         [Header("War Academy (2-Year Officer Program)")]
         public int academySemestersCompleted;           // Exactly 4 semesters = 2 years

@@ -400,14 +400,29 @@ namespace ArmyLife.UI
                 });
 
             // 10. Military Conscription / Volunteer Enlistment
-            CreateActivityCard("Enlist as Volunteer Military Recruit",
-                "Leave civilian life behind and report to the 6-month recruit training depot (Unpaid Basic Training).",
+            CreateActivityCard("Enlist: Imperial Army (6 Mo Boot Camp)",
+                "Leave civilian life to join the frontline Imperial Army. 6-month basic training depot -> E-1 Private. Eligible for frontline combat bounties.",
                 new Color(0.70f, 0.35f, 0.15f), () =>
                 {
-                    CivilAndMilitaryCareerEngine.EnlistAsRecruit(s, GameManager.Instance);
+                    CivilAndMilitaryCareerEngine.EnlistAsRecruit(s, GameManager.Instance, MilitaryBranch.Army);
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
+
+            CreateActivityCard("Enlist: Imperial Air Force (1 Yr Boot Camp)",
+                "Leave civilian life to join the Imperial Air Force. 1-year aviation training -> E-1 Airman. Superior base quarters (+15% Morale) and flight duty pay (+15%).",
+                new Color(0.20f, 0.50f, 0.85f), () =>
+                {
+                    CivilAndMilitaryCareerEngine.EnlistAsRecruit(s, GameManager.Instance, MilitaryBranch.AirForce, AirForceRole.FlightDuty);
+                    GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                    RefreshUI();
+                });
+
+            // Civilian Real Estate, Medical, Heir & Crime Sinks
+            BuildHousingAndRealEstateActivities(s);
+            BuildHospitalAndMedicalActivities(s);
+            BuildGenerationalAndSquadActivities(s);
+            BuildCrimeAndUnderworldActivities(s);
         }
 
         private void BuildAdultActivities(SoldierProfile s)
@@ -505,15 +520,26 @@ namespace ArmyLife.UI
                 RefreshUI();
             });
 
-            // 7. Officer Academy Admission (2-Year Program, $50,000 Tuition / 9% Loan)
+            // 7. Officer Academy Admission (Army: 2 Yrs, $50k / Air Force: 3 Yrs, $200k)
             if (!s.isOfficer && s.careerTrack != CareerTrack.MilitaryWarAcademy)
             {
-                string academyReqs = $"Requires <b>55% Discipline</b> (Current: {s.intellect:F0}%) and <b>55% Physical Readiness</b> (Current: {s.fitness:F0}%). Limited seats quota. Graduates commissioned directly as <b>2nd Lieutenant (O-1)</b>. Year 2 Top 10% cadets qualify for Special Forces selection!";
+                long academyTuition = (s.militaryBranch == MilitaryBranch.AirForce)
+                    ? EconomyData.AIRFORCE_ACADEMY_TUITION_COST
+                    : EconomyData.ARMY_ACADEMY_TUITION_COST;
+                int academyYears = (s.militaryBranch == MilitaryBranch.AirForce)
+                    ? (EconomyData.AIRFORCE_ACADEMY_SEMESTERS / 2)
+                    : (EconomyData.ARMY_WAR_ACADEMY_SEMESTERS / 2);
+                string academyName = (s.militaryBranch == MilitaryBranch.AirForce)
+                    ? "Imperial Flight Academy"
+                    : "Imperial War Academy";
+                string sfName = s.specialForcesBranchName;
 
-                if (s.cashBalance >= SoldierProfile.ACADEMY_TUITION_COST)
+                string academyReqs = $"Requires <b>55% Discipline</b> (Current: {s.intellect:F0}%) and <b>55% Physical Readiness</b> (Current: {s.fitness:F0}%). Limited seats quota. Graduates commissioned directly as <b>O-1 Officer</b>. Top 10% qualify for elite <b>{sfName}</b> selection!";
+
+                if (s.cashBalance >= academyTuition)
                 {
-                    CreateActivityCard("Apply for War Academy ($50,000 Cash Upfront)",
-                        $"Pay $50,000 tuition upfront in cash. {academyReqs}",
+                    CreateActivityCard($"Apply for {academyName} (${academyTuition:N0} Cash Upfront)",
+                        $"Pay ${academyTuition:N0} tuition upfront in cash for the {academyYears}-year officer program. {academyReqs}",
                         new Color(0.20f, 0.60f, 0.40f), () =>
                         {
                             if (GameManager.Instance != null)
@@ -524,8 +550,8 @@ namespace ArmyLife.UI
                         });
                 }
 
-                CreateActivityCard($"Apply for War Academy (9% Loan, {s.academyLoanDeductionPercent * 100f:F0}% Pay Deduction)",
-                    $"Finance the $50,000 tuition with a 9% annual interest Military Education Loan (monthly deduction from salary, minimum 10%). {academyReqs}",
+                CreateActivityCard($"Apply for {academyName} (9% Loan, {s.academyLoanDeductionPercent * 100f:F0}% Pay Deduction)",
+                    $"Finance the ${academyTuition:N0} tuition with a 9% annual interest Education Loan ({academyYears} years). {academyReqs}",
                     new Color(0.20f, 0.50f, 0.85f), () =>
                     {
                         if (GameManager.Instance != null)
@@ -942,6 +968,447 @@ namespace ArmyLife.UI
                             RefreshUI();
                         });
                 }
+            }
+
+            // --- MILITARY & VETERAN EXPANDED SUBSYSTEMS ---
+            BuildAirForceActivities(s);
+            BuildHousingAndRealEstateActivities(s);
+            BuildHospitalAndMedicalActivities(s);
+            BuildGenerationalAndSquadActivities(s);
+            BuildCrimeAndUnderworldActivities(s);
+        }
+
+        // ==================== AIR FORCE ACTIVITIES ====================
+
+        private void BuildAirForceActivities(SoldierProfile s)
+        {
+            if (s.isRetired || s.isCivilian) return;
+
+            if (s.militaryBranch != MilitaryBranch.AirForce)
+            {
+                // Transfer options to Imperial Air Force
+                CreateActivityCard("Branch Transfer: Imperial Air Force (Flight Duty)",
+                    "Apply to cross-train as a combat aviator in the 1st Tactical Aviation Wing. Earns an exclusive <b>+15% Aviation Flight Pay Bonus</b> on all military salary! Living conditions in air base quarters are superior (+15% Morale, +10% Health).",
+                    new Color(0.20f, 0.55f, 0.85f), () =>
+                    {
+                        if (GameManager.Instance != null) GameManager.Instance.EnlistInAirForce(AirForceRole.FlightDuty);
+                        RefreshUI();
+                    });
+
+                CreateActivityCard("Branch Transfer: Imperial Air Force (Ground Duty Staff)",
+                    "Transfer to Air Base Ground Logistics, Avionics, and Radar Defense. Standard military base pay, safer deployments, and air-conditioned base housing (+15% Morale).",
+                    new Color(0.30f, 0.45f, 0.65f), () =>
+                    {
+                        if (GameManager.Instance != null) GameManager.Instance.EnlistInAirForce(AirForceRole.GroundDutyStaff);
+                        RefreshUI();
+                    });
+                return;
+            }
+
+            // Active Air Force Personnel
+            if (s.isFlightDuty)
+            {
+                CreateActivityCard("Combat Flight Simulator Drills",
+                    $"Perform high-G supersonic dogfight simulations. Current Flight Hours Logged: <b>{s.flightHoursLogged} hrs</b>. (+10 Flight Hours, +3 Combat Skill, +3 Promotion Points).",
+                    new Color(0.15f, 0.50f, 0.85f), () =>
+                    {
+                        s.flightHoursLogged += 10;
+                        s.combatSkill = Mathf.Min(100f, s.combatSkill + 3f);
+                        s.promotionPoints += 3;
+                        GameEvents.OnFeedEventLogged?.Invoke("FLIGHT TRAINING",
+                            $"<color=#00D4FF>[AVIATION DRILL]</color> You mastered extreme high-G maneuvers in the cockpit simulator! Logged <b>+10 Flight Hours</b> (Total: {s.flightHoursLogged} hrs).");
+                        GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        RefreshUI();
+                    });
+
+                CreateActivityCard("Air Combat Air-Superiority Sortie",
+                    "Fly a high-altitude combat patrol in your interceptor. Earns immediate hazardous flight stipends (+$500) and combat skill.",
+                    new Color(0.25f, 0.40f, 0.80f), () =>
+                    {
+                        s.cashBalance += 500;
+                        s.flightHoursLogged += 15;
+                        s.combatSkill = Mathf.Min(100f, s.combatSkill + 4f);
+                        s.health = Mathf.Max(20f, s.health - 5f);
+                        GameEvents.OnFeedEventLogged?.Invoke("SORTIE",
+                            $"<color=#00D4FF>[COMBAT SORTIE FLOWN]</color> You patrolled the imperial airspace and intercepted hostile reconnaissance drones! (+15 Flight Hours, +$500 Hazardous Sortie Pay).");
+                        GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        RefreshUI();
+                    });
+            }
+            else
+            {
+                CreateActivityCard("Turbine & Radar Avionics Calibration",
+                    "Conduct pre-flight diagnostic overhauls on fighter jet turbines and tactical targeting radar arrays (+5 Discipline, +4 Board Points).",
+                    new Color(0.35f, 0.50f, 0.65f), () =>
+                    {
+                        s.discipline = Mathf.Min(100f, s.discipline + 5f);
+                        s.promotionPoints += 4;
+                        GameEvents.OnFeedEventLogged?.Invoke("AVIONICS",
+                            "<color=#00FFAA>[FLIGHT LINE MAINTENANCE]</color> You inspected and prepped an entire squadron of fighter jets for combat takeoff (+5 Discipline, +4 Merit Points).");
+                        GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        RefreshUI();
+                    });
+            }
+
+            CreateActivityCard("Air Base Officers & Aces Club",
+                "Unwind with squadron wingmen at the Air Base Mess, drinking top-shelf spirits and sharing aerial tactics (+15 Happiness, +15 Wingman Comradeship).",
+                new Color(0.25f, 0.60f, 0.50f), () =>
+                {
+                    s.happiness = Mathf.Min(100f, s.happiness + 15f);
+                    GameEvents.OnFeedEventLogged?.Invoke("AIR BASE",
+                        "<color=#00FFAA>[OFFICERS CLUB]</color> You enjoyed an evening celebrating aerial victories with your squadron wingmen (+15 Happiness).");
+                    GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                    RefreshUI();
+                });
+        }
+
+        // ==================== REAL ESTATE & HOUSING SPENDING ====================
+
+        private void BuildHousingAndRealEstateActivities(SoldierProfile s)
+        {
+            // Personal Living Quarters Upgrades
+            if (s.housingTier == HousingTier.BarracksOrSlums)
+            {
+                CreateActivityCard("Move to Modest City Apartment ($1,500 Buy)",
+                    "Move out of squalid tenements or barracks bunks into a private city apartment. Upkeep: $1,800/sem ($300/mo). Perks: +10% Morale, +5% Health recovery.",
+                    new Color(0.30f, 0.60f, 0.40f), () =>
+                    {
+                        if (s.cashBalance < 1500)
+                        {
+                            GameEvents.OnFeedEventLogged?.Invoke("HOUSING", "<color=#FF4444>[INSUFFICIENT FUNDS]</color> Moving to an apartment requires $1,500 deposit and furnishing fees.");
+                            return;
+                        }
+                        s.cashBalance -= 1500;
+                        s.housingTier = HousingTier.ModestApartment;
+                        s.happiness = Mathf.Min(100f, s.happiness + 15f);
+                        GameEvents.OnFeedEventLogged?.Invoke("HOUSING",
+                            "<color=#00FFAA><b>[APARTMENT LEASE SIGNED]</b></color> You moved into a private city apartment! (+15 Happiness, +10% Morale recovery).");
+                        GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        RefreshUI();
+                    });
+            }
+            else if (s.housingTier == HousingTier.ModestApartment)
+            {
+                CreateActivityCard("Upgrade to Comfortable Family Villa ($8,000 Buy)",
+                    "Purchase a suburban family villa with a garden and nursery. Upkeep: $4,200/sem. Perks: +25% Morale, +15% Health, +5 Clan Favor.",
+                    new Color(0.25f, 0.65f, 0.50f), () =>
+                    {
+                        if (s.cashBalance < 8000)
+                        {
+                            GameEvents.OnFeedEventLogged?.Invoke("HOUSING", "<color=#FF4444>[INSUFFICIENT FUNDS]</color> Upgrading to a family villa costs $8,000.");
+                            return;
+                        }
+                        s.cashBalance -= 8000;
+                        s.housingTier = HousingTier.ComfortableHome;
+                        s.happiness = Mathf.Min(100f, s.happiness + 25f);
+                        s.clanFavor = Mathf.Min(100f, s.clanFavor + 10f);
+                        GameEvents.OnFeedEventLogged?.Invoke("HOUSING",
+                            "<color=#00FFAA><b>[FAMILY VILLA ACQUIRED]</b></color> You bought a beautiful family villa! (+25 Happiness, +10 Clan Favor).");
+                        GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        RefreshUI();
+                    });
+            }
+            else if (s.housingTier == HousingTier.ComfortableHome)
+            {
+                CreateActivityCard("Acquire Grand Noble Estate & Manor ($35,000 Buy)",
+                    "Acquire a sprawling gated estate with private security staff and wine cellars. Upkeep: $12,000/sem. Perks: +50% Morale, +30% Health, +15 Clan Favor, +10 Prestige.",
+                    new Color(0.75f, 0.55f, 0.15f), () =>
+                    {
+                        if (s.cashBalance < 35000)
+                        {
+                            GameEvents.OnFeedEventLogged?.Invoke("HOUSING", "<color=#FF4444>[INSUFFICIENT FUNDS]</color> Noble estate acquisition costs $35,000.");
+                            return;
+                        }
+                        s.cashBalance -= 35000;
+                        s.housingTier = HousingTier.NobleEstate;
+                        s.politicalInfluence = Mathf.Min(100f, s.politicalInfluence + 15f);
+                        s.clanFavor = 100f;
+                        GameEvents.OnFeedEventLogged?.Invoke("HOUSING",
+                            "<color=#FFD700><b>[NOBLE ESTATE ACQUIRED]</b></color> You acquired a grand aristocratic manor! (+15 Political Influence, Maximum Clan Respect).");
+                        GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        RefreshUI();
+                    });
+            }
+
+            // Family Real Estate Purchases for Parents & Clan
+            if (s.familyHouseTier == FamilyHouseTier.None)
+            {
+                CreateActivityCard("Buy Family a Rural Homestead ($5,000)",
+                    "Buy your parents their own farmland and rural cottage, lifting them out of wartime poverty! (+20 Parent Approval, +15 Clan Favor, +25 Living Standard).",
+                    new Color(0.40f, 0.65f, 0.25f), () =>
+                    {
+                        EconomyEngine.BuyFamilyHouse(s, FamilyHouseTier.RuralHomestead);
+                        RefreshUI();
+                    });
+            }
+            else if (s.familyHouseTier == FamilyHouseTier.RuralHomestead)
+            {
+                CreateActivityCard("Buy Family a Capital City Townhouse ($25,000)",
+                    "Move your family into an affluent neighborhood in Valeria Magna. (+35 Parent Approval, +30 Clan Favor, +10 Political Influence).",
+                    new Color(0.20f, 0.60f, 0.65f), () =>
+                    {
+                        EconomyEngine.BuyFamilyHouse(s, FamilyHouseTier.CityTownhouse);
+                        RefreshUI();
+                    });
+            }
+            else if (s.familyHouseTier == FamilyHouseTier.CityTownhouse)
+            {
+                CreateActivityCard("Acquire Ancestral Dynastic Estate ($100,000)",
+                    "Establish a permanent ancestral castle for your dynasty. (Max Living Standard 100, +40 Succession Score, +25 Political Influence).",
+                    new Color(0.80f, 0.60f, 0.15f), () =>
+                    {
+                        EconomyEngine.BuyFamilyHouse(s, FamilyHouseTier.AncestralEstate);
+                        RefreshUI();
+                    });
+            }
+        }
+
+        // ==================== HOSPITAL & MEDICAL SPENDING ====================
+
+        private void BuildHospitalAndMedicalActivities(SoldierProfile s)
+        {
+            CreateActivityCard("Imperial Specialist Hospital Surgery ($500)",
+                "Undergo specialized surgical care and trauma rehabilitation. Restores +50 Health and repairs -40% Meridian & Nerve Damage.",
+                new Color(0.80f, 0.25f, 0.25f), () =>
+                {
+                    EconomyEngine.TreatAtImperialHospital(s);
+                    RefreshUI();
+                });
+
+            if (!s.hasBionicProsthetics)
+            {
+                CreateActivityCard("Install Advanced Bionic Cyber-Prosthetics ($2,500)",
+                    "Replace scarred or amputated limbs with state-of-the-art military cybernetics. Permanently grants <b>+15 Combat Skill</b>, <b>+10 Fitness</b>, and full health restoration!",
+                    new Color(0.55f, 0.25f, 0.75f), () =>
+                    {
+                        if (s.cashBalance < 2500)
+                        {
+                            GameEvents.OnFeedEventLogged?.Invoke("MEDICAL", "<color=#FF4444>[INSUFFICIENT FUNDS]</color> Cybernetic prosthetics cost $2,500.");
+                            return;
+                        }
+                        s.cashBalance -= 2500;
+                        s.hasBionicProsthetics = true;
+                        s.combatSkill = Mathf.Min(100f, s.combatSkill + 15f);
+                        s.fitness = Mathf.Min(100f, s.fitness + 10f);
+                        s.health = 100f;
+                        s.AddTrait("Bionic Operator");
+                        GameEvents.OnFeedEventLogged?.Invoke("MEDICAL",
+                            "<color=#FFD700><b>[BIONIC PROSTHETICS INSTALLED]</b></color> Military surgeons integrated titanium-composite bionic cybernetics into your body! (+15 Combat Skill, +10 Fitness, Healed to 100% Health).");
+                        GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        RefreshUI();
+                    });
+            }
+
+            CreateActivityCard("Family Emergency Medical Care ($1,200)",
+                "Fund emergency hospital surgeries and top apothecary elixir treatments for your parents and family (+30 Parent Relationship, +15 Clan Favor).",
+                new Color(0.75f, 0.35f, 0.30f), () =>
+                {
+                    EconomyEngine.TreatFamilyMedicalEmergency(s);
+                    RefreshUI();
+                });
+        }
+
+        // ==================== GENERATIONAL & SQUAD SPENDING ====================
+
+        private void BuildGenerationalAndSquadActivities(SoldierProfile s)
+        {
+            if (s.childHeir != null && !s.childHeir.isEligibleForEnlistment)
+            {
+                string tutorStatus = s.isHeirTutoringEnrolled 
+                    ? "<color=#00FFAA>[ACTIVE: +15 Intellect, Top Exam Preparation]</color>" 
+                    : "<color=#FF8866>[NOT ENROLLED]</color>";
+
+                CreateActivityCard("Child Heir: Private Academy Tutors ($1,000/sem)",
+                    $"Hire elite private proctors and martial tutors for {s.childHeir.childName}. Status: {tutorStatus}. Guarantees high scores on their Age 18 National Military Exam!",
+                    new Color(0.20f, 0.55f, 0.70f), () =>
+                    {
+                        EconomyEngine.SetHeirPrivateTutor(s, !s.isHeirTutoringEnrolled);
+                        RefreshUI();
+                    });
+            }
+
+            if (!s.isCivilian && !s.isRetired)
+            {
+                CreateActivityCard("PX Mess: Buy Squad Drinks & Feast ($150)",
+                    "Buy a lavish round of whiskey and steaks at the Enlisted/Officers Club for your entire squad (+20 Squad Respect, +15 Comradeship with all squadmates).",
+                    new Color(0.35f, 0.45f, 0.65f), () =>
+                    {
+                        EconomyEngine.BuySquadRounds(s);
+                        RefreshUI();
+                    });
+            }
+        }
+
+        // ==================== CRIME & UNDERWORLD HUSTLES ====================
+
+        private void BuildCrimeAndUnderworldActivities(SoldierProfile s)
+        {
+            if (s.isImprisoned || s.militaryBrigSemestersRemaining > 0)
+            {
+                CreateActivityCard("Serving Prison / Stockade Sentence",
+                    $"You are locked in the stockade/penitentiary! <b>{Mathf.Max(s.prisonSemestersRemaining, s.militaryBrigSemestersRemaining)} semester(s) remaining</b>. Reflect on your crimes or endure hard labor.",
+                    new Color(0.50f, 0.15f, 0.15f), () =>
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("PRISON", "You marked off another month on the cold concrete prison wall.");
+                        RefreshUI();
+                    });
+                return;
+            }
+
+            // Heat status banner
+            string heatBar = CrimeEngine.GetHeatBarString(s.criminalHeat);
+            CreateActivityCard($"Underworld Status: Heat {s.criminalHeat:F0}%",
+                $"Current Criminal Heat: <b>{heatBar}</b>. Crimes Committed: <b>{s.totalCrimesCommitted}</b>. Heat over 50% triggers dawn MP / Police SWAT raids!",
+                new Color(0.65f, 0.10f, 0.10f), () =>
+                {
+                    RefreshUI();
+                });
+
+            // Military Crimes
+            if (!s.isCivilian && !s.isRetired)
+            {
+                CreateActivityCard("Illicit Hustle: Siphon Fuel & Field Rations",
+                    "Siphon military depot diesel into civilian black-market fuel drums. <b>Payout: +$800 Cash</b> | Risk: Low (Heat +10%).",
+                    new Color(0.70f, 0.20f, 0.15f), () =>
+                    {
+                        CrimeEngine.CommitCrime(s, CrimeType.SiphonFuelAndRations);
+                        RefreshUI();
+                    });
+
+                CreateActivityCard("Illicit Hustle: Armory Weapons & Optics Theft",
+                    "Smuggle night-vision scopes and service carbines out of the regimental armory. <b>Payout: +$3,200 Cash</b> | Risk: High (Heat +25%).",
+                    new Color(0.80f, 0.20f, 0.10f), () =>
+                    {
+                        CrimeEngine.CommitCrime(s, CrimeType.ArmoryTheft);
+                        RefreshUI();
+                    });
+
+                CreateActivityCard("Illicit Hustle: Barracks Craps & Dice Ring",
+                    "Run an underground high-stakes dice game in the barracks basement. <b>Payout: +$1,500 Cash</b> | Risk: Medium (Heat +15%).",
+                    new Color(0.75f, 0.30f, 0.15f), () =>
+                    {
+                        CrimeEngine.CommitCrime(s, CrimeType.BarracksGamblingRing);
+                        RefreshUI();
+                    });
+
+                if (s.isInCombatDeployment)
+                {
+                    CreateActivityCard("Illicit Hustle: Frontline War Plunder & Looting",
+                        "Loot gold watches and contraband from fallen enemy trenches against military orders. <b>Payout: +$5,000 Cash</b> | Risk: High (Heat +30%).",
+                        new Color(0.85f, 0.15f, 0.15f), () =>
+                        {
+                            CrimeEngine.CommitCrime(s, CrimeType.FrontlineWarPlunder);
+                            RefreshUI();
+                        });
+                }
+
+                if (s.isOfficer)
+                {
+                    CreateActivityCard("Illicit Hustle: Defense Procurement Bribery",
+                        "Accept secret kickbacks from corporate defense contractors to award artillery contracts. <b>Payout: +$35,000 Cash</b> | Risk: Extreme (Heat +45%).",
+                        new Color(0.90f, 0.10f, 0.10f), () =>
+                        {
+                            CrimeEngine.CommitCrime(s, CrimeType.DefenseProcurementBribery);
+                            RefreshUI();
+                        });
+                }
+            }
+            // Civilian Crimes
+            else if (s.isCivilian)
+            {
+                CreateActivityCard("Illicit Hustle: Underground Pit Fight Club",
+                    "Brawl in illegal warehouse bare-knuckle pits for dirty purse money. <b>Payout: +$1,200 Cash</b> | Cost: -20 Health, Low Heat (+15%).",
+                    new Color(0.70f, 0.20f, 0.15f), () =>
+                    {
+                        CrimeEngine.CommitCrime(s, CrimeType.UndergroundFightClub);
+                        RefreshUI();
+                    });
+
+                CreateActivityCard("Illicit Hustle: Contraband Courier",
+                    "Smuggle black-market stimulants and stolen crystals through municipal police checkpoints. <b>Payout: +$3,500 Cash</b> | Risk: Medium (Heat +20%).",
+                    new Color(0.75f, 0.25f, 0.15f), () =>
+                    {
+                        CrimeEngine.CommitCrime(s, CrimeType.ContrabandCourier);
+                        RefreshUI();
+                    });
+
+                CreateActivityCard("Illicit Hustle: Syndicate Debt Enforcer",
+                    "Collect overdue street loans for the local crime syndicate with intimidation and muscle. <b>Payout: +$2,000 Cash</b> | Risk: Medium (Heat +18%).",
+                    new Color(0.80f, 0.25f, 0.15f), () =>
+                    {
+                        CrimeEngine.CommitCrime(s, CrimeType.SyndicateDebtEnforcer);
+                        RefreshUI();
+                    });
+
+                CreateActivityCard("Illicit Hustle: Customs Warehouse Heist",
+                    "Execute an armed nighttime heist on the imperial commercial customs warehouse. <b>Payout: +$30,000 Cash</b> | Risk: Extreme (Heat +40%).",
+                    new Color(0.90f, 0.15f, 0.15f), () =>
+                    {
+                        CrimeEngine.CommitCrime(s, CrimeType.WarehouseHeist);
+                        RefreshUI();
+                    });
+
+                if (s.careerTrack == CareerTrack.CivilianProfessional)
+                {
+                    CreateActivityCard("Illicit Hustle: Corporate Embezzlement",
+                        "Siphon company funds through dummy corporate shell accounts. <b>Payout: +$18,000 Cash</b> | Risk: High (Heat +35%).",
+                        new Color(0.85f, 0.20f, 0.10f), () =>
+                        {
+                            CrimeEngine.CommitCrime(s, CrimeType.CorporateEmbezzlement);
+                            RefreshUI();
+                        });
+                }
+            }
+            // Veteran Crimes
+            else if (s.isRetired)
+            {
+                CreateActivityCard("Illicit Hustle: Military Surplus Gunrunning",
+                    "Broker black-market export of decommissioned armored vehicles and assault rifles. <b>Payout: +$75,000 Cash</b> | Risk: Extreme (Heat +45%).",
+                    new Color(0.85f, 0.15f, 0.10f), () =>
+                    {
+                        CrimeEngine.CommitCrime(s, CrimeType.SurplusGunrunning);
+                        RefreshUI();
+                    });
+
+                CreateActivityCard("Illicit Hustle: Shadow PMC Wetwork Contract",
+                    "Execute an off-the-books assassination hit against a rival oligarch's security retinue. <b>Payout: +$35,000 Cash</b> | Risk: High (Heat +40%).",
+                    new Color(0.80f, 0.20f, 0.15f), () =>
+                    {
+                        CrimeEngine.CommitCrime(s, CrimeType.ShadowPMCWetwork);
+                        RefreshUI();
+                    });
+
+                if (s.veteranCareer == VeteranCareer.CityMayor || s.veteranCareer == VeteranCareer.RegionalGovernor || s.veteranCareer == VeteranCareer.MinisterOfDefense || s.politicalInfluencePoints >= 20)
+                {
+                    CreateActivityCard("Illicit Hustle: City Hall Municipal Graft & Bribes",
+                        "Siphon public infrastructure bond funds into private family trusts via political power. <b>Payout: +$120,000 Cash</b> | Risk: Extreme (Heat +50%).",
+                        new Color(0.95f, 0.10f, 0.10f), () =>
+                        {
+                            CrimeEngine.CommitCrime(s, CrimeType.CityHallGraft);
+                            RefreshUI();
+                        });
+                }
+            }
+
+            // Bribe / Lay Low Option
+            if (s.criminalHeat >= 15f)
+            {
+                CreateActivityCard("Lay Low & Bribe Dock Inspectors ($500)",
+                    "Slip $500 to port authorities and provost investigators to burn records and clear your name (-30% Criminal Heat).",
+                    new Color(0.35f, 0.55f, 0.35f), () =>
+                    {
+                        if (s.cashBalance < 500)
+                        {
+                            GameEvents.OnFeedEventLogged?.Invoke("UNDERWORLD", "<color=#FF4444>[INSUFFICIENT FUNDS]</color> Bribing inspectors costs $500.");
+                            return;
+                        }
+                        s.cashBalance -= 500;
+                        s.criminalHeat = Mathf.Max(0f, s.criminalHeat - 30f);
+                        GameEvents.OnFeedEventLogged?.Invoke("UNDERWORLD",
+                            $"<color=#00FFAA>[HEAT CLEARED]</color> You slipped bribes to internal affairs officers. Criminal Heat reduced to <b>{s.criminalHeat:F0}%</b>.");
+                        GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        RefreshUI();
+                    });
             }
         }
 

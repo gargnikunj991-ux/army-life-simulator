@@ -286,13 +286,20 @@ namespace ArmyLife.Core
                 {
                     currentSoldier.isSpecialForcesCandidate = false;
                     currentSoldier.isSpecialForces = true;
-                    currentSoldier.AddTrait("Special Forces Operator");
-                    currentSoldier.AddMedal("Special Forces Elite Beret");
+
+                    string sfName = currentSoldier.specialForcesBranchName;
+                    string sfRole = currentSoldier.specialForcesRoleTitle;
+                    string sfMedal = (currentSoldier.militaryBranch == MilitaryBranch.AirForce) 
+                        ? "Celestial Valkyrie Wings" 
+                        : "Iron Vanguard Black Beret";
+
+                    currentSoldier.AddTrait(sfRole);
+                    currentSoldier.AddMedal(sfMedal);
 
                     GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES",
-                        "<color=#FFD700><b>[SPECIAL FORCES GRADUATION • ELITE OPERATOR]</b></color> " +
-                        "You conquered the grueling 1-year Special Forces Qualification Course! Awarded the <b>Special Forces Elite Beret</b>. " +
-                        "You now receive <b>+$800/mo Elite Hazard Stipend</b>, but will deploy on high-lethality black ops!");
+                        $"<color=#FFD700><b>[SPECIAL FORCES GRADUATION • {sfName.ToUpper()}]</b></color> " +
+                        $"You conquered the grueling 1-year selection course! Inducted into <b>{sfName}</b> as a <b>{sfRole}</b> and awarded the <i>{sfMedal}</i>! " +
+                        "You now draw an exclusive <b>+$800/mo Elite Hazard Stipend</b>, but will deploy on the deadliest classified black-ops missions!");
                 }
             }
             else if (currentSoldier.isInCombatDeployment)
@@ -492,41 +499,9 @@ namespace ArmyLife.Core
                 return;
             }
 
-            // 4. Payday & Living Costs (Including 9% Loan Interest and Repayments)
-            if (currentSoldier.academyTuitionDebt > 0)
-            {
-                // Accrue 9% annual interest (4.5% per 6-month semester)
-                long interest = (long)(currentSoldier.academyTuitionDebt * 0.045f);
-                currentSoldier.academyTuitionDebt += interest;
-            }
-
-            long gross = SalaryCalculator.CalculateGrossMonthlyPay(currentSoldier);
-            long tax = SalaryCalculator.CalculateMonthlyTax(currentSoldier);
-            long net = SalaryCalculator.CalculateNetMonthlyPay(currentSoldier);
-            long monthlyLoan = SalaryCalculator.CalculateMonthlyLoanDeduction(currentSoldier);
-            long semesterLoan = monthlyLoan * 6;
-            if (semesterLoan > currentSoldier.academyTuitionDebt) semesterLoan = currentSoldier.academyTuitionDebt;
-            currentSoldier.academyTuitionDebt -= semesterLoan;
-
-            long semesterNet = net * 6;
-            currentSoldier.cashBalance += semesterNet;
-
-            string bonusNotice = currentSoldier.hasExtendedTourPayBonus 
-                ? " | <color=#FFD700><b>[+10% Continuous Combat Veteran Bonus]</b></color>" 
-                : "";
-            string sfNotice = currentSoldier.isSpecialForces
-                ? " | <color=#FF8844>[+$800/mo SF Hazard Pay]</color>"
-                : "";
-            string loanNotice = semesterLoan > 0
-                ? $" | <color=#FF8866>Loan Deduction: -${semesterLoan:N0} (Debt Remaining: ${currentSoldier.academyTuitionDebt:N0} @ 9% Int)</color>"
-                : "";
-
-            GameEvents.OnFeedEventLogged?.Invoke("PAYDAY",
-                $"<b>[MILITARY COMPENSATION]</b> Monthly Base: ${gross:N0}/mo | Tax: -${tax:N0}/mo | " +
-                $"<b>Take-Home: +${semesterNet:N0}</b> (+${net:N0}/mo){bonusNotice}{sfNotice}{loanNotice}. Bank: <b>${currentSoldier.cashBalance:N0}</b>.");
-
-            // Barracks mess & maintenance upkeep
-            currentSoldier.cashBalance = System.Math.Max(0, currentSoldier.cashBalance - 250);
+            // 4. Payday, US-Style Living Costs, Investments & Crime Heat Cycle
+            EconomyEngine.ProcessSemesterEconomy(currentSoldier);
+            CrimeEngine.ProcessSemesterHeatAndRaids(currentSoldier);
 
             // 5. Military Promotion Board Evaluation (Active Enlisted and Officers)
             if (currentSoldier.careerTrack != CareerTrack.MilitaryWarAcademy && !currentSoldier.isSpecialForcesCandidate)
@@ -614,10 +589,35 @@ namespace ArmyLife.Core
         {
             if (currentSoldier == null || currentSoldier.isDead || currentSoldier.isRetired) return;
             currentSoldier.isRetired = true;
+            currentSoldier.calculatedPensionPerMonth = EconomyEngine.CalculateScaledPension(currentSoldier);
             currentSoldier.AddTrait("Honorable Veteran");
             GameEvents.OnFeedEventLogged?.Invoke("RETIREMENT",
                 $"<color=#00FFAA><b>[HONORABLE RETIREMENT CEREMONY]</b></color> After {currentSoldier.totalSemestersLived * 0.5f:F1} years of faithful military service, " +
-                $"you were honorably discharged with full military honors! Awarded lifetime military pension.");
+                $"you were honorably discharged with full military honors! Awarded lifetime military pension of <b>${currentSoldier.calculatedPensionPerMonth:N0}/mo</b>.");
+            LifePersistenceManager.SaveSoldierLife(currentSoldier);
+            GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+        }
+
+        public void EnlistInAirForce(AirForceRole role)
+        {
+            if (currentSoldier == null) return;
+            currentSoldier.militaryBranch = MilitaryBranch.AirForce;
+            currentSoldier.airForceRole = role;
+            currentSoldier.careerTrack = CareerTrack.MilitaryEnlisted;
+            currentSoldier.currentRank = GetRankByPaygrade("E-1");
+            currentSoldier.assignedDepartment = (role == AirForceRole.FlightDuty)
+                ? "1st Tactical Aviation Wing (Flight Duty)"
+                : "Air Base Ground Logistics & Avionics";
+            currentSoldier.isInCombatDeployment = false;
+
+            string flightBonusNotice = (role == AirForceRole.FlightDuty)
+                ? " <b>Aviation Flight Duty active (+15% Flight Pay Bonus)!</b>"
+                : " Serving as ground technical crew.";
+
+            GameEvents.OnFeedEventLogged?.Invoke("ENLISTMENT",
+                $"<color=#00D4FF><b>[ENLISTED IN THE IMPERIAL AIR FORCE]</b></color> You joined the Imperial Air Force as <b>{currentSoldier.assignedDepartment}</b>!{flightBonusNotice} " +
+                "Air Force base quarters provide superior living conditions (+15% Morale, +10% Health recovery).");
+
             LifePersistenceManager.SaveSoldierLife(currentSoldier);
             GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
         }
@@ -645,9 +645,28 @@ namespace ArmyLife.Core
             GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
         }
 
-        public void ApplyForOfficerAcademy(bool takeLoan = false, float loanRepaymentPercent = 0.15f)
+        public void ApplyForOfficerAcademy(bool takeLoan = false, float loanRepaymentPercent = 0.15f, MilitaryBranch? branchOverride = null)
         {
             if (currentSoldier == null || currentSoldier.isDead || currentSoldier.isRetired) return;
+
+            if (branchOverride.HasValue)
+            {
+                currentSoldier.militaryBranch = branchOverride.Value;
+            }
+
+            long tuitionCost = (currentSoldier.militaryBranch == MilitaryBranch.AirForce)
+                ? EconomyData.AIRFORCE_ACADEMY_TUITION_COST
+                : EconomyData.ARMY_ACADEMY_TUITION_COST;
+            int programYears = (currentSoldier.militaryBranch == MilitaryBranch.AirForce)
+                ? (EconomyData.AIRFORCE_ACADEMY_SEMESTERS / 2)
+                : (EconomyData.ARMY_WAR_ACADEMY_SEMESTERS / 2);
+            int programSemesters = (currentSoldier.militaryBranch == MilitaryBranch.AirForce)
+                ? EconomyData.AIRFORCE_ACADEMY_SEMESTERS
+                : EconomyData.ARMY_WAR_ACADEMY_SEMESTERS;
+            string academyName = (currentSoldier.militaryBranch == MilitaryBranch.AirForce)
+                ? "Imperial Flight Academy"
+                : "Imperial War Academy";
+            string sfTargetName = currentSoldier.specialForcesBranchName;
 
             if (currentSoldier.isOfficer)
             {
@@ -658,7 +677,7 @@ namespace ArmyLife.Core
             if (currentSoldier.careerTrack == CareerTrack.MilitaryWarAcademy)
             {
                 GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
-                    $"<color=#00AAFF>[ALREADY ENROLLED]</color> You are already attending the 2-Year Imperial War Academy (Semester {currentSoldier.academySemestersCompleted + 1}/4)!");
+                    $"<color=#00AAFF>[ALREADY ENROLLED]</color> You are already attending the {programYears}-Year {academyName} (Semester {currentSoldier.academySemestersCompleted + 1}/{programSemesters})!");
                 return;
             }
 
@@ -682,47 +701,47 @@ namespace ArmyLife.Core
                 if (!seatsAvailable) reason += $"Competitive Seat Quota ({applicantScore:F0}/55 score required for limited admission seats) ";
 
                 GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
-                    $"<color=#FF8800><b>[ACADEMY ADMISSION REJECTED • LIMITED SEATS]</b></color> The War Academy Selection Board rejected your application. " +
+                    $"<color=#FF8800><b>[ACADEMY ADMISSION REJECTED • LIMITED SEATS]</b></color> The {academyName} Selection Board rejected your application. " +
                     $"Deficiencies: <b>{reason}</b>. Improve your stats and reapply next term!");
                 GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
                 return;
             }
 
-            // Tuition Payment check ($50,000)
+            // Tuition Payment check
             if (!takeLoan)
             {
-                if (currentSoldier.cashBalance < SoldierProfile.ACADEMY_TUITION_COST)
+                if (currentSoldier.cashBalance < tuitionCost)
                 {
                     GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
-                        $"<color=#FF8800><b>[INSUFFICIENT FUNDS]</b></color> You do not have $50,000 cash for upfront tuition (Bank: ${currentSoldier.cashBalance:N0}). " +
+                        $"<color=#FF8800><b>[INSUFFICIENT FUNDS]</b></color> You do not have ${tuitionCost:N0} cash for upfront tuition (Bank: ${currentSoldier.cashBalance:N0}). " +
                         "You can apply using the 9% Military Education Loan with salary deduction instead!");
                     return;
                 }
-                currentSoldier.cashBalance -= SoldierProfile.ACADEMY_TUITION_COST;
+                currentSoldier.cashBalance -= tuitionCost;
                 currentSoldier.academyTuitionDebt = 0;
             }
             else
             {
-                currentSoldier.academyTuitionDebt = SoldierProfile.ACADEMY_TUITION_COST;
+                currentSoldier.academyTuitionDebt = tuitionCost;
                 currentSoldier.academyLoanDeductionPercent = Mathf.Clamp(loanRepaymentPercent, 0.10f, 0.80f);
             }
 
-            // Enroll in 2-year War Academy
+            // Enroll in Academy
             currentSoldier.careerTrack = CareerTrack.MilitaryWarAcademy;
             currentSoldier.academySemestersCompleted = 0;
             currentSoldier.militarySchoolSemestersCompleted = 0;
-            currentSoldier.assignedDepartment = "The Imperial War Academy";
+            currentSoldier.assignedDepartment = academyName;
             currentSoldier.isInCombatDeployment = false;
 
             string paymentMethod = (!takeLoan) 
-                ? "Paid $50,000 cash upfront" 
-                : $"Approved for $50,000 Military Education Loan at 9% annual interest ({currentSoldier.academyLoanDeductionPercent * 100f:F0}% monthly salary deduction)";
+                ? $"Paid ${tuitionCost:N0} cash upfront" 
+                : $"Approved for ${tuitionCost:N0} Education Loan at 9% annual interest ({currentSoldier.academyLoanDeductionPercent * 100f:F0}% monthly salary deduction)";
 
-            GameEvents.OnFeedEventLogged?.Invoke("WAR ACADEMY",
-                $"<color=#FFD700><b>[WAR ACADEMY ADMISSION GRANTED • 2-YEAR OFFICER PROGRAM]</b></color> " +
-                $"You won a limited seat at the prestigious Imperial War Academy! " +
-                $"Tuition: <b>{paymentMethod}</b>. 4 semesters (2 years) of tactical command training commence. " +
-                "Cadets in the <b>Top 10% in Year 2</b> qualify for elite Special Forces selection. Graduates receive direct O-1 commissions!");
+            GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
+                $"<color=#FFD700><b>[{academyName.ToUpper()} ADMISSION GRANTED • {programYears}-YEAR OFFICER PROGRAM]</b></color> " +
+                $"You won a coveted seat at {academyName}! " +
+                $"Tuition: <b>{paymentMethod}</b>. {programSemesters} semesters ({programYears} years) of tactical command training commence. " +
+                $"Cadets in the <b>Top 10%</b> qualify for elite {sfTargetName} selection. Graduates receive direct O-1 commissions!");
 
             LifePersistenceManager.SaveSoldierLife(currentSoldier);
             GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
@@ -731,7 +750,10 @@ namespace ArmyLife.Core
         public void ApplyForOfficerAcademy()
         {
             if (currentSoldier == null) return;
-            bool canAffordCash = currentSoldier.cashBalance >= SoldierProfile.ACADEMY_TUITION_COST;
+            long tuitionCost = (currentSoldier.militaryBranch == MilitaryBranch.AirForce)
+                ? EconomyData.AIRFORCE_ACADEMY_TUITION_COST
+                : EconomyData.ARMY_ACADEMY_TUITION_COST;
+            bool canAffordCash = currentSoldier.cashBalance >= tuitionCost;
             ApplyForOfficerAcademy(takeLoan: !canAffordCash, loanRepaymentPercent: 0.15f);
         }
 

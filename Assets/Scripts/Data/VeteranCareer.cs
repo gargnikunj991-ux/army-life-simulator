@@ -19,6 +19,8 @@ namespace ArmyLife.Data
         public string gender;
         public float age;
         public float relationship = 80f;
+        public bool hasPrivateTutors = false;
+        public int examScoreBonus = 0;
         public bool isEligibleForEnlistment => age >= 18.0f;
 
         public ChildHeir() {}

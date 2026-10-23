@@ -23,49 +23,49 @@ namespace ArmyLife.Systems
 
             if (scorePercent >= 30f && scorePercent <= 50f)
             {
-                // Score 30% - 50%: Player choice between Civil Life and Military Service!
+                // Score 30% - 50%: Player choice between Civil Life, Army, and Air Force!
                 GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                     "CAREER DESTINY",
                     "Age 18 Milestone: Civil vs Military Destiny",
                     $"National Exam Result: {soldier.examScore}/750 ({scorePercent:F1}%)\n" +
-                    "Your score places you in the middle tier. Imperial regulations grant you the freedom to choose your destiny: Enter Civilian Life or Enlist in the Imperial Military.",
-                    "ENTER CIVILIAN LIFE ($150-$300/mo jobs)",
-                    "ENLIST AS RECRUIT (6 Mo Unpaid Basic Training -> E-1 Private)",
-                    "APPLY TO IMPERIAL COLLEGE ($100,000 for 4 Years -> $500+/mo Careers)",
+                    "Your score places you in the middle tier. Imperial regulations grant you freedom of service: Enter Civilian Employment, Enlist in the Imperial Army (6 Mo Boot Camp -> Frontline Bounties), or Enlist in the Imperial Air Force (1 Yr Boot Camp -> Superior Quarters & Flight Pay).",
+                    "ENTER CIVILIAN LIFE ($150-$300/mo Jobs & Trade)",
+                    "ENLIST IN IMPERIAL ARMY (6 Mo Boot Camp -> Frontline Bounties)",
+                    "ENLIST IN AIR FORCE (1 Yr Boot Camp -> +15% Flight Pay)",
                     () => ChooseCivilianLife(soldier),
-                    () => EnlistAsRecruit(soldier, gm),
-                    () => EnrollInCollege(soldier, "Imperial Administration & Governance")
+                    () => EnlistAsRecruit(soldier, gm, MilitaryBranch.Army),
+                    () => EnlistAsRecruit(soldier, gm, MilitaryBranch.AirForce, AirForceRole.FlightDuty)
                 );
             }
             else if (scorePercent < 30f)
             {
-                // Below 30%: Grassroots civilian work or volunteer recruit
+                // Below 30%: Grassroots civilian work, Army recruit, or Air Force ground staff
                 GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                     "EXAM FAILURE",
                     "National Exam Concluded (< 30%)",
                     $"National Exam Result: {soldier.examScore}/750 ({scorePercent:F1}%)\n" +
-                    "You failed to achieve the academic threshold for academy commissioning. You must work grassroots labor or enlist as a volunteer grunt.",
+                    "You failed to achieve the academic threshold for officer commissioning. You must work grassroots labor or enlist as a recruit.",
                     "ACCEPT WORKSHOP LABOR ($150/mo Entry Job)",
-                    "VOLUNTEER AS GRUNT (6 Mo Unpaid Basic Training)",
-                    "WORK ON FAMILY FARM ($150/mo)",
+                    "VOLUNTEER: IMPERIAL ARMY (6 Mo Boot Camp -> E-1 Private)",
+                    "VOLUNTEER: AIR FORCE (1 Yr Boot Camp -> Ground Support Staff)",
                     () => StartDirectCivilianJob(soldier, "Apprentice Workshop Laborer", LOWEST_CIVIL_PAY),
-                    () => EnlistAsRecruit(soldier, gm),
-                    () => StartDirectCivilianJob(soldier, "Family Farmhand", LOWEST_CIVIL_PAY)
+                    () => EnlistAsRecruit(soldier, gm, MilitaryBranch.Army),
+                    () => EnlistAsRecruit(soldier, gm, MilitaryBranch.AirForce, AirForceRole.GroundDutyStaff)
                 );
             }
             else
             {
-                // Above 50%: Elite academies unlocked!
+                // Above 50%: Elite academies unlocked! Army War Academy vs Air Force Flight Academy vs University
                 GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                     "ACADEMY COMMISSIONS",
                     "National Exam Honors (> 50%)",
                     $"National Exam Result: {soldier.examScore}/750 ({scorePercent:F1}%)\n" +
                     "High honors! You qualify for Imperial Military Academies or Prestigious University Degrees.",
-                    "THE WAR ACADEMY (2 Yrs, $50k Tuition/Loan -> Direct O-1 Commission)",
-                    "TECHNICAL / MEDICAL SCHOOL (2-3 Yrs, Paid after 1 Year)",
+                    "ARMY WAR ACADEMY (2 Yrs, $50k Tuition -> The Iron Vanguard)",
+                    "AIR FORCE FLIGHT ACADEMY (3 Yrs, $200k Tuition -> Celestial Valkyries)",
                     "IMPERIAL UNIVERSITY DEGREE ($100,000 Tuition -> High Civil Office)",
-                    () => EnrollInWarAcademy(soldier),
-                    () => EnrollInTechOrMedical(soldier, gm),
+                    () => EnrollInWarAcademy(soldier, takeLoan: soldier.cashBalance < EconomyData.ARMY_ACADEMY_TUITION_COST, deductionPercent: 0.15f, branch: MilitaryBranch.Army),
+                    () => EnrollInWarAcademy(soldier, takeLoan: soldier.cashBalance < EconomyData.AIRFORCE_ACADEMY_TUITION_COST, deductionPercent: 0.15f, branch: MilitaryBranch.AirForce),
                     () => EnrollInCollege(soldier, "Aetheric Energy & Cyber Engineering")
                 );
             }
@@ -130,48 +130,80 @@ namespace ArmyLife.Systems
             GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
         }
 
-        public static void EnlistAsRecruit(SoldierProfile soldier, GameManager gm)
+        public static void EnlistAsRecruit(SoldierProfile soldier, GameManager gm, MilitaryBranch branch = MilitaryBranch.Army, AirForceRole role = AirForceRole.FlightDuty)
         {
             if (soldier == null) return;
+            soldier.militaryBranch = branch;
+            soldier.airForceRole = (branch == MilitaryBranch.AirForce) ? role : AirForceRole.None;
             soldier.careerTrack = CareerTrack.MilitaryRecruitBasic;
             soldier.militarySchoolSemestersCompleted = 0;
             soldier.currentRank = null; // Unranked recruit
-            soldier.assignedDepartment = "Infantry Recruit Depot";
             soldier.isInCombatDeployment = false; // In training camp
 
-            GameEvents.OnFeedEventLogged?.Invoke("ENLISTMENT",
-                "<color=#FF8844><b>[ENLISTED AS RECRUIT • BASIC TRAINING]</b></color> You entered the 6-month Basic Combat Training Depot. " +
-                "<b>Pay Policy: $0 / month during basic training</b> (free mess hall rations only). " +
-                "Endure physical drills for 6 months to earn your Private (E-1) stripes and begin receiving military pay!");
+            if (branch == MilitaryBranch.AirForce)
+            {
+                soldier.assignedDepartment = "Imperial Air Force Recruit Depot";
+                GameEvents.OnFeedEventLogged?.Invoke("ENLISTMENT",
+                    "<color=#00D4FF><b>[ENLISTED AS AIR FORCE RECRUIT • 1-YEAR BASIC TRAINING]</b></color> You entered the rigorous 1-year (2-semester) Air Force Recruit Depot. " +
+                    "<b>Pay Policy: $0 / month during basic training</b> (flight dorms & rations provided). " +
+                    "Endure 1 year of aviation drills and endurance conditioning to commission as Airman Basic (E-1) with superior quarters (+15% Morale) and flight opportunities!");
+            }
+            else
+            {
+                soldier.assignedDepartment = "Infantry Recruit Depot";
+                GameEvents.OnFeedEventLogged?.Invoke("ENLISTMENT",
+                    "<color=#FF8844><b>[ENLISTED AS RECRUIT • BASIC TRAINING]</b></color> You entered the 6-month Basic Combat Training Depot. " +
+                    "<b>Pay Policy: $0 / month during basic training</b> (free mess hall rations only). " +
+                    "Endure physical drills for 6 months to earn your Private (E-1) stripes and begin receiving military pay!");
+            }
 
             GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
         }
 
-        public static void EnrollInWarAcademy(SoldierProfile soldier, bool takeLoan = false, float deductionPercent = 0.15f)
+        public static void EnrollInWarAcademy(SoldierProfile soldier, bool takeLoan = false, float deductionPercent = 0.15f, MilitaryBranch branch = MilitaryBranch.Army)
         {
             if (soldier == null) return;
+            soldier.militaryBranch = branch;
             soldier.careerTrack = CareerTrack.MilitaryWarAcademy;
             soldier.militarySchoolSemestersCompleted = 0;
             soldier.academySemestersCompleted = 0;
-            soldier.assignedDepartment = "The Imperial War Academy";
             soldier.isInCombatDeployment = false;
 
-            if (takeLoan)
+            long tuition = (branch == MilitaryBranch.AirForce)
+                ? EconomyData.AIRFORCE_ACADEMY_TUITION_COST
+                : EconomyData.ARMY_ACADEMY_TUITION_COST;
+            int totalYears = (branch == MilitaryBranch.AirForce)
+                ? (EconomyData.AIRFORCE_ACADEMY_SEMESTERS / 2)
+                : (EconomyData.ARMY_WAR_ACADEMY_SEMESTERS / 2);
+            string academyName = (branch == MilitaryBranch.AirForce)
+                ? "The Imperial Flight Academy"
+                : "The Imperial War Academy";
+            string sfName = soldier.specialForcesBranchName;
+
+            soldier.assignedDepartment = academyName;
+
+            bool mustLoan = takeLoan || soldier.cashBalance < tuition;
+            if (mustLoan)
             {
-                soldier.academyTuitionDebt = SoldierProfile.ACADEMY_TUITION_COST;
+                long downPayment = takeLoan ? 0L : soldier.cashBalance;
+                long loanAmount = tuition - downPayment;
+                soldier.cashBalance -= downPayment;
+                soldier.academyTuitionDebt = loanAmount;
                 soldier.academyLoanDeductionPercent = Mathf.Clamp(deductionPercent, 0.10f, 0.80f);
-                GameEvents.OnFeedEventLogged?.Invoke("WAR ACADEMY",
-                    $"<color=#FFD700><b>[THE IMPERIAL WAR ACADEMY • 2 YEARS]</b></color> You secured a limited seat in the Officer Cadet class! " +
-                    $"<b>Tuition: $50,000 Military Education Loan approved</b> at 9% annual interest. " +
-                    $"Monthly deduction set at <b>{soldier.academyLoanDeductionPercent * 100f:F0}%</b> of salary (min 10%).");
+
+                string downPaymentMsg = downPayment > 0 ? $" (Paid ${downPayment:N0} down payment)" : "";
+                GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
+                    $"<color=#FFD700><b>[{academyName.ToUpper()} • {totalYears} YEARS]</b></color> You secured a limited seat in the Officer Cadet class! " +
+                    $"<b>Tuition: ${loanAmount:N0} Education Loan approved</b>{downPaymentMsg} at 9% annual interest. " +
+                    $"Monthly deduction set at <b>{soldier.academyLoanDeductionPercent * 100f:F0}%</b> of salary. Top 10% qualify for {sfName}!");
             }
             else
             {
-                soldier.cashBalance = System.Math.Max(0, soldier.cashBalance - SoldierProfile.ACADEMY_TUITION_COST);
+                soldier.cashBalance -= tuition;
                 soldier.academyTuitionDebt = 0;
-                GameEvents.OnFeedEventLogged?.Invoke("WAR ACADEMY",
-                    $"<color=#FFD700><b>[THE IMPERIAL WAR ACADEMY • 2 YEARS]</b></color> You paid the $50,000 tuition upfront and secured your seat in the Officer Cadet class! " +
-                    "2 years of intensive tactical command and physical preparation begin.");
+                GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
+                    $"<color=#FFD700><b>[{academyName.ToUpper()} • {totalYears} YEARS]</b></color> You paid the ${tuition:N0} tuition upfront in cash! " +
+                    $"{totalYears} years of intensive tactical command and physical preparation begin. Top 10% qualify for {sfName}!");
             }
 
             GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
@@ -221,24 +253,51 @@ namespace ArmyLife.Systems
 
             switch (soldier.careerTrack)
             {
-                // 1. Basic Training (6 months = 1 semester)
+                // 1. Basic Training (Army: 6 months = 1 sem; Air Force: 1 year = 2 sem)
                 case CareerTrack.MilitaryRecruitBasic:
                     soldier.militarySchoolSemestersCompleted++;
                     soldier.fitness = Mathf.Min(100f, soldier.fitness + 8f);
                     soldier.combatSkill = Mathf.Min(100f, soldier.combatSkill + 6f);
-
-                    if (soldier.militarySchoolSemestersCompleted >= 1)
+                    if (soldier.militaryBranch == MilitaryBranch.AirForce)
                     {
-                        // Passed Basic Training! Commission as E-1 Private!
+                        soldier.intellect = Mathf.Min(100f, soldier.intellect + 4f);
+                    }
+
+                    int reqBasicSemesters = (soldier.militaryBranch == MilitaryBranch.AirForce)
+                        ? EconomyData.AIRFORCE_BASIC_TRAINING_SEMESTERS // 2 semesters = 1 year
+                        : EconomyData.ARMY_BASIC_TRAINING_SEMESTERS;     // 1 semester = 6 months
+
+                    if (soldier.militarySchoolSemestersCompleted >= reqBasicSemesters)
+                    {
+                        // Passed Basic Training! Commission as E-1
                         soldier.careerTrack = CareerTrack.MilitaryEnlisted;
                         var e1Rank = FindRank(gm, "E-1");
                         soldier.currentRank = e1Rank;
                         soldier.timeInCurrentRankSemesters = 0;
                         soldier.accumulatedPromotionPoints = 0;
 
-                        GameEvents.OnFeedEventLogged?.Invoke("GRADUATION",
-                            "<color=#00FFAA><b>[BASIC TRAINING CONCLUDED • PRIVATE E-1]</b></color> You completed the grueling 6-month recruit drills! " +
-                            "You earned your private stripes (E-1). Your monthly military pay and time-in-grade now begin.");
+                        if (soldier.militaryBranch == MilitaryBranch.AirForce)
+                        {
+                            soldier.assignedDepartment = (soldier.airForceRole == AirForceRole.FlightDuty)
+                                ? "1st Tactical Aviation Wing (Flight Duty)"
+                                : "Air Base Ground Logistics & Avionics";
+
+                            GameEvents.OnFeedEventLogged?.Invoke("GRADUATION",
+                                "<color=#00D4FF><b>[AIR FORCE BASIC TRAINING CONCLUDED • AIRMAN E-1]</b></color> You completed 1 year of aviation recruit conditioning! " +
+                                $"Commissioned as <b>Airman (E-1)</b> in {soldier.assignedDepartment}. Monthly military pay begins and superior air base quarters activated!");
+                        }
+                        else
+                        {
+                            soldier.assignedDepartment = "Line Infantry Regiment";
+                            GameEvents.OnFeedEventLogged?.Invoke("GRADUATION",
+                                "<color=#00FFAA><b>[BASIC TRAINING CONCLUDED • PRIVATE E-1]</b></color> You completed the grueling 6-month recruit drills! " +
+                                "You earned your private stripes (E-1). Your monthly military pay and frontline combat bounty eligibility begin.");
+                        }
+                    }
+                    else
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("TRAINING",
+                            $"<color=#00D4FF>[AIR FORCE BASIC RECRUIT DEPOT • TERM {soldier.militarySchoolSemestersCompleted}/{reqBasicSemesters}]</color> Completed basic aerodynamics and endurance conditioning. 6 months remain before graduation.");
                     }
                     break;
 
@@ -291,7 +350,7 @@ namespace ArmyLife.Systems
                     }
                     break;
 
-                // 4. War Academy (2 years = 4 semesters)
+                // 4. War Academy / Flight Academy (Army: 2 years = 4 sem; Air Force: 3 years = 6 sem)
                 case CareerTrack.MilitaryWarAcademy:
                     soldier.militarySchoolSemestersCompleted++;
                     soldier.academySemestersCompleted++;
@@ -301,32 +360,67 @@ namespace ArmyLife.Systems
                     soldier.leadership = Mathf.Min(100f, soldier.leadership + 6f);
                     soldier.discipline = Mathf.Min(100f, soldier.discipline + 5f);
 
+                    if (soldier.militaryBranch == MilitaryBranch.AirForce)
+                    {
+                        soldier.flightHoursLogged += 40; // 40 flight hours per semester in supersonic trainer jets
+                    }
+
                     // Academic and tactical performance evaluation (0 - 100%)
                     float currentSemesterGrade = (soldier.intellect * 0.35f) + (soldier.fitness * 0.25f) + (soldier.discipline * 0.20f) + (soldier.combatSkill * 0.20f);
                     soldier.academyPerformanceScore = Mathf.Clamp(currentSemesterGrade, 0f, 100f);
 
-                    if (soldier.academySemestersCompleted == 2)
+                    int maxAcademySemesters = (soldier.militaryBranch == MilitaryBranch.AirForce)
+                        ? EconomyData.AIRFORCE_ACADEMY_SEMESTERS // 6 semesters = 3 years
+                        : EconomyData.ARMY_WAR_ACADEMY_SEMESTERS; // 4 semesters = 2 years
+
+                    int sfTriggerSemester = (soldier.militaryBranch == MilitaryBranch.AirForce)
+                        ? 5 // Year 3, Semester 1 (Semester 5)
+                        : 3; // Year 2, Semester 1 (Semester 3)
+
+                    string branchAcademyName = (soldier.militaryBranch == MilitaryBranch.AirForce)
+                        ? "Imperial Flight Academy"
+                        : "Imperial War Academy";
+
+                    string branchSfName = soldier.specialForcesBranchName;
+
+                    // Progress notifications for intermediate completed years
+                    if (soldier.academySemestersCompleted % 2 == 0 && soldier.academySemestersCompleted < maxAcademySemesters)
                     {
-                        GameEvents.OnFeedEventLogged?.Invoke("WAR ACADEMY",
-                            $"<color=#00FFAA><b>[WAR ACADEMY • YEAR 1 COMPLETED]</b></color> You completed your first year of officer tactical command! Class Standing: <b>{soldier.academyPerformanceScore:F1}%</b>.");
+                        int yearCompleted = soldier.academySemestersCompleted / 2;
+                        GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
+                            $"<color=#00FFAA><b>[{branchAcademyName.ToUpper()} • YEAR {yearCompleted} COMPLETED]</b></color> You completed Year {yearCompleted} of officer command training! Class Standing: <b>{soldier.academyPerformanceScore:F1}%</b>.");
                     }
-                    else if (soldier.academySemestersCompleted == 3)
+
+                    // Special Forces Selection Qualification Trigger
+                    if (soldier.academySemestersCompleted == sfTriggerSemester)
                     {
                         if (soldier.isAcademyTop10Percent && !soldier.isSpecialForces && !soldier.isSpecialForcesCandidate)
                         {
-                            GameEvents.OnFeedEventLogged?.Invoke("WAR ACADEMY",
-                                $"<color=#FFD700><b>[SPECIAL FORCES SELECTION QUALIFIED • TOP 10%]</b></color> In Year 2, your top 10% class standing (<b>{soldier.academyPerformanceScore:F1}%</b>) has officially qualified you to volunteer for elite 1-year <b>Special Forces Qualification & Training</b>!");
+                            GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
+                                $"<color=#FFD700><b>[{branchSfName.ToUpper()} SELECTION QUALIFIED • TOP 10%]</b></color> Your top 10% class standing (<b>{soldier.academyPerformanceScore:F1}%</b>) has officially qualified you to volunteer for elite <b>{branchSfName} Special Forces</b>!");
                         }
                     }
-                    else if (soldier.academySemestersCompleted >= 4)
+
+                    // Graduation and Direct O-1 Commission
+                    if (soldier.academySemestersCompleted >= maxAcademySemesters)
                     {
                         soldier.graduatedWarAcademy = true;
                         soldier.careerTrack = CareerTrack.MilitaryOfficer;
                         soldier.currentRank = FindRank(gm, "O-1");
                         soldier.timeInCurrentRankSemesters = 0;
                         soldier.accumulatedPromotionPoints = 0;
-                        soldier.AddTrait("War Academy Graduate");
+                        soldier.AddTrait(soldier.militaryBranch == MilitaryBranch.AirForce ? "Flight Academy Graduate" : "War Academy Graduate");
                         soldier.AddTrait("Commissioned Officer");
+
+                        if (soldier.militaryBranch == MilitaryBranch.AirForce)
+                        {
+                            soldier.airForceRole = AirForceRole.FlightDuty;
+                            soldier.assignedDepartment = "1st Imperial Fighter Squadron";
+                        }
+                        else
+                        {
+                            soldier.assignedDepartment = "Field Tactical Command";
+                        }
 
                         string honorsText = "";
                         if (soldier.isAcademyTop10Percent)
@@ -335,10 +429,11 @@ namespace ArmyLife.Systems
                             honorsText = " Graduated in the <b>Top 10% with High Honors</b> and awarded the <i>Imperial Honors Saber</i>!";
                         }
 
+                        string officerTitle = (soldier.militaryBranch == MilitaryBranch.AirForce) ? "Flight Lieutenant (O-1)" : "2nd Lieutenant (O-1)";
                         GameEvents.OnFeedEventLogged?.Invoke("GRADUATION",
-                            $"<color=#FFD700><b>[WAR ACADEMY GRADUATION • COMMISSIONED 2ND LIEUTENANT (O-1)]</b></color> " +
-                            $"You conquered the rigorous 2-year Imperial War Academy!{honorsText} " +
-                            $"Directly commissioned as an Imperial Officer <b>({soldier.currentRank?.rankName ?? "2nd Lieutenant"} O-1)</b> with full command authority and ${(soldier.currentRank?.baseMonthlySalary ?? 3800):N0}/mo base salary!");
+                            $"<color=#FFD700><b>[{branchAcademyName.ToUpper()} GRADUATION • COMMISSIONED {officerTitle.ToUpper()}]</b></color> " +
+                            $"You conquered the {maxAcademySemesters / 2}-year {branchAcademyName}!{honorsText} " +
+                            $"Directly commissioned as an Imperial Officer <b>({soldier.currentRank?.rankName ?? officerTitle})</b> with full command authority and ${(soldier.currentRank?.baseMonthlySalary ?? 3800):N0}/mo base salary!");
                     }
                     break;
 

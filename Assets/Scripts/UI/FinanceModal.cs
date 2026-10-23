@@ -1,3 +1,4 @@
+using System;
 using ArmyLife.Core;
 using ArmyLife.Data;
 using ArmyLife.Systems;
@@ -38,6 +39,20 @@ namespace ArmyLife.UI
         public Button emergencyAdvanceButton;
         public TextMeshProUGUI warBondStatusText;
 
+        [Header("Expanded Three-Phase Economy Actions (Optional Inspector Bindings)")]
+        public Button buyTradeGuildShareButton;
+        public Button payDebt1000Button;
+        public Button treatSquadButton;
+        public Button specialistHospitalButton;
+        public TextMeshProUGUI portfolioBreakdownText;
+        public TextMeshProUGUI spendingBreakdownText;
+
+        // Dynamic fallback buttons
+        private Button _runtimeBuyTradeShareBtn;
+        private Button _runtimePayDebtBtn;
+        private Button _runtimeTreatSquadBtn;
+        private Button _runtimeHospitalBtn;
+
         private void Awake()
         {
             if (Instance == null) Instance = this;
@@ -56,6 +71,13 @@ namespace ArmyLife.UI
             if (buyWarBondButton != null) buyWarBondButton.onClick.AddListener(OnBuyWarBondClicked);
             if (emergencyAdvanceButton != null) emergencyAdvanceButton.onClick.AddListener(OnEmergencyAdvanceClicked);
 
+            if (buyTradeGuildShareButton != null) buyTradeGuildShareButton.onClick.AddListener(OnBuyTradeGuildShareClicked);
+            if (payDebt1000Button != null) payDebt1000Button.onClick.AddListener(OnPayDebt1000Clicked);
+            if (treatSquadButton != null) treatSquadButton.onClick.AddListener(OnTreatSquadClicked);
+            if (specialistHospitalButton != null) specialistHospitalButton.onClick.AddListener(OnSpecialistHospitalClicked);
+
+            EnsureDynamicActionButtons();
+
             ThemeManager.OnThemeChanged += OnThemeChanged;
         }
 
@@ -67,6 +89,16 @@ namespace ArmyLife.UI
             if (send1000Button != null) send1000Button.onClick.RemoveAllListeners();
             if (buyWarBondButton != null) buyWarBondButton.onClick.RemoveListener(OnBuyWarBondClicked);
             if (emergencyAdvanceButton != null) emergencyAdvanceButton.onClick.RemoveListener(OnEmergencyAdvanceClicked);
+
+            if (buyTradeGuildShareButton != null) buyTradeGuildShareButton.onClick.RemoveListener(OnBuyTradeGuildShareClicked);
+            if (payDebt1000Button != null) payDebt1000Button.onClick.RemoveListener(OnPayDebt1000Clicked);
+            if (treatSquadButton != null) treatSquadButton.onClick.RemoveListener(OnTreatSquadClicked);
+            if (specialistHospitalButton != null) specialistHospitalButton.onClick.RemoveListener(OnSpecialistHospitalClicked);
+
+            if (_runtimeBuyTradeShareBtn != null) _runtimeBuyTradeShareBtn.onClick.RemoveListener(OnBuyTradeGuildShareClicked);
+            if (_runtimePayDebtBtn != null) _runtimePayDebtBtn.onClick.RemoveListener(OnPayDebt1000Clicked);
+            if (_runtimeTreatSquadBtn != null) _runtimeTreatSquadBtn.onClick.RemoveListener(OnTreatSquadClicked);
+            if (_runtimeHospitalBtn != null) _runtimeHospitalBtn.onClick.RemoveListener(OnSpecialistHospitalClicked);
 
             ThemeManager.OnThemeChanged -= OnThemeChanged;
         }
@@ -105,6 +137,11 @@ namespace ArmyLife.UI
                 cmpBalanceText.text = $"Combat Merit Points: <color=#FF88FF>{s.combatMeritPoints:N0} CMP</color>";
             }
 
+            // Housing Upkeep
+            long housingPerSemester = EconomyData.GetHousingUpkeepPerSemester(s.housingTier);
+            long housingPerMonth = EconomyData.GetHousingUpkeepPerMonth(s.housingTier);
+            string housingName = EconomyData.GetHousingName(s.housingTier);
+
             // Monthly breakdown
             if (monthlyBreakdownText != null)
             {
@@ -115,124 +152,292 @@ namespace ArmyLife.UI
                 else if (s.isYouthPhase)
                 {
                     monthlyBreakdownText.text = 
-                        "<b>Current Income Status:</b> Dependent Student / Cadet\n" +
-                        "<i>Cadets receive free academy meals and academic boarding, but no monthly salary until official enlistment or graduation.</i>";
+                        "<b><color=#00D4FF>PHASE: DEPENDENT YOUTH & CADET</color></b>\n" +
+                        $"<b>Housing / Boarding:</b> {housingName} (Free Military Dependent Quarters)\n" +
+                        "<b>Monthly Allowance:</b> $0 / mo (Academic Boarding & Mess Hall rations provided)\n" +
+                        "<i>Cadets receive free academy meals, physical training gear, and academic instruction, but no military salary until official enlistment or graduation at Age 18.0.</i>";
                 }
                 else if (s.careerTrack == CareerTrack.CivilianCollege)
                 {
                     long debt = s.collegeTuitionDebt;
                     monthlyBreakdownText.text = 
-                        $"<b>Imperial College Undergraduate:</b> $0 / mo (Full-Time Degree Student)\n" +
-                        $"<b>Semester Tuition:</b> $12,500 / sem ($100,000 for 4 Years / 8 Semesters)\n" +
-                        $"<color={(debt > 0 ? "#FF6666" : "#00FFAA")}><b>Outstanding Student Loan Debt:</b> ${debt:N0}</color>\n" +
-                        $"<i>Degrees confer professional civil positions starting at $500+/mo upon graduation.</i>";
+                        "<b><color=#FFD700>PHASE: IMPERIAL COLLEGE UNDERGRADUATE</color></b>\n" +
+                        "<b>Academic Track:</b> Full-Time Degree Student ($0 / mo wage)\n" +
+                        "<b>Semester Tuition Cost:</b> $12,500 / semester ($100,000 for 4-Year / 8-Semester Degree)\n" +
+                        $"<b>Housing Residence:</b> {housingName} (-${housingPerMonth:N0}/mo | -${housingPerSemester:N0}/sem upkeep)\n" +
+                        $"<color={(debt > 0 ? "#FF6666" : "#00FFAA")}><b>Outstanding Student Loan Balance:</b> ${debt:N0}</color>\n" +
+                        "<i>Degrees qualify graduates for prestigious civilian guild positions starting at $500+/mo upon graduation.</i>";
                 }
                 else if (s.isCivilian)
                 {
-                    long gross = s.civilianSalaryPerMonth;
-                    long net = SalaryCalculator.CalculateNetMonthlyPay(s);
-                    long tax = gross - net;
-                    string debtTag = s.collegeTuitionDebt > 0 ? $"\n<color=#FF6666><b>Student Tuition Debt Remaining:</b> ${s.collegeTuitionDebt:N0}</color>" : "";
+                    long gross = s.civilianSalaryPerMonth > 0 ? s.civilianSalaryPerMonth : 150L;
+                    long tax = (long)(gross * SalaryCalculator.CivilMunicipalTaxRate);
+                    long netBeforeHousing = gross - tax;
+                    long netTakeHome = Math.Max(0L, netBeforeHousing - housingPerMonth);
+                    long semesterTakeHome = netTakeHome * 6;
+
+                    string debtTag = s.collegeTuitionDebt > 0 
+                        ? $"\n<color=#FF6666><b>Student Tuition Debt Remaining:</b> ${s.collegeTuitionDebt:N0}</color>" 
+                        : "";
 
                     monthlyBreakdownText.text = 
-                        $"<b>Gross Civilian Wage ({s.civilianJobTitle}):</b> ${gross:N0} / mo\n" +
-                        $"<color=#FF8866><b>Municipal Civil Income Tax (50%):</b> -${tax:N0} / mo</color>\n" +
-                        $"<color=#00FF88><b>Net Take-Home Pay:</b> +${net:N0} / mo</color>{debtTag}\n" +
-                        $"<i>Civilian citizens pay 50% municipal tax towards public infrastructure and municipal governance.</i>";
+                        $"<b><color=#00FFAA>PHASE: CIVILIAN CITIZEN • {s.civilianJobTitle.ToUpper()}</color></b>\n" +
+                        $"<b>Gross Monthly Wage:</b> ${gross:N0} / mo (${gross * 6:N0} / sem)\n" +
+                        $"<color=#FF8866><b>Municipal Civil Income Tax (50%):</b> -${tax:N0} / mo (-${tax * 6:N0} / sem)</color>\n" +
+                        $"<color=#FFAA44><b>Housing Rent & Upkeep ({housingName}):</b> -${housingPerMonth:N0} / mo (-${housingPerSemester:N0} / sem)</color>\n" +
+                        $"<color=#00FF88><b>Net Monthly Take-Home Pay:</b> +${netTakeHome:N0} / mo</color>\n" +
+                        $"<color=#00FFAA><b>Estimated Semester Net Cashflow:</b> +${semesterTakeHome:N0} / sem</color>{debtTag}\n" +
+                        "<i>Civilian municipal law requires a 50% municipal tax towards city infrastructure, security watch, and public maintenance.</i>";
                 }
                 else if (s.careerTrack == CareerTrack.MilitaryRecruitBasic)
                 {
                     monthlyBreakdownText.text = 
-                        "<b>Basic Combat Training Recruit:</b> $0 / mo (Unpaid Basic Drills)\n" +
-                        "<i>Recruits receive standard field rations and boot camp gear. Pay begins upon passing out as Private (E-1) in 6 months.</i>";
+                        "<b><color=#FF8844>PHASE: BASIC COMBAT TRAINING RECRUIT</color></b>\n" +
+                        "<b>Compensation:</b> $0 / mo (Unpaid Basic Drill Term)\n" +
+                        $"<b>Housing:</b> {housingName} (Military Depot Barracks)\n" +
+                        "<i>Recruits receive standard field rations, bunking, and uniform gear. Active salary commences upon passing out as Private (E-1).</i>";
                 }
                 else if (s.careerTrack == CareerTrack.MilitaryTechSchool || s.careerTrack == CareerTrack.MilitaryMedicalSchool || s.careerTrack == CareerTrack.MilitaryWarAcademy)
                 {
                     long pay = SalaryCalculator.CalculateGrossMonthlyPay(s);
-                    string payNote = pay > 0 ? $"+${pay:N0} / mo (Tax-Exempt Cadet Stipend)" : "$0 / mo (Cadet Trainee)";
+                    string payNote = pay > 0 ? $"+${pay:N0} / mo (${pay * 6:N0} / sem, Tax-Exempt Cadet Stipend)" : "$0 / mo (Cadet Trainee)";
                     string loanLine = s.academyTuitionDebt > 0 
-                        ? $"\n<color=#FF8866><b>War Academy Tuition Debt:</b> ${s.academyTuitionDebt:N0} (9% Annual Interest | {s.academyLoanDeductionPercent * 100f:F0}% deduction rate)</color>" 
+                        ? $"\n<color=#FF8866><b>War Academy Tuition Debt:</b> ${s.academyTuitionDebt:N0} (9% Annual Int | {s.academyLoanDeductionPercent * 100f:F0}% deduction rate)</color>" 
                         : "";
 
                     monthlyBreakdownText.text = 
-                        $"<b>Academy Cadet Status:</b> {s.assignedDepartment}\n" +
-                        $"<b>Cadet Monthly Stipend:</b> {payNote}{loanLine}\n" +
-                        $"<i>Cadet educational stipends are fully exempt from the 40% Imperial War Tax during training.</i>";
+                        $"<b><color=#00D4FF>PHASE: MILITARY ACADEMY CADET • {s.assignedDepartment.ToUpper()}</color></b>\n" +
+                        $"<b>Cadet Monthly Stipend:</b> {payNote}\n" +
+                        $"<b>Housing Quarters:</b> {housingName} (Cadet Hall)\n" +
+                        $"<color=#FFAA44><b>Quarters Upkeep:</b> -${housingPerMonth:N0} / mo (-${housingPerSemester:N0} / sem)</color>{loanLine}\n" +
+                        "<i>Cadet educational stipends are fully exempt from the 40% Imperial War Tax during academy schooling.</i>";
                 }
                 else if (s.isRetired)
                 {
+                    long pension = s.calculatedPensionPerMonth > 0 ? s.calculatedPensionPerMonth : 1500L;
+                    long careerPay = 0L;
+                    string careerTitle = "Honorable Military Veteran";
+
+                    switch (s.veteranCareer)
+                    {
+                        case VeteranCareer.UniversityGI: careerPay = 500L; careerTitle = "GI Bill University Scholar"; break;
+                        case VeteranCareer.DefenseContractor: careerPay = 2500L; careerTitle = "Defense Logistics Contractor"; break;
+                        case VeteranCareer.CityMayor: careerPay = 4000L; careerTitle = "Municipal City Mayor"; break;
+                        case VeteranCareer.RegionalGovernor: careerPay = 8000L; careerTitle = "Provincial Governor"; break;
+                        case VeteranCareer.MinisterOfDefense: careerPay = 18000L; careerTitle = "Minister of Defense (Cabinet Post)"; break;
+                    }
+
+                    long disability = s.vaDisabilityAllowancePerMonth;
+                    long totalMonthly = pension + careerPay + disability;
+                    long netMonthly = Math.Max(0L, totalMonthly - housingPerMonth);
+                    long semesterNet = netMonthly * 6;
+
+                    string vaLine = disability > 0 
+                        ? $"\n<color=#FFD700><b>VA Frontline Combat Disability Stipend:</b> +${disability:N0} / mo (+${disability * 6:N0} / sem, Tax-Exempt)</color>" 
+                        : "";
+
+                    string careerLine = careerPay > 0 
+                        ? $"\n<b>Veteran Career Wage ({careerTitle}):</b> +${careerPay:N0} / mo (+${careerPay * 6:N0} / sem)" 
+                        : "";
+
                     monthlyBreakdownText.text = 
-                        "<b>Imperial Veteran Pension:</b> +$1,500 / month\n" +
-                        "<i>Exempt from standard military hazard deductions. Paid directly from Imperial Treasury.</i>";
+                        $"<b><color=#FFD700>PHASE: HONORABLE RETIRED VETERAN • {careerTitle.ToUpper()}</color></b>\n" +
+                        $"<b>Lifetime Imperial Veteran Pension:</b> +${pension:N0} / mo (+${pension * 6:N0} / sem){careerLine}{vaLine}\n" +
+                        $"<color=#FFAA44><b>Personal Residence ({housingName}):</b> -${housingPerMonth:N0} / mo (-${housingPerSemester:N0} / sem)</color>\n" +
+                        $"<color=#00FF88><b>Net Monthly Cashflow:</b> +${netMonthly:N0} / mo</color>\n" +
+                        $"<color=#00FFAA><b>Estimated Semester Net Cashflow:</b> +${semesterNet:N0} / sem</color>\n" +
+                        "<i>Imperial military pensions and VA disability allowances are fully exempt from wartime taxation.</i>";
                 }
                 else
                 {
+                    // Active Military Service
                     long gross = SalaryCalculator.CalculateGrossMonthlyPay(s);
                     long net = SalaryCalculator.CalculateNetMonthlyPay(s);
                     long tax = SalaryCalculator.CalculateMonthlyTax(s);
                     long loanDeduction = SalaryCalculator.CalculateMonthlyLoanDeduction(s);
+                    long disability = s.vaDisabilityAllowancePerMonth;
 
+                    long monthlyNetWithHousing = Math.Max(0L, net + disability - housingPerMonth);
+                    long semesterNetCashflow = monthlyNetWithHousing * 6;
+
+                    string rankName = s.currentRank != null ? s.currentRank.rankName : "Private";
                     string sfLine = s.isSpecialForces ? "\n<color=#FFD700><b>Special Forces Hazard Stipend:</b> +$800 / mo included</color>" : "";
-                    string extTourLine = s.hasExtendedTourPayBonus ? "\n<color=#00FFAA><b>Extended Frontline Veteran Bonus:</b> +10% Gross Pay included</color>" : "";
-                    string tourBonus = s.isInCombatDeployment ? " (+$450 Hazard Pay)" : "";
+                    string extTourLine = s.hasExtendedTourPayBonus ? "\n<color=#00FFAA><b>Continuous Combat Veteran Bonus:</b> +10% Total Pay included</color>" : "";
+                    string tourBonus = s.isInCombatDeployment ? " (+$450 Hazard Pay Active)" : "";
+                    string vaLine = disability > 0 ? $"\n<color=#FFD700><b>VA Combat Disability Stipend:</b> +${disability:N0} / mo included (Tax-Exempt)</color>" : "";
+
                     string loanLine = loanDeduction > 0 
-                        ? $"\n<color=#FF8866><b>War Academy Education Loan Repayment:</b> -${loanDeduction:N0} / mo (Remaining Debt: ${s.academyTuitionDebt:N0} @ 9% Int)</color>" 
+                        ? $"\n<color=#FF8866><b>War Academy Loan Repayment:</b> -${loanDeduction:N0} / mo (-${loanDeduction * 6:N0} / sem) [Debt: ${s.academyTuitionDebt:N0} @ 9% Int]</color>" 
                         : "";
 
                     monthlyBreakdownText.text = 
-                        $"<b>Gross Military Salary:</b> ${gross:N0} / mo{tourBonus}{sfLine}{extTourLine}\n" +
-                        $"<color=#FF6666><b>Mandatory Imperial War Tax (40%):</b> -${tax:N0} / mo</color>{loanLine}\n" +
-                        $"<color=#00FF88><b>Net Take-Home Pay:</b> +${net:N0} / mo</color>\n" +
-                        $"<i>Imperial Decree: 40% of military pay is deducted for wartime supply logistics. Loan deductions reduce education debt each pay cycle.</i>";
+                        $"<b><color=#00FFAA>PHASE: ACTIVE DUTY MILITARY • {rankName.ToUpper()}</color></b>\n" +
+                        $"<b>Gross Monthly Compensation:</b> ${gross:N0} / mo (${gross * 6:N0} / sem){tourBonus}{sfLine}{extTourLine}{vaLine}\n" +
+                        $"<color=#FF6666><b>Mandatory Imperial War Tax (40%):</b> -${tax:N0} / mo (-${tax * 6:N0} / sem)</color>{loanLine}\n" +
+                        $"<color=#FFAA44><b>Housing Rent & Mess ({housingName}):</b> -${housingPerMonth:N0} / mo (-${housingPerSemester:N0} / sem)</color>\n" +
+                        $"<color=#00FF88><b>Net Monthly Take-Home Pay:</b> +${monthlyNetWithHousing:N0} / mo</color>\n" +
+                        $"<color=#00FFAA><b>Estimated Semester Net Cashflow:</b> +${semesterNetCashflow:N0} / sem</color>\n" +
+                        "<i>Imperial Decree: 40% of military compensation is deducted for logistics and wartime ammunition reserves.</i>";
                 }
             }
 
-            // Family Status
-            if (familyWealthStatusText != null)
+            // Investment & Business Portfolio
+            long bondDividends = EconomyData.GetWarBondDividendPerSemester(s.warBondsOwned);
+            long shareDividends = EconomyData.GetTradeGuildDividendPerSemester(s.tradeGuildShares);
+            long totalDividends = bondDividends + shareDividends;
+
+            long bizRevenue = s.businessRevenueLastSemester;
+            if (bizRevenue <= 0 && s.ownedBusiness != CommercialBusiness.None)
             {
-                string familyTier;
-                if (s.familyLineage != null && s.familyLineage.startingNobleRank > NobleRank.Commoner)
-                {
-                    familyTier = "Hereditary Aristocracy (Affluent)";
-                }
-                else if (s.totalRemittancesSentToFamily >= 3000)
-                {
-                    familyTier = "Comfortable (Lifted by Remittances)";
-                }
-                else if (s.totalRemittancesSentToFamily >= 1000)
-                {
-                    familyTier = "Modest Working Class";
-                }
-                else
-                {
-                    familyTier = "Impoverished Wartime Civilian Class";
-                }
-
-                familyWealthStatusText.text = 
-                    $"<b>Family House:</b> House {s.lastName}   |   <b>Economic Tier:</b> {familyTier}\n" +
-                    $"<b>Total Remittances Delivered:</b> ${s.totalRemittancesSentToFamily:N0}   |   <b>Parent Relationship:</b> {s.parentRelationship:F0}%\n" +
-                    $"<i>Sending money home lifts your family out of wartime rationing and grants massive Clan Favor & Parent Approval.</i>";
+                bizRevenue = EconomyData.GetBusinessBaseSemesterYield(s.ownedBusiness);
             }
 
-            // War Bonds / Student Loan Status
+            long totalPassiveIncome = totalDividends + (s.ownedBusiness != CommercialBusiness.None ? bizRevenue : 0L);
+
             if (warBondStatusText != null)
             {
-                if (s.collegeTuitionDebt > 0)
+                string bizStatus = s.ownedBusiness != CommercialBusiness.None
+                    ? $"<b>Enterprise Owned:</b> {EconomyData.GetBusinessName(s.ownedBusiness)} (Last Sem Revenue: <color=#00FFAA>+${bizRevenue:N0}</color>)\n"
+                    : "<b>Commercial Enterprise:</b> None owned (Workshops, Taverns, and Caravans available in Activities)\n";
+
+                string debtSummary = "";
+                if (s.academyTuitionDebt > 0 || s.collegeTuitionDebt > 0)
                 {
-                    warBondStatusText.text = 
-                        $"<b>Imperial College Student Loan:</b> Outstanding balance of <b>${s.collegeTuitionDebt:N0}</b>. " +
-                        $"Use your earnings or family remittances to eliminate debt burden.";
+                    debtSummary = $"<b>Active Liabilities:</b> War Academy Debt: <color=#FF6666>${s.academyTuitionDebt:N0}</color> (9% Int) | College Debt: <color=#FF6666>${s.collegeTuitionDebt:N0}</color>\n";
                 }
-                else
+
+                warBondStatusText.text = 
+                    "<b><color=#00D4FF>INVESTMENT & COMMERCIAL PORTFOLIO:</color></b>\n" +
+                    $"<b>Imperial War Bonds:</b> {s.warBondsOwned} owned (${s.warBondsOwned * 500:N0} invested) | Yield: <color=#00FFAA>+${bondDividends:N0} / sem</color> (~7% APY)\n" +
+                    $"<b>Trade Guild Shares:</b> {s.tradeGuildShares} shares (${s.tradeGuildShares * 1000:N0} invested) | Yield: <color=#00FFAA>+${shareDividends:N0} / sem</color> (~9% APY)\n" +
+                    $"{bizStatus}" +
+                    $"{debtSummary}" +
+                    $"<color=#FFD700><b>Total Semi-Annual Portfolio Return:</b> +${totalPassiveIncome:N0} / semester</color>";
+            }
+
+            // Family Status & Spending
+            if (familyWealthStatusText != null)
+            {
+                string familyHouseStr;
+                switch (s.familyHouseTier)
                 {
-                    warBondStatusText.text = 
-                        "<b>Imperial Defense War Bonds:</b> Purchase a $500 Certificate of Valor. Yields dividends and boosts imperial court prestige.";
+                    case FamilyHouseTier.AncestralEstate:
+                        familyHouseStr = "Ancestral Dynastic Castle & Estate (Landed Aristocracy)";
+                        break;
+                    case FamilyHouseTier.CityTownhouse:
+                        familyHouseStr = "Capital City Townhouse (High Working Class)";
+                        break;
+                    case FamilyHouseTier.RuralHomestead:
+                        familyHouseStr = "Fertile Rural Homestead (Landed Gentry)";
+                        break;
+                    default:
+                        if (s.familyLineage != null && s.familyLineage.startingNobleRank > NobleRank.Commoner)
+                            familyHouseStr = "Hereditary Aristocratic Manor";
+                        else if (s.totalRemittancesSentToFamily >= 3000)
+                            familyHouseStr = "Comfortable Townhouse (Lifted by Remittances)";
+                        else if (s.totalRemittancesSentToFamily >= 1000)
+                            familyHouseStr = "Modest Working-Class Tenement";
+                        else
+                            familyHouseStr = "Impoverished Wartime Tenement Slums";
+                        break;
                 }
+
+                string heirTutoringStr = s.isHeirTutoringEnrolled 
+                    ? "<color=#00FFAA>Enrolled in Private Elite Tutoring ($1,000/sem)</color>" 
+                    : "<color=#94A3B8>Public Military Cadre</color>";
+
+                string bionicStr = s.hasBionicProsthetics 
+                    ? " | Bionics: <color=#00D4FF>Equipped</color>" 
+                    : "";
+
+                familyWealthStatusText.text = 
+                    $"<b>Family House:</b> House {s.lastName}   |   <b>Living Standard:</b> {s.familyLivingCondition:F0}/100\n" +
+                    $"<b>Family Real Estate:</b> {familyHouseStr}\n" +
+                    $"<b>Total Remittances Sent:</b> ${s.totalRemittancesSentToFamily:N0}   |   <b>Parent Approval:</b> {s.parentRelationship:F0}%   |   <b>Clan Favor:</b> {s.clanFavor:F0}%\n" +
+                    $"<b>Generational Heir Tutoring:</b> {heirTutoringStr}{bionicStr}\n" +
+                    "<i>Sending money home elevates your house standing and awards filial approval and succession points.</i>";
             }
 
             // Apply Theme Palette
             ThemeMode mode = ThemeManager.Instance != null ? ThemeManager.Instance.CurrentMode : ThemeMode.Dark;
             ApplyThemePalette(ThemeManager.GetPalette(mode));
+        }
+
+        private void EnsureDynamicActionButtons()
+        {
+            // If buyTradeGuildShareButton is null and buyWarBondButton exists, create one beside/below it
+            if (buyTradeGuildShareButton == null && _runtimeBuyTradeShareBtn == null && buyWarBondButton != null)
+            {
+                var parent = buyWarBondButton.transform.parent;
+                var btnObj = new GameObject("Runtime_BuyTradeGuildShareBtn");
+                btnObj.transform.SetParent(parent, false);
+                btnObj.transform.SetSiblingIndex(buyWarBondButton.transform.GetSiblingIndex() + 1);
+
+                var img = btnObj.AddComponent<Image>();
+                img.color = new Color(0.20f, 0.50f, 0.70f);
+
+                _runtimeBuyTradeShareBtn = btnObj.AddComponent<Button>();
+                _runtimeBuyTradeShareBtn.targetGraphic = img;
+                _runtimeBuyTradeShareBtn.onClick.AddListener(OnBuyTradeGuildShareClicked);
+
+                var le = btnObj.AddComponent<LayoutElement>();
+                le.preferredHeight = 52;
+                le.minHeight = 48;
+
+                var textObj = new GameObject("Text");
+                textObj.transform.SetParent(btnObj.transform, false);
+                var tmp = textObj.AddComponent<TextMeshProUGUI>();
+                tmp.text = "BUY $1,000 TRADE GUILD SHARE (+9% Div & Influence)";
+                tmp.fontSize = 20;
+                tmp.fontStyle = FontStyles.Bold;
+                tmp.alignment = TextAlignmentOptions.Center;
+                tmp.color = Color.white;
+
+                var rt = textObj.GetComponent<RectTransform>();
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+            }
+
+            // If pay debt button is missing and war bonds section exists, create a quick debt repayment button if in debt
+            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
+            if (s != null && (s.academyTuitionDebt > 0 || s.collegeTuitionDebt > 0))
+            {
+                if (payDebt1000Button == null && _runtimePayDebtBtn == null && emergencyAdvanceButton != null)
+                {
+                    var parent = emergencyAdvanceButton.transform.parent;
+                    var btnObj = new GameObject("Runtime_PayDebt1000Btn");
+                    btnObj.transform.SetParent(parent, false);
+                    btnObj.transform.SetSiblingIndex(emergencyAdvanceButton.transform.GetSiblingIndex() + 1);
+
+                    var img = btnObj.AddComponent<Image>();
+                    img.color = new Color(0.65f, 0.35f, 0.20f);
+
+                    _runtimePayDebtBtn = btnObj.AddComponent<Button>();
+                    _runtimePayDebtBtn.targetGraphic = img;
+                    _runtimePayDebtBtn.onClick.AddListener(OnPayDebt1000Clicked);
+
+                    var le = btnObj.AddComponent<LayoutElement>();
+                    le.preferredHeight = 52;
+                    le.minHeight = 48;
+
+                    var textObj = new GameObject("Text");
+                    textObj.transform.SetParent(btnObj.transform, false);
+                    var tmp = textObj.AddComponent<TextMeshProUGUI>();
+                    tmp.text = "PAY $1,000 TOWARD DEBT PRINCIPAL";
+                    tmp.fontSize = 20;
+                    tmp.fontStyle = FontStyles.Bold;
+                    tmp.alignment = TextAlignmentOptions.Center;
+                    tmp.color = Color.white;
+
+                    var rt = textObj.GetComponent<RectTransform>();
+                    rt.anchorMin = Vector2.zero;
+                    rt.anchorMax = Vector2.one;
+                    rt.offsetMin = Vector2.zero;
+                    rt.offsetMax = Vector2.zero;
+                }
+            }
         }
 
         private void SendRemittance(int amount)
@@ -249,6 +454,7 @@ namespace ArmyLife.UI
 
             s.cashBalance -= amount;
             s.totalRemittancesSentToFamily += amount;
+            s.familyLivingCondition = Mathf.Min(100f, s.familyLivingCondition + (amount >= 1000 ? 10f : 4f));
             s.parentRelationship = Mathf.Min(100f, s.parentRelationship + (amount >= 1000 ? 15f : (amount >= 500 ? 10f : 5f)));
             s.clanFavor = Mathf.Min(100f, s.clanFavor + (amount >= 1000 ? 8f : 4f));
             s.clanSuccessionScore += (amount >= 1000 ? 6 : 2);
@@ -261,32 +467,58 @@ namespace ArmyLife.UI
             RefreshUI();
         }
 
-        private void OnBuyWarBondClicked()
+        public void OnBuyWarBondClicked()
         {
             var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
             if (s == null) return;
 
-            if (s.cashBalance < 500)
+            if (s.cashBalance < EconomyData.WAR_BOND_COST)
             {
                 GameEvents.OnFeedEventLogged?.Invoke("FINANCE",
-                    "<color=#FF4444>[INSUFFICIENT FUNDS]</color> Imperial War Bonds require a minimum investment of $500.");
+                    $"<color=#FF4444>[INSUFFICIENT FUNDS]</color> Imperial War Bonds require a minimum investment of ${EconomyData.WAR_BOND_COST:N0}.");
                 return;
             }
 
-            s.cashBalance -= 500;
+            s.cashBalance -= EconomyData.WAR_BOND_COST;
+            s.warBondsOwned++;
             s.meritRating = Mathf.Min(100f, s.meritRating + 8f);
             s.politicalInfluence = Mathf.Min(100f, s.politicalInfluence + 5f);
             s.happiness = Mathf.Min(100f, s.happiness + 5f);
 
             GameEvents.OnFeedEventLogged?.Invoke("FINANCE",
-                "<color=#FFD700>[WAR BOND PURCHASED]</color> You invested <b>$500</b> into Imperial Victory War Bonds! " +
-                "The Imperial High Command recognized your patriotic support. (+8 Merit, +5 Political Influence).");
+                $"<color=#FFD700>[WAR BOND PURCHASED]</color> You invested <b>${EconomyData.WAR_BOND_COST:N0}</b> into Imperial Defense War Bonds! " +
+                $"Total Owned: <b>{s.warBondsOwned}</b> (Yields +${s.warBondsOwned * 35:N0}/sem). Imperial Command noted your patriotism (+8 Merit, +5 Influence).");
 
             GameEvents.OnSoldierStatsUpdated?.Invoke(s);
             RefreshUI();
         }
 
-        private void OnEmergencyAdvanceClicked()
+        public void OnBuyTradeGuildShareClicked()
+        {
+            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
+            if (s == null) return;
+
+            if (s.cashBalance < EconomyData.TRADE_GUILD_SHARE_COST)
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("FINANCE",
+                    $"<color=#FF4444>[INSUFFICIENT FUNDS]</color> Trade Guild Shares require ${EconomyData.TRADE_GUILD_SHARE_COST:N0} in liquid cash.");
+                return;
+            }
+
+            s.cashBalance -= EconomyData.TRADE_GUILD_SHARE_COST;
+            s.tradeGuildShares++;
+            s.politicalInfluence = Mathf.Min(100f, s.politicalInfluence + 8f);
+            s.happiness = Mathf.Min(100f, s.happiness + 4f);
+
+            GameEvents.OnFeedEventLogged?.Invoke("FINANCE",
+                $"<color=#00D4FF>[TRADE GUILD SHARE ACQUIRED]</color> You purchased 1 Commercial Guild Share for <b>${EconomyData.TRADE_GUILD_SHARE_COST:N0}</b>! " +
+                $"Total Shares: <b>{s.tradeGuildShares}</b> (Yields +${s.tradeGuildShares * 90:N0}/sem dividend). Commercial influence rose (+8 Influence).");
+
+            GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+            RefreshUI();
+        }
+
+        public void OnEmergencyAdvanceClicked()
         {
             var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
             if (s == null) return;
@@ -309,6 +541,103 @@ namespace ArmyLife.UI
             RefreshUI();
         }
 
+        public void OnPayDebt1000Clicked()
+        {
+            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
+            if (s == null) return;
+
+            if (s.cashBalance < 1000)
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("DEBT",
+                    $"<color=#FF4444>[INSUFFICIENT FUNDS]</color> You need $1,000 cash for extra principal repayment.");
+                return;
+            }
+
+            if (s.academyTuitionDebt > 0)
+            {
+                long pay = Math.Min(1000L, s.academyTuitionDebt);
+                s.cashBalance -= pay;
+                s.academyTuitionDebt -= pay;
+                GameEvents.OnFeedEventLogged?.Invoke("DEBT",
+                    $"<color=#00FFAA>[PRINCIPAL REPAID]</color> You paid <b>${pay:N0}</b> towards your War Academy loan! Remaining debt: <b>${s.academyTuitionDebt:N0}</b>.");
+            }
+            else if (s.collegeTuitionDebt > 0)
+            {
+                long pay = Math.Min(1000L, s.collegeTuitionDebt);
+                s.cashBalance -= pay;
+                s.collegeTuitionDebt -= pay;
+                GameEvents.OnFeedEventLogged?.Invoke("DEBT",
+                    $"<color=#00FFAA>[PRINCIPAL REPAID]</color> You paid <b>${pay:N0}</b> towards your Imperial College student debt! Remaining debt: <b>${s.collegeTuitionDebt:N0}</b>.");
+            }
+            else
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("DEBT",
+                    "<color=#00FFAA>[DEBT-FREE]</color> You have no outstanding loan liabilities!");
+                return;
+            }
+
+            GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+            RefreshUI();
+        }
+
+        public void OnTreatSquadClicked()
+        {
+            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
+            if (s == null) return;
+
+            if (s.cashBalance < EconomyData.SQUAD_MESS_DRINKS_COST)
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("MESS",
+                    $"<color=#FF4444>[INSUFFICIENT FUNDS]</color> Treating the fireteam costs ${EconomyData.SQUAD_MESS_DRINKS_COST:N0}.");
+                return;
+            }
+
+            s.cashBalance -= EconomyData.SQUAD_MESS_DRINKS_COST;
+            s.squadRespect = Mathf.Min(100f, s.squadRespect + 20f);
+            s.happiness = Mathf.Min(100f, s.happiness + 10f);
+
+            if (s.squadMates != null)
+            {
+                foreach (var mate in s.squadMates)
+                {
+                    if (mate != null && !mate.isDead)
+                    {
+                        mate.relationship = Mathf.Min(100f, mate.relationship + 15f);
+                    }
+                }
+            }
+
+            GameEvents.OnFeedEventLogged?.Invoke("MESS",
+                $"<color=#00FFAA>[SQUAD DRINKS & FEAST]</color> You treated your fireteam brothers at the mess hall (-${EconomyData.SQUAD_MESS_DRINKS_COST})! " +
+                "The soldiers raised a toast to your loyalty (+20 Squad Respect, +15 Comradeship).");
+
+            GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+            RefreshUI();
+        }
+
+        public void OnSpecialistHospitalClicked()
+        {
+            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
+            if (s == null) return;
+
+            if (s.cashBalance < EconomyData.SPECIALIST_HOSPITAL_CARE_COST)
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("MEDICAL",
+                    $"<color=#FF4444>[INSUFFICIENT FUNDS]</color> Specialist trauma surgery costs ${EconomyData.SPECIALIST_HOSPITAL_CARE_COST:N0}.");
+                return;
+            }
+
+            s.cashBalance -= EconomyData.SPECIALIST_HOSPITAL_CARE_COST;
+            s.health = Mathf.Min(100f, s.health + 50f);
+            s.meridianDamage = Mathf.Max(0f, s.meridianDamage - 40f);
+
+            GameEvents.OnFeedEventLogged?.Invoke("MEDICAL",
+                $"<color=#00FFAA>[SPECIALIST CARE]</color> Imperial military trauma surgeons cleansed battle wounds and meridian fatigue (-40% Strain, +50 Health).");
+
+            GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+            RefreshUI();
+        }
+
         private void OnThemeChanged(ThemeMode mode, ThemePalette palette)
         {
             ApplyThemePalette(palette);
@@ -323,6 +652,8 @@ namespace ArmyLife.UI
             if (monthlyBreakdownText != null) monthlyBreakdownText.color = p.textSecondary;
             if (familyWealthStatusText != null) familyWealthStatusText.color = p.textSecondary;
             if (warBondStatusText != null) warBondStatusText.color = p.textSecondary;
+            if (portfolioBreakdownText != null) portfolioBreakdownText.color = p.textSecondary;
+            if (spendingBreakdownText != null) spendingBreakdownText.color = p.textSecondary;
         }
     }
 }
