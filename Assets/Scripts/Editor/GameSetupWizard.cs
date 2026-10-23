@@ -24,9 +24,12 @@ namespace ArmyLife.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            EditorUtility.DisplayDialog("Army Life Simulator", 
-                "Successfully generated all 12 Power Tiers, Military Ranks (E-1 to O-10), and Family Lineages inside Assets/GameData/!", 
-                "OK");
+            if (!Application.isBatchMode)
+            {
+                EditorUtility.DisplayDialog("Army Life Simulator", 
+                    "Successfully generated all 12 Power Tiers, Military Ranks (E-1 to O-10), and Family Lineages inside Assets/GameData/!", 
+                    "OK");
+            }
         }
 
         private static void EnsureDirectoryExists(string path)
@@ -91,8 +94,12 @@ namespace ArmyLife.Editor
             CreateRank("1st Lieutenant", "O-2", PaygradeType.Officer, 11, 4700, 600, 65, true, false);
             CreateRank("Captain", "O-3", PaygradeType.Officer, 12, 6200, 1100, 70, true, false);
             CreateRank("Major", "O-4", PaygradeType.Officer, 13, 7400, 1700, 75, true, true);
+            CreateRank("Lieutenant Colonel", "O-5", PaygradeType.Officer, 14, 8800, 2400, 78, true, true);
             CreateRank("Colonel", "O-6", PaygradeType.Officer, 15, 10500, 3200, 80, true, true);
-            CreateRank("General (Guardian Pillar)", "O-10", PaygradeType.Officer, 19, 18000, 9000, 90, true, true);
+            CreateRank("Brigadier General", "O-7", PaygradeType.Officer, 16, 12500, 4400, 82, true, true);
+            CreateRank("Major General", "O-8", PaygradeType.Officer, 17, 14500, 5800, 85, true, true);
+            CreateRank("Lieutenant General", "O-9", PaygradeType.Officer, 18, 16500, 7400, 88, true, true);
+            CreateRank("General (Guardian Pillar)", "O-10", PaygradeType.Officer, 19, 19000, 9500, 90, true, true);
         }
 
         private static void CreateRank(string title, string paygrade, PaygradeType type, int order, int salary, int merit, int fitness, bool unlockSelf, bool unlockFam)

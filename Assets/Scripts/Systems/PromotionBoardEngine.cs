@@ -117,7 +117,11 @@ namespace ArmyLife.Systems
                 case "E-4": return 4; // 2 years (4 semesters) in E-4 to promote to E-5 (Sergeant)
                 case "E-5": return 5; // 2.5 years (5 semesters) in E-5 to promote to E-6 (Staff Sergeant)
                 case "E-6": return 6; // 3 years (6 semesters) in E-6 to promote to E-7
-                default:    return 6; // 3 years for senior NCOs and Officers
+                case "E-7": return 6; // 3 years (6 semesters) in E-7 to promote to E-8
+                case "E-8": return 6; // 3 years (6 semesters) in E-8 to promote to E-9
+                case "O-1": return 3; // 1.5 years (3 semesters) in O-1 to promote to O-2 (1st Lt)
+                case "O-2": return 4; // 2 years (4 semesters) in O-2 to promote to O-3 (Captain)
+                default:    return 6; // 3 years (6 semesters) for O-3 through O-9
             }
         }
 

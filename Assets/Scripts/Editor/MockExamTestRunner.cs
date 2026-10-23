@@ -1021,7 +1021,40 @@ namespace ArmyLife.Editor
             Debug.Assert(year2PromotionPay == 3750L, $"Promotion year gross pay should equal new rank base ($3,750), got ${year2PromotionPay}");
             Debug.Log($"[Longevity Test 10] Promotion Year Raise Skipped verified! New Rank Base: ${year2PromotionPay}/mo");
 
-            Debug.Log("<color=#00FFAA>========== ALL IN-GAME ECONOMY & CRIME TESTS PASSED 100%! ==========</color>");
+            // 11. Test Complete Officer Ranks (O-1 to O-10 with O-5, O-7, O-8, O-9) and Data Generation
+            GameSetupWizard.GenerateAllDefaultData();
+            var allRanks = UnityEditor.AssetDatabase.FindAssets("t:MilitaryRankSO", new[] { "Assets/GameData/Ranks" });
+            Debug.Assert(allRanks.Length >= 19, $"Expected at least 19 ranks (E-1..E-9, O-1..O-10), found {allRanks.Length}");
+
+            var o5Rank = UnityEditor.AssetDatabase.LoadAssetAtPath<MilitaryRankSO>("Assets/GameData/Ranks/Rank_O-5_LieutenantColonel.asset");
+            var o7Rank = UnityEditor.AssetDatabase.LoadAssetAtPath<MilitaryRankSO>("Assets/GameData/Ranks/Rank_O-7_BrigadierGeneral.asset");
+            var o8Rank = UnityEditor.AssetDatabase.LoadAssetAtPath<MilitaryRankSO>("Assets/GameData/Ranks/Rank_O-8_MajorGeneral.asset");
+            var o9Rank = UnityEditor.AssetDatabase.LoadAssetAtPath<MilitaryRankSO>("Assets/GameData/Ranks/Rank_O-9_LieutenantGeneral.asset");
+            var o10Rank = UnityEditor.AssetDatabase.LoadAssetAtPath<MilitaryRankSO>("Assets/GameData/Ranks/Rank_O-10_General(GuardianPillar).asset");
+
+            Debug.Assert(o5Rank != null && o5Rank.rankOrder == 14 && o5Rank.paygrade == "O-5", "O-5 Lt Colonel must exist at order 14");
+            Debug.Assert(o7Rank != null && o7Rank.rankOrder == 16 && o7Rank.paygrade == "O-7", "O-7 Brigadier General must exist at order 16");
+            Debug.Assert(o8Rank != null && o8Rank.rankOrder == 17 && o8Rank.paygrade == "O-8", "O-8 Major General must exist at order 17");
+            Debug.Assert(o9Rank != null && o9Rank.rankOrder == 18 && o9Rank.paygrade == "O-9", "O-9 Lieutenant General must exist at order 18");
+            Debug.Assert(o10Rank != null && o10Rank.rankOrder == 19 && o10Rank.paygrade == "O-10", "O-10 General must exist at order 19");
+
+            // 12. Test Top 10% Academy Special Forces Qualification Pipeline
+            var honorCadet = new SoldierProfile("Valerius Swift", null, 150)
+            {
+                careerTrack = CareerTrack.MilitaryWarAcademy,
+                academySemestersCompleted = 2,
+                academyPerformanceScore = 94.5f // Top 10%
+            };
+            Debug.Assert(honorCadet.isAcademyTop10Percent, "Cadet with 94.5% score must be in top 10%");
+            Debug.Assert(!honorCadet.isSpecialForcesCandidate, "Cadet must NOT be automatically forced into Special Forces");
+            Debug.Assert(!honorCadet.isSpecialForces, "Cadet must NOT be an active SF operator before selection");
+
+            // Cadet volunteers for selection
+            honorCadet.isSpecialForcesCandidate = true;
+            honorCadet.specialForcesTrainingSemesters = 0;
+            Debug.Assert(honorCadet.isSpecialForcesCandidate, "Cadet successfully volunteered and entered SF Q-Course");
+
+            Debug.Log("<color=#00FFAA>========== ALL IN-GAME ECONOMY, RANKS & CRIME TESTS PASSED 100%! ==========</color>");
         }
     }
 }

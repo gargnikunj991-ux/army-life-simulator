@@ -16,8 +16,8 @@ MonoBehaviour:
   paygrade: O-10
   type: 2
   rankOrder: 19
-  baseMonthlySalary: 18000
-  requiredMeritPoints: 9000
+  baseMonthlySalary: 19000
+  requiredMeritPoints: 9500
   requiredFitness: 90
   requiredCombatSkill: 0
   unlocksSelfTalentTesting: 1
