@@ -388,21 +388,21 @@ namespace ArmyLife.Systems
                     break;
 
                 case 7:
-                    // Classified Pre-War Prototype Cache
+                    // Classified Enemy Command Bunker
                     GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
-                        "PROTOTYPE VAULT",
-                        "The Unsealed Pre-War Bunker",
-                        "An artillery bunker-buster breached an uncharted pre-war military vault beneath the trench line. A glowing quantum aetheric battery hums with immense energy.",
-                        "Interface directly with the battery to supercharge augmentations",
-                        "Requisition artifact to Imperial Aether Research (+Merit, +CMP)",
-                        "Pawn battery power-cells to black market contacts (+$2,000 Cash)",
+                        "ENEMY COMMAND VAULT",
+                        "The Breached Command Bunker",
+                        "An artillery shell breached an uncharted enemy command bunker beneath the trench line. An intact cryptographic cipher machine and strategic map table lie inside.",
+                        "Study the encryption codes & maps personally (+Readiness, +Intellect)",
+                        "Secure and turn over the cipher machine to Military Intelligence (+Merit, +CMP)",
+                        "Salvage precision components to black market contacts (+$2,000 Cash)",
                         () =>
                         {
-                            s.knowsAboutCultivation = true;
-                            s.tierProgressPercent = Mathf.Min(100f, s.tierProgressPercent + 40f);
-                            s.AddTrait("Pre-War Augmented");
-                            GameEvents.OnFeedEventLogged?.Invoke("AUGMENT SURGE",
-                                "<color=#FFD700><b>[DIRECT INTERFACE]</b></color> You synced your cyber-neural ports with the quantum battery. Raw power supercharged your implant framework! (+40% Saturation, [Pre-War Augmented]).");
+                            s.combatReadiness = Mathf.Min(100f, s.combatReadiness + 25f);
+                            s.intellect = Mathf.Min(100f, s.intellect + 15f);
+                            s.AddTrait("Field Intelligence Specialist");
+                            GameEvents.OnFeedEventLogged?.Invoke("INTELLIGENCE",
+                                "<color=#FFD700><b>[CIPHER MASTERED]</b></color> You decoded enemy frequency lists and mapped upcoming counter-offensive routes! (+25 Readiness, +15 Intellect).");
                             GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                         },
                         () =>
@@ -412,7 +412,7 @@ namespace ArmyLife.Systems
                             s.coFavor = Mathf.Min(100f, s.coFavor + 20f);
                             s.AddTrait("Imperial Loyalist");
                             GameEvents.OnFeedEventLogged?.Invoke("SUBMITTED",
-                                "<color=#00FFAA><b>[RESEARCH COMMENDATION]</b></color> You reported the discovery to the Ministry of Aether. Imperial scientists praised your loyalty (+750 CMP, +45 Promotion Points)!");
+                                "<color=#00FFAA><b>[INTELLIGENCE COMMENDATION]</b></color> You delivered the intact cipher machine to Regimental Intelligence. Staff officers praised your loyalty (+750 CMP, +45 Promotion Points)!");
                             GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                         },
                         () =>

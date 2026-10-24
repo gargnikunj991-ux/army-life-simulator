@@ -50,7 +50,7 @@ namespace ArmyLife.UI
             else Destroy(gameObject);
 
             if (modalRoot != null) modalRoot.SetActive(false);
-            gameObject.SetActive(false);
+            else gameObject.SetActive(false);
         }
 
         private void OnEnable()
@@ -77,7 +77,7 @@ namespace ArmyLife.UI
         public void CloseModal()
         {
             if (modalRoot != null) modalRoot.SetActive(false);
-            gameObject.SetActive(false);
+            else gameObject.SetActive(false);
         }
 
         public void RefreshUI()
@@ -109,15 +109,12 @@ namespace ArmyLife.UI
                     $"<b>Appearance:</b> <i>{s.hairStyle ?? "Short"} {s.hairColor ?? "Black"} hair, {s.eyeColor ?? "Brown"} eyes, {s.gender}</i>";
             }
 
-            // Physical Status & Cyber-Bio Strain
+            // Physical Status & Readiness
             if (physicalStatusText != null)
             {
-                string strainColor = s.meridianDamage > 50f ? "#FF4444" : (s.meridianDamage > 20f ? "#FFAA00" : "#44FF44");
-                string prepPhase = s.isYouthPhase ? $"Conditioning Phase {s.preTierStage}/4 ({PowerTierKnowledgeSystem.GetPreTierStageName(s.preTierStage)})" : "Framework Integrated";
-
                 physicalStatusText.text = 
-                    $"<b>Neural Strain:</b> <color={strainColor}>{s.meridianDamage:F0}% Toxicity</color>   |   <b>Framework:</b> {prepPhase}\n" +
-                    $"<b>Bio-Aptitude Calibration:</b> {s.foundationalTempering:F0}/100   |   <b>Morale:</b> {s.happiness:F0}%";
+                    $"<b>Combat Readiness:</b> <color=#00FFAA>{s.combatReadiness:F0}%</color>   |   <b>Discipline:</b> {s.discipline:F0}%\n" +
+                    $"<b>Tactical Intellect:</b> {s.tacticalIntellect:F0}/100   |   <b>Morale:</b> {s.happiness:F0}%";
             }
 
             if (healthSlider != null) healthSlider.value = s.health / 100f;
@@ -126,41 +123,29 @@ namespace ArmyLife.UI
             if (fitnessSlider != null) fitnessSlider.value = s.fitness / 100f;
             if (fitnessText != null) fitnessText.text = $"Fitness: {s.fitness:F0}%";
 
-            // Super-Soldier Augmentation Program
+            // Military Standing & Career Classification
             if (powerRealmText != null)
             {
-                bool showAugmentation = s.knowsAboutCultivation || s.nobleTitle > NobleRank.Commoner;
-                if (showAugmentation)
-                {
-                    string augmentStr = PowerTierKnowledgeSystem.FormatSoldierPowerTier(s);
-                    powerRealmText.text = $"<b>Augmentation Class:</b> {augmentStr}\n" +
-                                          $"<b>Implant Calibration Faults:</b> {s.failedBreakthroughCount}/3 (3rd fault triggers fatal neural overload!)";
-                }
-                else
-                {
-                    powerRealmText.text = "<b>Augmentation Program:</b> <i>[Classified by High Command] (Requires Rank E-4 Clearance)</i>";
-                }
+                string rankStr = s.currentRank != null ? $"{s.currentRank.rankName} ({s.currentRank.paygrade})" : "Civilian / Candidate";
+                powerRealmText.text = $"<b>Military Standing:</b> {rankStr}\n" +
+                                      $"<b>Branch & Unit:</b> {s.militaryBranch} • {s.assignedDepartment ?? "Infantry"}";
             }
 
             if (qiProgressSlider != null)
             {
-                bool showAugmentation = s.knowsAboutCultivation || s.nobleTitle > NobleRank.Commoner;
-                qiProgressSlider.gameObject.SetActive(showAugmentation);
-                qiProgressSlider.value = s.tierProgressPercent / 100f;
+                qiProgressSlider.gameObject.SetActive(true);
+                qiProgressSlider.value = s.combatReadiness / 100f;
             }
 
             if (qiProgressText != null)
             {
-                bool showAugmentation = s.knowsAboutCultivation || s.nobleTitle > NobleRank.Commoner;
-                qiProgressText.gameObject.SetActive(showAugmentation);
-                qiProgressText.text = $"Serum Infusion Saturation: {s.tierProgressPercent:F1}%";
+                qiProgressText.gameObject.SetActive(true);
+                qiProgressText.text = $"Combat Readiness Index: {s.combatReadiness:F0}%";
             }
 
             if (talentScoreText != null)
             {
-                talentScoreText.text = s.isPersonalTalentRevealed 
-                    ? $"<b>Genetic Aptitude Rating:</b> <color=#FFD700>{s.talentScore} / 200</color>"
-                    : "<b>Genetic Aptitude Rating:</b> <i>[Unscreened] (Requires Rank E-4 Medical Clearance)</i>";
+                talentScoreText.text = $"<b>MEPS / ASVAB AFQT Rating:</b> <color=#FFD700>{s.talentScore} / 99</color> (Qualified Active Duty)";
             }
 
             // Career / Military Record

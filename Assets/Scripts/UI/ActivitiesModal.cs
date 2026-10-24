@@ -30,7 +30,7 @@ namespace ArmyLife.UI
             else Destroy(gameObject);
 
             if (modalRoot != null) modalRoot.SetActive(false);
-            gameObject.SetActive(false);
+            else gameObject.SetActive(false);
         }
 
         private void OnEnable()
@@ -57,7 +57,7 @@ namespace ArmyLife.UI
         public void CloseModal()
         {
             if (modalRoot != null) modalRoot.SetActive(false);
-            gameObject.SetActive(false);
+            else gameObject.SetActive(false);
         }
 
         public void RefreshUI()
@@ -85,7 +85,7 @@ namespace ArmyLife.UI
                 }
                 else
                 {
-                    subtitleText.text = $"Fitness: <b>{s.fitness:F0}%</b>   |   Combat: <b>{s.combatSkill:F0}%</b>   |   Meridians: <b>{(100f - s.meridianDamage):F0}% Intact</b>";
+                    subtitleText.text = $"Fitness: <b>{s.fitness:F0}%</b>   |   Combat: <b>{s.combatSkill:F0}%</b>   |   Readiness: <b>{s.combatReadiness:F0}%</b>";
                 }
             }
 
@@ -137,22 +137,22 @@ namespace ArmyLife.UI
                     RefreshUI();
                 });
 
-            // 2. Body Conditioning
+            // 2. Physical Conditioning & Drill
             string stageName = PowerTierKnowledgeSystem.GetPreTierStageName(s.preTierStage);
-            CreateActivityCard($"Sub-Dermal Conditioning ({stageName})",
-                "Endure high-intensity physical conditioning to prepare bone density and neural pathways for super-soldier augmentations.",
+            CreateActivityCard($"Physical Conditioning ({stageName})",
+                "Endure high-intensity physical conditioning, calisthenics, and ruck marches to build strength and stamina.",
                 new Color(0.70f, 0.35f, 0.15f), () =>
                 {
-                    s.foundationalTempering = Mathf.Min(100f, s.foundationalTempering + 6f);
+                    s.combatReadiness = Mathf.Min(100f, s.combatReadiness + 6f);
                     s.fitness = Mathf.Min(100f, s.fitness + 3f);
                     s.health = Mathf.Max(20f, s.health - 4f);
 
-                    if (s.foundationalTempering >= 25f && s.preTierStage < 2) s.preTierStage = 2;
-                    if (s.foundationalTempering >= 50f && s.preTierStage < 3) s.preTierStage = 3;
-                    if (s.foundationalTempering >= 80f && s.preTierStage < 4) s.preTierStage = 4;
+                    if (s.combatReadiness >= 25f && s.preTierStage < 2) s.preTierStage = 2;
+                    if (s.combatReadiness >= 50f && s.preTierStage < 3) s.preTierStage = 3;
+                    if (s.combatReadiness >= 80f && s.preTierStage < 4) s.preTierStage = 4;
 
                     GameEvents.OnFeedEventLogged?.Invoke("TRAINING",
-                        $"<color=#00FFAA>[SUB-DERMAL CONDITIONING]</color> You completed grueling muscular and biomechanical drills! (+6 Framework, +3 Fitness).");
+                        $"<color=#00FFAA>[PHYSICAL CONDITIONING]</color> You completed grueling muscular and endurance drills! (+6 Readiness, +3 Fitness).");
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
@@ -170,34 +170,34 @@ namespace ArmyLife.UI
                     RefreshUI();
                 });
 
-            // 4. Classified Archives
-            CreateActivityCard("Classified Military Archives",
-                "Peruse classified doctrine, mechanized warfare manuals, and super-soldier gene blueprints.",
+            // 4. Tactical Archives
+            CreateActivityCard("Military Tactical Archives",
+                "Study military doctrine, infantry maneuvers, artillery tables, and command strategy.",
                 new Color(0.50f, 0.25f, 0.70f), () =>
                 {
                     s.intellect = Mathf.Min(100f, s.intellect + 3f);
-                    s.knowsAboutCultivation = true;
+                    s.discipline = Mathf.Min(100f, s.discipline + 2f);
                     GameEvents.OnFeedEventLogged?.Invoke("STUDY",
-                        "<color=#FFD700>[CLASSIFIED ARCHIVES]</color> You unlocked classified Imperial files on Super-Soldier Augmentations and Neural Systems! (+3 Intellect).");
+                        "<color=#FFD700>[MILITARY ARCHIVES]</color> You studied advanced infantry manuals and battlefield command doctrines! (+3 Intellect, +2 Discipline).");
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
 
-            // 5. Bio-Regen Stimulants
-            CreateActivityCard("Military Bio-Regen Dispensary",
-                "Purchase cellular cleansing stims ($30) to purge neural strain and restore biological vitality.",
+            // 5. Medical Clinic Treatment
+            CreateActivityCard("Base Medical Clinic",
+                "Purchase medical treatment and restorative vitamins ($30) to recover from training fatigue.",
                 new Color(0.15f, 0.55f, 0.35f), () =>
                 {
                     if (s.cashBalance < 30)
                     {
-                        GameEvents.OnFeedEventLogged?.Invoke("MEDICAL", "<color=#FF4444>[POVERTY]</color> You lack $30 for cleansing stims.");
+                        GameEvents.OnFeedEventLogged?.Invoke("MEDICAL", "<color=#FF4444>[POVERTY]</color> You lack $30 for medical treatment.");
                         return;
                     }
                     s.cashBalance -= 30;
                     s.health = Mathf.Min(100f, s.health + 15f);
-                    s.meridianDamage = Mathf.Max(0f, s.meridianDamage - 10f);
+                    s.combatReadiness = Mathf.Min(100f, s.combatReadiness + 5f);
                     GameEvents.OnFeedEventLogged?.Invoke("MEDICAL",
-                        "<color=#00FFAA>[CELLULAR CLEANSING]</color> The neural serum cleansed your implant receptors (-10% Neural Strain, +15 Health).");
+                        "<color=#00FFAA>[MEDICAL CARE]</color> Clinic doctors treated your sprains and exhaustion (+5 Readiness, +15 Health).");
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
@@ -363,26 +363,19 @@ namespace ArmyLife.UI
                     }
                     s.cashBalance -= 80;
                     s.health = Mathf.Min(100f, s.health + 25f);
-                    s.meridianDamage = Mathf.Max(0f, s.meridianDamage - 15f);
+                    s.combatReadiness = Mathf.Min(100f, s.combatReadiness + 15f);
                     GameEvents.OnFeedEventLogged?.Invoke("CLINIC",
-                        "<color=#00FFAA>[HEALTH RESTORED]</color> The municipal doctors treated your ailments (+25 Health, -15% Strain).");
+                        "<color=#00FFAA>[HEALTH RESTORED]</color> The municipal doctors treated your ailments (+25 Health, +15 Readiness).");
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
 
-            // 8. Bio-Rhythm Neural Synchronization
-            CreateActivityCard("Bio-Rhythm Neural Sync",
-                "Sit in a sensory recovery booth to harmonize neural bio-rhythms and reduce implant strain.",
+            // 8. Physical Conditioning Drills
+            CreateActivityCard("Physical Conditioning Drills",
+                "Perform calisthenics, morning ruck marches, and endurance conditioning.",
                 new Color(0.55f, 0.25f, 0.75f), () =>
                 {
-                    if (s.tierProgressPercent >= 95f)
-                    {
-                        PowerCultivationEngine.AttemptBreakthrough(s, null);
-                    }
-                    else
-                    {
-                        PowerCultivationEngine.ProcessCultivationTraining(s);
-                    }
+                    MilitaryPhysicalConditioningEngine.ProcessPhysicalConditioning(s);
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
@@ -454,26 +447,19 @@ namespace ArmyLife.UI
                     RefreshUI();
                 });
 
-            // 3. Super-Soldier Augmentation Pod
-            CreateActivityCard("Augmentation Calibration Pod",
-                "Enter the pressurized bio-chamber to infuse next-tier military serums and calibrate cyber-frames.",
+            // 3. Combat Readiness & Qualification Drills
+            CreateActivityCard("Combat Readiness & Qualification Drills",
+                "Participate in advanced tactical field maneuvers, squad coordination, and obstacle course qualifications.",
                 new Color(0.55f, 0.25f, 0.75f), () =>
                 {
-                    if (s.tierProgressPercent >= 95f)
-                    {
-                        PowerCultivationEngine.AttemptBreakthrough(s, null);
-                    }
-                    else
-                    {
-                        PowerCultivationEngine.ProcessCultivationTraining(s);
-                    }
+                    MilitaryPhysicalConditioningEngine.ConductFitnessQualificationTest(s);
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
 
             // 4. Base Medical Hospital
             CreateActivityCard("Base Medical Bay & Recovery",
-                "Receive intensive medical therapy ($150) to repair torn meridians and restore health.",
+                "Receive intensive medical therapy and physical rehabilitation ($150) to treat combat wounds.",
                 new Color(0.85f, 0.25f, 0.25f), () =>
                 {
                     if (s.cashBalance < 150)
@@ -482,10 +468,10 @@ namespace ArmyLife.UI
                         return;
                     }
                     s.cashBalance -= 150;
-                    s.meridianDamage = Mathf.Max(0f, s.meridianDamage - 25f);
+                    s.combatReadiness = Mathf.Min(100f, s.combatReadiness + 25f);
                     s.health = Mathf.Min(100f, s.health + 30f);
                     GameEvents.OnFeedEventLogged?.Invoke("MEDICAL",
-                        "<color=#00FFAA>[MEDICAL TREATMENT]</color> Imperial military doctors restored your cellular meridians (-25% Meridian Damage, +30 Health).");
+                        "<color=#00FFAA>[MEDICAL TREATMENT]</color> Military trauma surgeons treated your combat wounds (+25 Readiness, +30 Health).");
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
@@ -817,47 +803,58 @@ namespace ArmyLife.UI
                         RefreshUI();
                     });
 
-                // Transfer options
-                if (s.currentTheater != WarTheaterType.WesternMudTrenches)
+                // Transfer options across all 5 combat theaters
+                if (s.currentTheater != WarTheaterType.ArdenRidgeTrenchLines && s.currentTheater != WarTheaterType.WesternMudTrenches)
                 {
-                    CreateActivityCard("Request Transfer: Western Mud Trenches",
-                        "Request deployment to Sector 7. Brutal artillery and mortar barrages with stagnant trench attrition.",
+                    CreateActivityCard("Request Transfer: Arden Ridge Trench Lines",
+                        "Request deployment to the Arden Ridge trench network. Heavy artillery, deep mud, and brutal static attrition (Danger Level 4, Hazard Pay $500).",
                         new Color(0.45f, 0.35f, 0.25f), () =>
                         {
-                            if (GameManager.Instance != null) GameManager.Instance.TransferWarTheater(WarTheaterType.WesternMudTrenches);
+                            if (GameManager.Instance != null) GameManager.Instance.TransferWarTheater(WarTheaterType.ArdenRidgeTrenchLines);
                             RefreshUI();
                         });
                 }
 
-                if (s.currentTheater != WarTheaterType.EasternFrozenSteppe)
+                if (s.currentTheater != WarTheaterType.PortIronAmphibiousFront && s.currentTheater != WarTheaterType.PacificJungleIslands)
                 {
-                    CreateActivityCard("Request Transfer: Eastern Frozen Steppe",
-                        "Request deployment to the Karkov Steppe. Sub-zero blizzards, frostbite hazards, and armored panzer counter-offensives.",
-                        new Color(0.25f, 0.45f, 0.65f), () =>
+                    CreateActivityCard("Request Transfer: Port Iron Amphibious Front",
+                        "Request amphibious assault deployment to Port Iron. Fortified sea-walls, bunker clearing, and deadly crossfire (Danger Level 5, Hazard Pay $750).",
+                        new Color(0.20f, 0.45f, 0.55f), () =>
                         {
-                            if (GameManager.Instance != null) GameManager.Instance.TransferWarTheater(WarTheaterType.EasternFrozenSteppe);
+                            if (GameManager.Instance != null) GameManager.Instance.TransferWarTheater(WarTheaterType.PortIronAmphibiousFront);
                             RefreshUI();
                         });
                 }
 
-                if (s.currentTheater != WarTheaterType.PacificJungleIslands)
+                if (s.currentTheater != WarTheaterType.KaelenValleyUrbanZone && s.currentTheater != WarTheaterType.UrbanCitadel)
                 {
-                    CreateActivityCard("Request Transfer: Pacific Jungle Atolls",
-                        "Request deployment to the Peleliu Jungle Islands. Mangrove swamps, spider-hole ambushes, and bunker flamethrowers.",
-                        new Color(0.25f, 0.55f, 0.30f), () =>
-                        {
-                            if (GameManager.Instance != null) GameManager.Instance.TransferWarTheater(WarTheaterType.PacificJungleIslands);
-                            RefreshUI();
-                        });
-                }
-
-                if (s.currentTheater != WarTheaterType.UrbanCitadel)
-                {
-                    CreateActivityCard("Request Transfer: The Citadel Siege (City Ruins)",
-                        "Request deployment to the shattered urban citadel. Sniper alleys, room clearing, and close-quarters rubble skirmishes.",
+                    CreateActivityCard("Request Transfer: Kaelen Valley Urban Zone",
+                        "Request deployment to ruined city canyons. Sniper alleys, room-clearing CQB, and IED ambushes (Danger Level 4, Hazard Pay $600).",
                         new Color(0.50f, 0.25f, 0.45f), () =>
                         {
-                            if (GameManager.Instance != null) GameManager.Instance.TransferWarTheater(WarTheaterType.UrbanCitadel);
+                            if (GameManager.Instance != null) GameManager.Instance.TransferWarTheater(WarTheaterType.KaelenValleyUrbanZone);
+                            RefreshUI();
+                        });
+                }
+
+                if (s.currentTheater != WarTheaterType.BadlandsSteppeRecon)
+                {
+                    CreateActivityCard("Request Transfer: Badlands Steppe Recon",
+                        "Request deployment to wide arid desert expanse. Mechanized vehicle patrols, heat exhaustion, and long-range skirmishes (Danger Level 3, Hazard Pay $450).",
+                        new Color(0.65f, 0.45f, 0.20f), () =>
+                        {
+                            if (GameManager.Instance != null) GameManager.Instance.TransferWarTheater(WarTheaterType.BadlandsSteppeRecon);
+                            RefreshUI();
+                        });
+                }
+
+                if (s.currentTheater != WarTheaterType.NorthernTaigaOutpost && s.currentTheater != WarTheaterType.EasternFrozenSteppe)
+                {
+                    CreateActivityCard("Request Transfer: Northern Taiga Outpost",
+                        "Request arctic deployment to sub-zero pine frontier. Blizzards, hypothermia, deep snow, and guerrilla mountain insurgency (Danger Level 3, Hazard Pay $550).",
+                        new Color(0.25f, 0.50f, 0.65f), () =>
+                        {
+                            if (GameManager.Instance != null) GameManager.Instance.TransferWarTheater(WarTheaterType.NorthernTaigaOutpost);
                             RefreshUI();
                         });
                 }

@@ -23,6 +23,7 @@ namespace ArmyLife.Data
         public int age;
         public float relationship; // 0 to 100 (Varied! Not everyone likes you!)
         public NobleRank nobleRank;
+        [Obsolete("powerTier in ClanMember is deprecated; military seniority is represented by nobleRank and military background.")]
         public int powerTier;
         public string personalityTrait; // "Strict", "Affectionate", "Competitive", "Arrogant", "Vindictive", "Wise"
         public float generosity; // 0 to 100 (affects pocket money / allowance)
@@ -78,7 +79,7 @@ namespace ArmyLife.Data
         City2nd = 1,         // Mid City School
         City1st = 2,         // Highest City School (Top municipal scholars)
         State3rd = 3,        // Lowest State School (Provincial entry)
-        State2nd = 4,        // Mid State School (Rigorous martial training)
+        State2nd = 4,        // Mid State School (Rigorous military drill and academics)
         State1st = 5,        // Highest State School (Difficult to score 75; 85-90 rare)
         ImperialPinnacle = 6 // Solitary Imperial Academy in Imperial Capital (95+ legendary)
     }

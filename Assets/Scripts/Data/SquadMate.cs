@@ -25,6 +25,12 @@ namespace ArmyLife.Data
         public string personalityTrait; // e.g. "Cynical Veteran", "Warm-Hearted Medic", "Nervous Farmboy"
         public int battlesSurvived;
 
+        [Header("Tactical Readiness & Morale")]
+        [Range(0f, 100f)] public float morale = 75f;
+        [Range(0f, 100f)] public float fatigue = 15f;
+        public bool isInjured = false;
+        public string injuryStatus = "Fit for Duty";
+
         public SquadMate() {}
 
         public SquadMate(string name, string nickname, SquadRole role, string roleTitle, string trait, float initialRelationship = 50f)
@@ -38,6 +44,21 @@ namespace ArmyLife.Data
             this.relationship = initialRelationship;
             this.isDead = false;
             this.battlesSurvived = 0;
+            this.morale = 75f;
+            this.fatigue = 15f;
+            this.isInjured = false;
+            this.injuryStatus = "Fit for Duty";
+        }
+
+        public void ApplyRestAndRecovery(float fatigueRecovery = 25f, float moraleRecovery = 15f)
+        {
+            fatigue = Mathf.Max(0f, fatigue - fatigueRecovery);
+            morale = Mathf.Min(100f, morale + moraleRecovery);
+            if (isInjured)
+            {
+                isInjured = false;
+                injuryStatus = "Fit for Duty";
+            }
         }
 
         public string GetDisplayName()

@@ -49,7 +49,10 @@ namespace ArmyLife.UI
             {
                 modalRoot.SetActive(false);
             }
-            gameObject.SetActive(false);
+            else
+            {
+                gameObject.SetActive(false);
+            }
         }
 
         private void OnEnable()
@@ -84,7 +87,7 @@ namespace ArmyLife.UI
         public void CloseModal()
         {
             if (modalRoot != null) modalRoot.SetActive(false);
-            gameObject.SetActive(false);
+            else gameObject.SetActive(false);
         }
 
         private void PopulateDossier(SoldierProfile soldier)

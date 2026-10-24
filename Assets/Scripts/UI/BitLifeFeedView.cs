@@ -85,9 +85,9 @@ namespace ArmyLife.UI
                 case "BIRTH":         return "<color=#00FFAA><b>[ORIGIN]</b></color>";
                 case "PAYDAY":        return "<color=#44FF44><b>[FINANCES]</b></color>";
                 case "PROMOTION":     return "<color=#00AAFF><b>[PROMOTION]</b></color>";
-                case "BREAKTHROUGH":  return "<color=#FFD700><b>[CULTIVATION]</b></color>";
-                case "TESTING":       return "<color=#00FFFF><b>[APPARATUS]</b></color>";
-                case "SECRET CAVE":   return "<color=#FF00FF><b>[ANCIENT SECT]</b></color>";
+                case "BREAKTHROUGH":  return "<color=#FFD700><b>[QUALIFICATION]</b></color>";
+                case "TESTING":       return "<color=#00FFFF><b>[MEPS / ASVAB]</b></color>";
+                case "SECRET CAVE":   return "<color=#FF00FF><b>[INTELLIGENCE]</b></color>";
                 case "MARRIAGE":      return "<color=#FF88FF><b>[DYNASTY]</b></color>";
                 case "CLEARANCE":     return "<color=#FFCC00><b>[SECURITY]</b></color>";
                 case "BOTTLENECK":    return "<color=#FF6600><b>[WARNING]</b></color>";

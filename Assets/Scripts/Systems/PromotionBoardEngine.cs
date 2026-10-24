@@ -8,8 +8,7 @@ namespace ArmyLife.Systems
     {
         /// <summary>
         /// Evaluates military promotion points and convenes Promotion Boards every semester.
-        /// Commoner soldiers climb through PT fitness, combat tours, NCO reviews, and time-in-service!
-        /// Cultivation is NOT required for enlisted promotions!
+        /// Commoner soldiers climb through PT fitness, marksmanship qualification, combat tours, NCO reviews, and time-in-service!
         /// </summary>
         public static void EvaluateBoardPromotion(SoldierProfile soldier, MilitaryRankSO[] rankDatabase = null)
         {

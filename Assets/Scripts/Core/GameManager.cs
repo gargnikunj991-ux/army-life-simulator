@@ -924,9 +924,9 @@ namespace ArmyLife.Core
 
             if (nextRank.unlocksSelfTalentTesting && !currentSoldier.isPersonalTalentRevealed)
             {
-                currentSoldier.knowsAboutCultivation = true;
+                currentSoldier.isPersonalTalentRevealed = true;
                 GameEvents.OnFeedEventLogged?.Invoke("CLEARANCE",
-                    "<color=#00AAFF>[SECURITY CLEARANCE GRANTED]</color> Reaching rank E-4 grants medical clearance to requisition the Imperial Genetic Scanner to officially test your Genetic Aptitude for Super-Soldier Augmentations!");
+                    "<color=#00AAFF>[NCO CLEARANCE GRANTED]</color> Reaching rank E-4 certifies you as a Non-Commissioned Officer (NCO) with full service jacket review clearance!");
             }
 
             if (currentSoldier.totalPromotionsEarned == 3 && !currentSoldier.isMarried)

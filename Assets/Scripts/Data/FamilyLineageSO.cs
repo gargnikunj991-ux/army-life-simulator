@@ -21,11 +21,11 @@ namespace ArmyLife.Data
         public int startingClanFavor;       // Standing with family elders
         public long startingFamilyWealth;
 
-        [Header("Pre-Enlistment Cultivation Stockpile")]
-        [Tooltip("Legacy sons are fed family serums before enlistment.")]
-        public int startingPowerTier;       // 0 for commoner, 1-2 for high nobility
+        [Header("Pre-Enlistment Military Preparation")]
+        [Tooltip("Legacy sons receive preparatory military coaching before enlistment.")]
+        public int startingPowerTier;       // Readiness baseline
         [Range(0f, 100f)]
-        public float startingFoundationalTempering; // Pre-tempered body before youth academy
+        public float startingFoundationalTempering; // Physical conditioning before youth academy
 
         [Header("Academy Fast-Track Privileges")]
         public bool hasWestPointFastTrack;

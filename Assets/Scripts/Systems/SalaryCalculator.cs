@@ -89,8 +89,8 @@ namespace ArmyLife.Systems
                 total += aviationBonus;
             }
 
-            // Power Tier Cultivation Stipend ($750 per tier)
-            total += (soldier.powerTier * 750L);
+            // Combat Readiness & Special Duty Stipend
+            total += (soldier.powerTier * 150L);
 
             // Feudal Noble Aristocratic Allowance
             switch (soldier.nobleTitle)

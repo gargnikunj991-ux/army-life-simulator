@@ -49,7 +49,7 @@ namespace ArmyLife.UI
             else Destroy(gameObject);
 
             if (modalRoot != null) modalRoot.SetActive(false);
-            gameObject.SetActive(false);
+            else gameObject.SetActive(false);
         }
 
         private void OnEnable()
@@ -85,7 +85,7 @@ namespace ArmyLife.UI
         public void CloseModal()
         {
             if (modalRoot != null) modalRoot.SetActive(false);
-            gameObject.SetActive(false);
+            else gameObject.SetActive(false);
         }
 
         public void SwitchTab(ActiveTab tab)
@@ -218,14 +218,14 @@ namespace ArmyLife.UI
             {
                 CreateActionButton(btnRow.transform, "SPAR DUEL", new Color(0.70f, 0.35f, 0.15f), () =>
                 {
-                    bool won = (soldier.combatSkill + soldier.powerTier * 10f) >= (member.powerTier * 15f + 30f);
+                    bool won = (soldier.combatSkill + soldier.fitness * 0.4f) >= (45f + member.age * 0.4f);
                     if (won)
                     {
                         soldier.clanSuccessionScore += 4;
                         soldier.combatSkill = Mathf.Min(100f, soldier.combatSkill + 3f);
                         member.relationship = Mathf.Max(0f, member.relationship - 5f);
                         GameEvents.OnFeedEventLogged?.Invoke("CLAN",
-                            $"<color=#FFD700>[SIBLING DUEL WON]</color> You bested <b>{member.name}</b> in a martial sparring bout! " +
+                            $"<color=#FFD700>[SIBLING DUEL WON]</color> You bested <b>{member.name}</b> in a close-combat sparring bout! " +
                             $"The clan elders noted your superiority (+4 Succession Favor, +3 Combat Skill).");
                     }
                     else

@@ -429,12 +429,12 @@ namespace ArmyLife.Systems
             soldier.totalMedicalExpensesPaid += EconomyData.IMPERIAL_HOSPITAL_TREATMENT_COST;
 
             soldier.health = Math.Min(100f, soldier.health + 45f);
-            soldier.meridianDamage = Math.Max(0f, soldier.meridianDamage - 30f);
+            soldier.combatReadiness = Math.Min(100f, soldier.combatReadiness + 20f);
             soldier.fitness = Math.Min(100f, soldier.fitness + 10f);
 
             GameEvents.OnFeedEventLogged?.Invoke("HOSPITAL",
-                $"<color=#00FFAA><b>[IMPERIAL SPECIALIST SURGERY]</b></color> Expert alchemical surgeons treated your wounds and purged internal toxins (-${EconomyData.IMPERIAL_HOSPITAL_TREATMENT_COST:N0}). " +
-                $"Health restored to <b>{soldier.health:F0}/100</b>! Meridian damage healed (Residual Damage: {soldier.meridianDamage:F0}%).");
+                $"<color=#00FFAA><b>[MILITARY SPECIALIST SURGERY]</b></color> Military trauma surgeons repaired combat wounds and administered intensive rehabilitation (-${EconomyData.IMPERIAL_HOSPITAL_TREATMENT_COST:N0}). " +
+                $"Health restored to <b>{soldier.health:F0}/100</b>! Combat readiness restored to <b>{soldier.combatReadiness:F0}/100</b>.");
 
             GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
             return true;

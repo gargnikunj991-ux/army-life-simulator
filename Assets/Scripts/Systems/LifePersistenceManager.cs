@@ -110,15 +110,15 @@ namespace ArmyLife.Systems
             existing.nobleTitle = soldier.nobleTitle;
             existing.rankPaygrade = soldier.currentRank != null ? soldier.currentRank.paygrade : "E-1";
             existing.rankName = soldier.currentRank != null ? soldier.currentRank.rankName : "Private Recruit";
-            existing.powerTier = soldier.powerTier;
-            existing.subTier = soldier.subTier;
-            existing.preTierStage = soldier.preTierStage;
-            existing.talentScore = soldier.talentScore;
-            existing.isPersonalTalentRevealed = soldier.isPersonalTalentRevealed;
+            existing.physicalFitness = soldier.physicalFitness;
+            existing.marksmanshipScore = soldier.marksmanshipScore;
+            existing.tacticalIntellect = soldier.tacticalIntellect;
+            existing.discipline = soldier.discipline;
+            existing.combatReadiness = soldier.combatReadiness;
             existing.cashBalance = soldier.cashBalance;
             existing.combatMeritPoints = soldier.combatMeritPoints;
             existing.health = soldier.health;
-            existing.fitness = soldier.fitness;
+            existing.fitness = soldier.physicalFitness;
             existing.combatSkill = soldier.combatSkill;
             existing.isDead = soldier.isDead;
             existing.deathReason = soldier.deathReason;
@@ -147,18 +147,20 @@ namespace ArmyLife.Systems
             SoldierProfile soldier = JsonUtility.FromJson<SoldierProfile>(entry.serializedProfileJson);
             if (soldier == null)
             {
-                soldier = new SoldierProfile(entry.characterName, null, entry.talentScore)
+                soldier = new SoldierProfile(entry.characterName, null, 50)
                 {
                     lifeId = entry.lifeId,
                     age = entry.age,
                     totalSemestersLived = entry.totalSemestersLived,
                     nobleTitle = entry.nobleTitle,
-                    powerTier = entry.powerTier,
-                    isPersonalTalentRevealed = entry.isPersonalTalentRevealed,
+                    physicalFitness = entry.physicalFitness > 0f ? entry.physicalFitness : (entry.fitness > 0f ? entry.fitness : 50f),
+                    marksmanshipScore = entry.marksmanshipScore > 0f ? entry.marksmanshipScore : 50f,
+                    tacticalIntellect = entry.tacticalIntellect > 0f ? entry.tacticalIntellect : 50f,
+                    discipline = entry.discipline > 0f ? entry.discipline : 60f,
+                    combatReadiness = entry.combatReadiness > 0f ? entry.combatReadiness : 50f,
                     cashBalance = entry.cashBalance,
                     combatMeritPoints = entry.combatMeritPoints,
                     health = entry.health,
-                    fitness = entry.fitness,
                     combatSkill = entry.combatSkill,
                     isDead = entry.isDead,
                     deathReason = entry.deathReason,

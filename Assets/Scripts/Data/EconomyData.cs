@@ -152,7 +152,7 @@ namespace ArmyLife.Data
                 return 75000L; // Nation's highest decoration
             if (medalName.Contains("Distinguished Service Cross"))
                 return 30000L;
-            if (medalName.Contains("Silver Vanguard Cross") || medalName.Contains("Silver Star"))
+            if (medalName.Contains("Silver Vanguard Cross") || medalName.Contains("Silver Star") || medalName.Contains("Silver Cross"))
                 return 15000L;
             if (medalName.Contains("Distinguished Flying Cross"))
                 return 15000L;
@@ -162,6 +162,8 @@ namespace ArmyLife.Data
                 return 10000L;
             if (medalName.Contains("Bronze Star"))
                 return 6000L;
+            if (medalName.Contains("Valor Citation"))
+                return 3500L;
             if (medalName.Contains("Academy Honors Saber"))
                 return 5000L;
             if (medalName.Contains("Imperial Wound Star"))

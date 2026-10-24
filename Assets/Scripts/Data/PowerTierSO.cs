@@ -1,14 +1,15 @@
+using System;
 using UnityEngine;
 
 namespace ArmyLife.Data
 {
     public enum TierStratum
     {
-        PreTierMortal,      // Pre-Tier 1: 4 Preparatory Stages (Cellular Conditioning, Neural Calibration, Bio-Resonance Sync, Sub-Dermal Framework)
-        MortalInitiate,     // Tiers 1-3: Enhanced Operative Classes (Iron Vanguard, Bronze Strike, Silver Centurion)
-        MortalPeak,         // Tiers 4-6: Titan Warframe Augments (Gold Vanguard, Platinum Frame, Apex Titan)
-        NationalGuardian,   // Tiers 7-10: Strategic Dreadnought Super-Soldiers (Dreadnought, Orbital Sovereign, Imperial Pillar)
-        PrimordialSect      // Tiers 11-12: Classified Pre-War Prototypes (Singularity Operative, Transcendent Warmaster Frame)
+        PreTierMortal,      // Pre-qualification conditioning stages
+        MortalInitiate,     // Basic active duty tiers
+        MortalPeak,         // Senior enlisted / non-commissioned officer tiers
+        NationalGuardian,   // High command strategic tiers
+        PrimordialSect      // Legacy classified tiers
     }
 
     public enum PowerSubTier
@@ -19,35 +20,34 @@ namespace ArmyLife.Data
         Peak = 3
     }
 
-    [CreateAssetMenu(fileName = "PowerTier_", menuName = "ArmyLife/Power Tier")]
+    /// <summary>
+    /// Deprecated cultivation tier definition, retained for asset and database compatibility.
+    /// Grounded military progression relies on MilitaryRankSO, Paygrades, and MilitaryBranch roles.
+    /// </summary>
+    [Obsolete("PowerTierSO is deprecated in pure military sim. Career progression is managed via MilitaryRankSO.")]
+    [CreateAssetMenu(fileName = "PowerTier_", menuName = "ArmyLife/Power Tier (Deprecated)")]
     public class PowerTierSO : ScriptableObject
     {
         [Header("Tier Identity")]
         public int tierLevel;               // 1 to 12
-        public string designation;          // e.g. "Iron Initiate", "Primordial Immortal"
+        public string designation;          // e.g. "Line Infantry Specialist"
         public TierStratum stratum;
 
         [Header("Lifespan & Biological Limits")]
-        [Tooltip("Maximum biological lifespan achieved upon reaching this tier.")]
-        public int maxLifespanYears;        // Tier 11 = 500, Tier 12 = 1000
+        public int maxLifespanYears;
 
         [Header("Monthly Financial & Resource Metrics")]
-        [Tooltip("Automatic monthly merit salary stipend ($750 * Tier Level).")]
         public int monthlySalaryBonus;
-        [Tooltip("Monthly cost in Cash required to sustain steady cultivation progress.")]
         public int monthlyCashBurn;
-        [Tooltip("Alternative monthly cost in Combat Merit Points (CMP).")]
         public int monthlyCMPBurn;
 
         [Header("Bottleneck Breakthrough")]
         [Range(0f, 1f)]
-        public float breakthroughDifficulty; // Higher = harder trial / lower base success rate
+        public float breakthroughDifficulty;
 
         [Header("Information Censorship & Fog")]
-        [Tooltip("If true, general grunts and civilians believe this tier cannot be achieved.")]
         public bool isHiddenFromPublic;
-        [Tooltip("If true, even children of 4-Star Generals and top houses are unaware this tier exists.")]
-        public bool isHiddenFromTopHouses;  // True for Tiers 11 and 12
+        public bool isHiddenFromTopHouses;
 
         private void OnValidate()
         {
@@ -58,17 +58,21 @@ namespace ArmyLife.Data
         }
     }
 
+    /// <summary>
+    /// Military readiness and conditioning level descriptor.
+    /// Supersedes fantasy cultivation knowledge and qi breakthrough calculations.
+    /// </summary>
     public static class PowerTierKnowledgeSystem
     {
         public static string GetPreTierStageName(int stage)
         {
             switch (stage)
             {
-                case 1: return "Cellular Conditioning";
-                case 2: return "Neural Calibration";
-                case 3: return "Bio-Resonance Integration";
-                case 4: return "Sub-Dermal Framework";
-                default: return "Cellular Conditioning";
+                case 1: return "Basic Conditioning";
+                case 2: return "Infantry Tactics";
+                case 3: return "Field Exercises";
+                case 4: return "Combat Readiness";
+                default: return "Basic Conditioning";
             }
         }
 
@@ -76,11 +80,11 @@ namespace ArmyLife.Data
         {
             switch (subTier)
             {
-                case PowerSubTier.Early: return "Mk I";
-                case PowerSubTier.Mid: return "Mk II";
-                case PowerSubTier.Late: return "Mk III";
-                case PowerSubTier.Peak: return "Apex";
-                default: return "Mk I";
+                case PowerSubTier.Early: return "Class 1";
+                case PowerSubTier.Mid: return "Class 2";
+                case PowerSubTier.Late: return "Class 3";
+                case PowerSubTier.Peak: return "Senior";
+                default: return "Class 1";
             }
         }
 
@@ -88,19 +92,19 @@ namespace ArmyLife.Data
         {
             switch (tier)
             {
-                case 1: return "Iron Vanguard Operator";
-                case 2: return "Bronze Strike Commando";
-                case 3: return "Silver Centurion Frame";
-                case 4: return "Gold Vanguard Commander";
-                case 5: return "Platinum Warframe";
-                case 6: return "Titan Dreadnought (Peak Augmented)";
-                case 7: return "Dreadnought Class";
-                case 8: return "Orbital Sovereign Frame";
-                case 9: return "Imperial Aegis Pillar";
-                case 10: return "Apex Strategic Deterrent";
-                case 11: return "Singularity Operative (Classified)";
-                case 12: return "Transcendent Warmaster (Classified)";
-                default: return "Standard Human";
+                case 1: return "Line Infantry Recruit";
+                case 2: return "Infantry Rifleman";
+                case 3: return "Squad Specialist";
+                case 4: return "Veteran Fireteam Leader";
+                case 5: return "Squad Leader";
+                case 6: return "Platoon Sergeant";
+                case 7: return "First Sergeant";
+                case 8: return "Sergeant Major";
+                case 9: return "Command Sergeant Major";
+                case 10: return "Chief of Enlisted Staff";
+                case 11: return "Master War Specialist";
+                case 12: return "Marshal Special Advisor";
+                default: return "Active Duty Soldier";
             }
         }
 
@@ -109,12 +113,6 @@ namespace ArmyLife.Data
             return tier >= 7;
         }
 
-        /// <summary>
-        /// Returns the perceived max tier based on knowledge censorship:
-        /// - Soldiers below Tier 4 only know up to Tier 6 (The Spoken Mortal Limit).
-        /// - Soldiers Tier 4 to 10 know up to Tier 10 (National Guardian apex).
-        /// - Tiers 11 and 12 are hidden from everyone unless unlocked via the Secret Cave.
-        /// </summary>
         public static int GetPerceivedMaxTier(int viewerTier, bool unlockedHidden)
         {
             if (unlockedHidden) return 12;
@@ -122,10 +120,6 @@ namespace ArmyLife.Data
             return 6;
         }
 
-        /// <summary>
-        /// Returns the climbing difficulty multiplier based on major tier and sub-tier.
-        /// Higher tiers and higher sub-tiers (Early -> Mid -> Late -> Peak) require exponentially denser Qi.
-        /// </summary>
         public static float GetClimbingDifficultyFactor(int tier, PowerSubTier subTier)
         {
             if (tier <= 0) return 1.0f;
@@ -134,47 +128,37 @@ namespace ArmyLife.Data
             return tierFactor * subTierFactor;
         }
 
-        /// <summary>
-        /// Returns the bottleneck trial difficulty for sub-tier advancement within a tier.
-        /// Early -> Mid (0.22+) < Mid -> Late (0.34+) < Late -> Peak (0.46+).
-        /// </summary>
         public static float GetSubTierAdvancementDifficulty(int tier, PowerSubTier currentSubTier)
         {
             float tierBase = tier * 0.035f;
             switch (currentSubTier)
             {
-                case PowerSubTier.Early: return 0.22f + tierBase; // Advancing to Mid
-                case PowerSubTier.Mid:   return 0.34f + tierBase; // Advancing to Late
-                case PowerSubTier.Late:  return 0.46f + tierBase; // Advancing to Peak
+                case PowerSubTier.Early: return 0.22f + tierBase;
+                case PowerSubTier.Mid:   return 0.34f + tierBase;
+                case PowerSubTier.Late:  return 0.46f + tierBase;
                 default:                 return 0.50f + tierBase;
             }
         }
 
-        /// <summary>
-        /// Formats the power tier display string for a soldier, respecting knowledge fog and sub-tiers.
-        /// </summary>
         public static string FormatSoldierPowerTier(SoldierProfile soldier)
         {
-            if (soldier == null) return "Mortal";
+            if (soldier == null) return "Civilian";
+
+            if (soldier.currentRank != null)
+            {
+                return $"{soldier.currentRank.rankName} ({soldier.currentRank.paygrade})";
+            }
 
             if (soldier.powerTier == 0)
             {
                 int stage = Mathf.Clamp(soldier.preTierStage, 1, 4);
-                return $"Pre-Tier Stage {stage}/4 ({GetPreTierStageName(stage)})";
+                return $"Conditioning Stage {stage}/4 ({GetPreTierStageName(stage)})";
             }
 
             int perceivedMax = GetPerceivedMaxTier(soldier.powerTier, soldier.unlockedTiers11And12);
             string subTierStr = GetSubTierName(soldier.subTier);
 
-            if (soldier.powerTier >= 7)
-            {
-                string hiddenTag = soldier.powerTier >= 11 ? " [HIDDEN REALM]" : "";
-                return $"<color=#FFD700>Tier {soldier.powerTier} ({subTierStr})/{perceivedMax} • National Guardian ({GetTierDesignation(soldier.powerTier)}){hiddenTag}</color>";
-            }
-            else
-            {
-                return $"Tier {soldier.powerTier} ({subTierStr})/{perceivedMax} ({GetTierDesignation(soldier.powerTier)})";
-            }
+            return $"Readiness Level {soldier.powerTier} ({subTierStr})/{perceivedMax} ({GetTierDesignation(soldier.powerTier)})";
         }
     }
 }

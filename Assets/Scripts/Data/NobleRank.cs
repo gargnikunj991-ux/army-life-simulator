@@ -42,11 +42,11 @@ namespace ArmyLife.Data
         public int requiredFitness;
         public int requiredCombatSkill;
 
-        [Header("Apparatus Security Clearance")]
-        [Tooltip("At E-4 (Corporal/Specialist), clearance is granted to requisition the Army Resonance Chamber to reveal personal talent.")]
+        [Header("Testing & Examination Clearance")]
+        [Tooltip("At E-4 (Corporal/Specialist), clearance is granted to requisition service jacket aptitude records.")]
         public bool unlocksSelfTalentTesting;
 
-        [Tooltip("At E-8 (Master Sergeant), senior command privilege is granted to bring spouse and children for talent testing.")]
+        [Tooltip("At E-8 (Master Sergeant), senior command privilege is granted to sponsor family aptitude assessments.")]
         public bool unlocksFamilyTalentTesting;
     }
 }

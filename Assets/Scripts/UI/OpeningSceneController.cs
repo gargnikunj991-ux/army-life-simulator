@@ -22,6 +22,7 @@ namespace ArmyLife.UI
         public Button continueOrManageButton;
         public TextMeshProUGUI continueOrManageButtonText;
         public TextMeshProUGUI totalLivesCountLabel;
+        public Button settingsButton;
 
         [Header("Character Creation Modal")]
         public GameObject characterCreationModal;
@@ -100,14 +101,14 @@ namespace ArmyLife.UI
 
         private static readonly (string name, string desc)[] Countries = 
         {
-            ("The Valerian Empire", "Feudal military superpower. Masters of subterranean ancient sect ley-lines and noble martial dynasties."),
-            ("The Iron Federation", "Cybernetic & industrial superpower. Powered by nanite infusions, armored mech-titans, and orbital EMPs."),
-            ("The Ouroboros Dominion", "Beast-cultivating warlords. Savage warriors surgically fused with mutated atmospheric beasts.")
+            ("The Valerian Empire", "Imperial military superpower. Grounded discipline, artillery superiority, and noble officer dynasties."),
+            ("The Iron Federation", "Industrial and mechanized power. Powered by heavy armor, mobile artillery corps, and mechanized infantry."),
+            ("The Ouroboros Dominion", "Northern coalition of martial warlords hardened by arctic trench warfare.")
         };
 
         private static readonly string[] HairStyles = 
         {
-            "Military Buzzcut", "Short Crew Cut", "Slicked Back", "Cultivator Topknot", "Undercut Fade", "Long Flowing Braids"
+            "Military Buzzcut", "Short Crew Cut", "Slicked Back", "Classic Officer Part", "Undercut Fade", "Long Flowing Braids"
         };
 
         private static readonly string[] HairColors = 
@@ -256,6 +257,19 @@ namespace ArmyLife.UI
 
         private void Start()
         {
+            if (settingsButton == null && openingScreenPanel != null)
+            {
+                var btns = openingScreenPanel.GetComponentsInChildren<Button>(true);
+                foreach (var b in btns)
+                {
+                    if (b.name.ToLower().Contains("setting"))
+                    {
+                        settingsButton = b;
+                        break;
+                    }
+                }
+            }
+
             InitLineageList();
             WireEventListeners();
             RefreshMenuState();
@@ -345,6 +359,28 @@ namespace ArmyLife.UI
 
             if (returnToMenuButton != null)
                 returnToMenuButton.onClick.AddListener(OnReturnToMenuClicked);
+
+            if (settingsButton != null)
+            {
+                settingsButton.onClick.RemoveListener(OnSettingsClicked);
+                settingsButton.onClick.AddListener(OnSettingsClicked);
+            }
+        }
+
+        private void OnSettingsClicked()
+        {
+            if (SettingsModal.Instance != null)
+            {
+                SettingsModal.Instance.OpenModal();
+            }
+            else
+            {
+                var modal = FindAnyObjectByType<SettingsModal>(FindObjectsInactive.Include);
+                if (modal != null)
+                {
+                    modal.OpenModal();
+                }
+            }
         }
 
         public void RefreshMenuState()
@@ -749,13 +785,13 @@ namespace ArmyLife.UI
             var detailsText = detailsObj.AddComponent<TextMeshProUGUI>();
             detailsText.fontSize = 22;
             detailsText.color = new Color(0.8f, 0.85f, 0.9f);
-            string powerDisplay = life.powerTier > 0 
-                ? $"Tier {life.powerTier} ({PowerTierKnowledgeSystem.GetSubTierName(life.subTier)})/12" 
-                : $"Pre-Tier (Stage {Mathf.Clamp(life.preTierStage, 1, 4)}/4)";
+            string standingDisplay = !string.IsNullOrEmpty(life.rankName) 
+                ? $"{life.rankName} ({life.rankPaygrade})" 
+                : "Recruit / Candidate";
 
             detailsText.text = 
-                $"Homeland: <b>{life.birthCountry ?? "The Valerian Empire"}</b> | Age: <b>{life.age:F1}</b> | Rank: <b>{life.rankName} ({life.rankPaygrade})</b>\n" +
-                $"Lineage: <b>{life.lineageArchetypeName}</b> | Power: <b>{powerDisplay}</b> | Wealth: <b>${life.cashBalance:N0}</b>\n" +
+                $"Homeland: <b>{life.birthCountry ?? "The Valerian Empire"}</b> | Age: <b>{life.age:F1}</b> | Standing: <b>{standingDisplay}</b>\n" +
+                $"Lineage: <b>{life.lineageArchetypeName}</b> | Wealth: <b>${life.cashBalance:N0}</b>\n" +
                 $"Look: <i>{life.hairStyle}, {life.hairColor} hair, {life.eyeColor} eyes</i>";
 
             // 3. Buttons Row

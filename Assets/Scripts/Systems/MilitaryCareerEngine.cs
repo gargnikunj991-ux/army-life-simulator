@@ -46,11 +46,11 @@ namespace ArmyLife.Systems
                 retireReason = "You reached mandatory civilian retirement at age 65.";
             }
 
-            // 5. Medical Invalidation (Meridian damage > 80%)
-            if (soldier.meridianDamage >= 80f && rankOrder < 10)
+            // 5. Medical Invalidation (Cumulative Combat Disability)
+            if (soldier.health <= 30f && soldier.fitness <= 30f && rankOrder < 10)
             {
                 forceRetire = true;
-                retireReason = "The Medical Evaluation Board deemed your shattered meridians unfit for active combat duty.";
+                retireReason = "The Medical Evaluation Board deemed your cumulative battlefield wounds and physical trauma unfit for active combat duty.";
             }
 
             if (forceRetire)
@@ -69,17 +69,17 @@ namespace ArmyLife.Systems
 
         /// <summary>
         /// Simulates frontline combat mortality and casualty risks during deployment tours.
-        /// Low-tier grunts face brutal mortality against enemy heavy firepower!
+        /// Unseasoned grunts face brutal mortality against enemy heavy firepower!
         /// </summary>
         public static void ProcessCombatDeploymentTour(SoldierProfile soldier)
         {
             if (soldier == null || soldier.isDead || soldier.isRetired || !soldier.isInCombatDeployment) return;
 
-            // Combat Power Score: Power Tier * 25 + Combat Skill * 0.5 + Fitness * 0.3
-            float combatPower = (soldier.powerTier * 28f) + (soldier.combatSkill * 0.45f) + (soldier.fitness * 0.25f);
+            // Combat Power Score: Combat Readiness * 0.40 + Combat Skill * 0.35 + Fitness * 0.25
+            float combatPower = (soldier.combatReadiness * 0.40f) + (soldier.combatSkill * 0.35f) + (soldier.fitness * 0.25f);
             float casualtyRoll = Random.Range(0f, 100f);
 
-            // High risk for low combat power (e.g. Tier 1 grunt vs enemy artillery)
+            // High risk for low combat power
             float mortalityThreshold = Mathf.Clamp(18f - (combatPower * 0.12f), 1.0f, 25f);
             float injuryThreshold = Mathf.Clamp(40f - (combatPower * 0.20f), 5.0f, 50f);
 
@@ -88,12 +88,12 @@ namespace ArmyLife.Systems
                 // KIA (KILLED IN ACTION)
                 soldier.isDead = true;
                 soldier.health = 0f;
-                soldier.deathReason = "Killed in Action defending an ancient energy fortress against enemy vanguard shock-troops";
+                soldier.deathReason = "Killed in Action defending a frontline bunker complex against enemy shock-troops";
                 soldier.AddMedal("Posthumous Valerian Star");
                 soldier.AddMedal("Imperial Purple Heart");
 
                 GameEvents.OnFeedEventLogged?.Invoke("DEATH",
-                    $"<color=#FF0000><b>[KILLED IN ACTION (KIA)]</b></color> An enemy heavy energy barrage breached your defensive line in Sector 4! " +
+                    $"<color=#FF0000><b>[KILLED IN ACTION (KIA)]</b></color> An enemy heavy artillery barrage breached your defensive line in Sector 4! " +
                     $"You fought bravely to the last breath, but were killed in action at age {soldier.age:F1}. " +
                     $"The Empire awarded you the Purple Heart and Valerian Star posthumously.");
 
@@ -103,14 +103,14 @@ namespace ArmyLife.Systems
             {
                 // BATTLEFIELD INJURY
                 soldier.health = Mathf.Max(20f, soldier.health - 35f);
-                soldier.meridianDamage = Mathf.Min(100f, soldier.meridianDamage + 25f);
+                soldier.combatReadiness = Mathf.Max(15f, soldier.combatReadiness - 20f);
                 soldier.fitness = Mathf.Max(25f, soldier.fitness - 15f);
                 soldier.AddMedal("Imperial Wound Star");
                 soldier.AddTrait("Scarred Veteran");
 
                 GameEvents.OnFeedEventLogged?.Invoke("CASUALTY",
                     "<color=#FF4444>[BATTLEFIELD CASUALTY]</color> You were wounded during an enemy counter-attack! " +
-                    "Shrapnel pierced your shoulder and bruised your energy meridians. Awarded <b>Imperial Wound Star</b> and trait <b>[Scarred Veteran]</b>.");
+                    "Shrapnel pierced your shoulder causing severe muscle trauma. Awarded <b>Imperial Wound Star</b> and trait <b>[Scarred Veteran]</b>.");
             }
             else
             {

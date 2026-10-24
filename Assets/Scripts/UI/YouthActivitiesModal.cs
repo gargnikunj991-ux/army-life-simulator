@@ -117,10 +117,10 @@ namespace ArmyLife.UI
 
             // Update button label tags for clear BitLife-style age gates
             UpdateButtonLabel(studyTacticsButton, "STUDY STRATEGY & TACTICS", s.age >= 6.0f ? "(+Intellect)" : "<color=#FF6666>[Unlocks at Age 6]</color>");
-            UpdateButtonLabel(clanLibraryButton, "CLAN MARTIAL ARCHIVE", s.age >= 6.0f ? "(+Qi Insight)" : "<color=#FF6666>[Unlocks at Age 6]</color>");
+            UpdateButtonLabel(clanLibraryButton, "MILITARY TACTICAL ARCHIVE", s.age >= 6.0f ? "(+Tactics)" : "<color=#FF6666>[Unlocks at Age 6]</color>");
             UpdateButtonLabel(cadetFiringRangeButton, "CADET FIRING RANGE", s.age >= 12.0f ? "(+Combat Skill)" : "<color=#FF6666>[Unlocks at Age 12]</color>");
             UpdateButtonLabel(oddJobsButton, "DISTRICT ODD JOBS", s.age >= 12.0f ? "(+Earn Cash)" : "<color=#FF6666>[Unlocks at Age 12]</color>");
-            UpdateButtonLabel(apothecaryButton, "APOTHECARY BONE BROTH", s.age >= 4.0f ? "(-$30, +Health)" : "<color=#FF6666>[Unlocks at Age 4]</color>");
+            UpdateButtonLabel(apothecaryButton, "NUTRITIOUS MESS MEAL", s.age >= 4.0f ? "(-$30, +Health)" : "<color=#FF6666>[Unlocks at Age 4]</color>");
             UpdateButtonLabel(takeMockExamButton, "TAKE MOCK MILITARY EXAM", s.age >= 17.5f ? "(Ready)" : "<color=#FF6666>[Age 17.5 Only]</color>");
             UpdateButtonLabel(askFatherExamHelpButton, "ASK FATHER FOR EXAM HELP", s.age >= 16.0f ? "(Available)" : "<color=#FF6666>[Unlocks at Age 16]</color>");
         }
@@ -209,8 +209,8 @@ namespace ArmyLife.UI
                 if (s.age < 6.0f)
                 {
                     GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
-                        $"<color=#FF8800><b>[FORBIDDEN ARCHIVE]</b></color> The clan guards block the iron doors: " +
-                        $"<i>'Toddlers cannot read ancient meridian charts! Come back when you turn 6.'</i> (Unlocks at Age 6.0).");
+                        $"<color=#FF8800><b>[RESTRICTED ARCHIVE]</b></color> The guards block the archive doors: " +
+                        $"<i>'Toddlers cannot read military tactical maps! Come back when you turn 6.'</i> (Unlocks at Age 6.0).");
                 }
                 else
                 {

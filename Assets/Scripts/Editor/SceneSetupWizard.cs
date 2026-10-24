@@ -14,6 +14,11 @@ namespace ArmyLife.Editor
 {
     public static class SceneSetupWizard
     {
+        public static void BuildFullProjectScene()
+        {
+            SetupCompletePlayableScene();
+        }
+
         [MenuItem("Army Life/1-Click Setup Complete Playable Scene", false, 0)]
         public static void SetupCompletePlayableScene()
         {
@@ -277,18 +282,23 @@ namespace ArmyLife.Editor
 
             // Option 1: Create New Life Button
             var createBtnObj = CreateButton("CreateNewLifeButton", openingPanel.transform, "CREATE NEW LIFE", new Color(0.18f, 0.65f, 0.35f));
-            SetRect(createBtnObj.GetComponent<RectTransform>(), 0.15f, 0.40f, 0.85f, 0.50f);
+            SetRect(createBtnObj.GetComponent<RectTransform>(), 0.15f, 0.42f, 0.85f, 0.51f);
             openingCtrl.createNewLifeButton = createBtnObj.GetComponent<Button>();
 
             // Option 2: Continue or Manage Lives Button (Dynamically switched in code!)
             var contBtnObj = CreateButton("ContinueOrManageButton", openingPanel.transform, "CONTINUE", new Color(0.20f, 0.45f, 0.75f));
-            SetRect(contBtnObj.GetComponent<RectTransform>(), 0.15f, 0.27f, 0.85f, 0.37f);
+            SetRect(contBtnObj.GetComponent<RectTransform>(), 0.15f, 0.30f, 0.85f, 0.39f);
             openingCtrl.continueOrManageButton = contBtnObj.GetComponent<Button>();
             openingCtrl.continueOrManageButtonText = contBtnObj.GetComponentInChildren<TextMeshProUGUI>();
 
+            // Option 3: Settings Button
+            var openingSettingsBtnObj = CreateButton("OpeningSettingsButton", openingPanel.transform, "SETTINGS", new Color(0.24f, 0.32f, 0.42f));
+            SetRect(openingSettingsBtnObj.GetComponent<RectTransform>(), 0.15f, 0.18f, 0.85f, 0.27f);
+            openingCtrl.settingsButton = openingSettingsBtnObj.GetComponent<Button>();
+
             // Footer Lore Hint
             var footerText = CreateText("FooterHint", openingPanel.transform, "Valerian Empire vs Iron Federation & Ouroboros Dominion\n12 Cultivation Tiers • Nobility Inheritance • Sibling Wars", 24, TextAlignmentOptions.Center, FontStyles.Normal, new Color(0.45f, 0.50f, 0.58f));
-            SetRect(footerText.GetComponent<RectTransform>(), 0.05f, 0.05f, 0.95f, 0.15f);
+            SetRect(footerText.GetComponent<RectTransform>(), 0.05f, 0.05f, 0.95f, 0.14f);
 
             // ==========================================
             // 7. BITLIFE-STYLE CHARACTER CREATION MODAL
@@ -1194,6 +1204,7 @@ namespace ArmyLife.Editor
         private static void CreateSettingsModal(Transform parent, MainHUDView hudView)
         {
             var modalObj = CreateUIElement("SettingsModal", parent);
+            SetFullScreen(modalObj.GetComponent<RectTransform>());
             var ctrl = modalObj.AddComponent<SettingsModal>();
             hudView.settingsModal = ctrl;
 
@@ -1218,16 +1229,38 @@ namespace ArmyLife.Editor
             SetRect(title.GetComponent<RectTransform>(), 0.05f, 0.92f, 0.95f, 0.98f);
             ctrl.titleText = title;
 
-            // Content container
-            var contentObj = CreateUIElement("SettingsContent", box.transform);
-            SetRect(contentObj.GetComponent<RectTransform>(), 0.05f, 0.09f, 0.95f, 0.91f);
+            // Scroll container for settings items
+            var scrollObj = CreateUIElement("SettingsScroll", box.transform);
+            SetRect(scrollObj.GetComponent<RectTransform>(), 0.04f, 0.09f, 0.96f, 0.91f);
+            var scroll = scrollObj.AddComponent<ScrollRect>();
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.scrollSensitivity = 35f;
+
+            var viewport = CreateUIElement("Viewport", scrollObj.transform);
+            SetFullScreen(viewport.GetComponent<RectTransform>());
+            viewport.AddComponent<RectMask2D>();
+            scroll.viewport = viewport.GetComponent<RectTransform>();
+
+            var contentObj = CreateUIElement("Content", viewport.transform);
+            var contentRect = contentObj.GetComponent<RectTransform>();
+            contentRect.anchorMin = new Vector2(0f, 1f);
+            contentRect.anchorMax = new Vector2(1f, 1f);
+            contentRect.pivot = new Vector2(0.5f, 1f);
+            contentRect.offsetMin = Vector2.zero;
+            contentRect.offsetMax = Vector2.zero;
+            scroll.content = contentRect;
+
             var vLayout = contentObj.AddComponent<VerticalLayoutGroup>();
-            vLayout.spacing = 8f;
-            vLayout.padding = new RectOffset(10, 10, 8, 8);
+            vLayout.spacing = 10f;
+            vLayout.padding = new RectOffset(14, 14, 10, 10);
             vLayout.childControlHeight = true;
             vLayout.childControlWidth = true;
             vLayout.childForceExpandHeight = false;
             vLayout.childForceExpandWidth = true;
+
+            var fitter = contentObj.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             // 1. Theme Selection Row
             var themeLabel = CreateText("ThemeLabel", contentObj.transform, "<b>DISPLAY THEME MODE:</b>", 22, TextAlignmentOptions.Left, FontStyles.Bold, Color.white);
@@ -1274,8 +1307,8 @@ namespace ArmyLife.Editor
             var ironBtn = CreateButton("IroncladBtn", diffRow.transform, "IRONCLAD", new Color(0.65f, 0.20f, 0.20f));
             ctrl.difficultyIroncladButton = ironBtn.GetComponent<Button>();
 
-            var diffDesc = CreateText("DiffDesc", contentObj.transform, "Authentic imperial simulation with 40% war tax and frontline risks.", 19, TextAlignmentOptions.Left, FontStyles.Normal, new Color(0.7f, 0.75f, 0.8f));
-            SetLayoutHeight(diffDesc.gameObject, 36);
+            var diffDesc = CreateText("DiffDesc", contentObj.transform, "<b>Realistic Mode:</b> Authentic military simulation, 40% war tax, combat tours, competitive promotion boards.", 19, TextAlignmentOptions.Left, FontStyles.Normal, new Color(0.7f, 0.75f, 0.8f));
+            SetLayoutHeight(diffDesc.gameObject, 42);
             ctrl.difficultyDescriptionText = diffDesc;
 
             // 3. Pacing Row
@@ -1349,6 +1382,7 @@ namespace ArmyLife.Editor
         private static void CreateLifeModal(Transform parent, MainHUDView hudView)
         {
             var modalObj = CreateUIElement("LifeModal", parent);
+            SetFullScreen(modalObj.GetComponent<RectTransform>());
             var ctrl = modalObj.AddComponent<LifeModal>();
             hudView.lifeModal = ctrl;
 
@@ -1462,6 +1496,7 @@ namespace ArmyLife.Editor
         private static void CreateFinanceModal(Transform parent, MainHUDView hudView)
         {
             var modalObj = CreateUIElement("FinanceModal", parent);
+            SetFullScreen(modalObj.GetComponent<RectTransform>());
             var ctrl = modalObj.AddComponent<FinanceModal>();
             hudView.financeModal = ctrl;
 
@@ -1581,6 +1616,7 @@ namespace ArmyLife.Editor
         private static void CreateRelationshipsModal(Transform parent, MainHUDView hudView)
         {
             var modalObj = CreateUIElement("RelationshipsModal", parent);
+            SetFullScreen(modalObj.GetComponent<RectTransform>());
             var ctrl = modalObj.AddComponent<RelationshipsModal>();
             hudView.relationshipsModal = ctrl;
 
@@ -1723,6 +1759,7 @@ namespace ArmyLife.Editor
         private static void CreateActivitiesModal(Transform parent, MainHUDView hudView)
         {
             var modalObj = CreateUIElement("ActivitiesModal", parent);
+            SetFullScreen(modalObj.GetComponent<RectTransform>());
             var ctrl = modalObj.AddComponent<ActivitiesModal>();
             hudView.activitiesModal = ctrl;
 
@@ -1795,6 +1832,7 @@ namespace ArmyLife.Editor
         private static void CreateCareerDossierModal(Transform parent, MainHUDView hudView)
         {
             var modalObj = CreateUIElement("CareerDossierModal", parent);
+            SetFullScreen(modalObj.GetComponent<RectTransform>());
             var ctrl = modalObj.AddComponent<CareerDossierModal>();
             hudView.careerDossierModal = ctrl;
 

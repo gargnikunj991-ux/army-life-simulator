@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ArmyLife.Data
@@ -63,10 +64,16 @@ namespace ArmyLife.Data
     [Serializable]
     public class WarTheater
     {
-        public WarTheaterType theaterType = WarTheaterType.WesternMudTrenches;
-        public string theaterName = "The Western Front";
-        public float hazardRating = 1.0f;
+        public WarTheaterType theaterType = WarTheaterType.ArdenRidgeTrenchLines;
+        public string theaterName = "Arden Ridge Trench Lines";
+        public float hazardRating = 1.35f;
         public string environmentDescription = "Mud and trenches";
+        public int dangerLevel = 4;
+        public float casualtyRateModifier = 1.35f;
+        public long hazardPayRate = 500L;
+        public string specializedTerrainTrait = "Muddy Trench Foot & Artillery Barrages";
+        public List<string> operationalDoctrinesRecommended = new List<string>();
+        public string enemyDoctrine = "Static Trench Defense";
 
         public WarTheater() {}
 
@@ -76,18 +83,42 @@ namespace ArmyLife.Data
             this.theaterName = name;
             this.hazardRating = hazard;
             this.environmentDescription = desc;
+            var info = WarTheaterInfo.GetInfo(type);
+            if (info != null)
+            {
+                this.dangerLevel = info.dangerLevel;
+                this.casualtyRateModifier = info.casualtyRateModifier;
+                this.hazardPayRate = info.hazardPayRate;
+                this.specializedTerrainTrait = info.specializedTerrainTrait;
+                this.operationalDoctrinesRecommended = new List<string>(info.operationalDoctrinesRecommended);
+                this.enemyDoctrine = info.enemyDoctrine;
+            }
         }
 
         public static WarTheater FromType(WarTheaterType type)
         {
             var info = WarTheaterInfo.GetInfo(type);
-            return new WarTheater(type, info.theaterName, info.baseHazardModifier, info.description);
+            var wt = new WarTheater(type, info.theaterName, info.baseHazardModifier, info.description);
+            wt.dangerLevel = info.dangerLevel;
+            wt.casualtyRateModifier = info.casualtyRateModifier;
+            wt.hazardPayRate = info.hazardPayRate;
+            wt.specializedTerrainTrait = info.specializedTerrainTrait;
+            wt.operationalDoctrinesRecommended = new List<string>(info.operationalDoctrinesRecommended);
+            wt.enemyDoctrine = info.enemyDoctrine;
+            return wt;
         }
 
         public static implicit operator WarTheater(WarTheaterInfo info)
         {
             if (info == null) return null;
-            return new WarTheater(info.theaterType, info.theaterName, info.baseHazardModifier, info.description);
+            var wt = new WarTheater(info.theaterType, info.theaterName, info.baseHazardModifier, info.description);
+            wt.dangerLevel = info.dangerLevel;
+            wt.casualtyRateModifier = info.casualtyRateModifier;
+            wt.hazardPayRate = info.hazardPayRate;
+            wt.specializedTerrainTrait = info.specializedTerrainTrait;
+            wt.operationalDoctrinesRecommended = new List<string>(info.operationalDoctrinesRecommended);
+            wt.enemyDoctrine = info.enemyDoctrine;
+            return wt;
         }
 
         public static implicit operator WarTheater(WarTheaterType type)

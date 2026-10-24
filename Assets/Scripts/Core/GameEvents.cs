@@ -21,9 +21,11 @@ namespace ArmyLife.Core
         public static Action<int> OnChildBorn;                   // (ChildTalent) Triggers Soul Transfer Prompt
         public static Action<NobleRank> OnNobleTitleInherited;   // Player becomes Duke / Clan Head
 
-        // Cultivation & Ancient Sect Events
-        public static Action OnSecretCaveDiscovered;             // 1-in-100 anomaly trigger
-        public static Action<int> OnPowerTierBreakthrough;       // (NewTierLevel)
+        // Military Qualification Events (Deprecated Cultivation Hooks)
+        [Obsolete("Deprecated in pure military sim.")]
+        public static Action OnSecretCaveDiscovered;
+        [Obsolete("Deprecated in pure military sim.")]
+        public static Action<int> OnPowerTierBreakthrough;       // (NewReadinessTier)
 
         // Imperial Retribution
         public static Action<string> OnImperialExecutionTriggered; // (Reason for royal decapitation)

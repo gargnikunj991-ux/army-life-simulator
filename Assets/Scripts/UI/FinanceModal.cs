@@ -59,7 +59,7 @@ namespace ArmyLife.UI
             else Destroy(gameObject);
 
             if (modalRoot != null) modalRoot.SetActive(false);
-            gameObject.SetActive(false);
+            else gameObject.SetActive(false);
         }
 
         private void OnEnable()
@@ -118,7 +118,10 @@ namespace ArmyLife.UI
             {
                 modalRoot.SetActive(false);
             }
-            gameObject.SetActive(false);
+            else
+            {
+                gameObject.SetActive(false);
+            }
         }
 
         public void RefreshUI()
@@ -629,10 +632,10 @@ namespace ArmyLife.UI
 
             s.cashBalance -= EconomyData.SPECIALIST_HOSPITAL_CARE_COST;
             s.health = Mathf.Min(100f, s.health + 50f);
-            s.meridianDamage = Mathf.Max(0f, s.meridianDamage - 40f);
+            s.combatReadiness = Mathf.Min(100f, s.combatReadiness + 30f);
 
             GameEvents.OnFeedEventLogged?.Invoke("MEDICAL",
-                $"<color=#00FFAA>[SPECIALIST CARE]</color> Imperial military trauma surgeons cleansed battle wounds and meridian fatigue (-40% Strain, +50 Health).");
+                $"<color=#00FFAA>[SPECIALIST CARE]</color> Military trauma surgeons repaired combat injuries and physical exhaustion (+30 Readiness, +50 Health).");
 
             GameEvents.OnSoldierStatsUpdated?.Invoke(s);
             RefreshUI();

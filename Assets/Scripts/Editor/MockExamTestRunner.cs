@@ -286,13 +286,13 @@ namespace ArmyLife.Editor
                 meridianDamage = 0f
             };
 
-            Debug.Assert(PowerTierKnowledgeSystem.GetPreTierStageName(1) == "Body Tempering", "Stage 1 should be Body Tempering!");
-            Debug.Assert(PowerTierKnowledgeSystem.GetPreTierStageName(2) == "Meridian Awakening", "Stage 2 should be Meridian Awakening!");
-            Debug.Assert(PowerTierKnowledgeSystem.GetPreTierStageName(3) == "Qi Circulation", "Stage 3 should be Qi Circulation!");
-            Debug.Assert(PowerTierKnowledgeSystem.GetPreTierStageName(4) == "Foundational Core", "Stage 4 should be Foundational Core!");
+            Debug.Assert(PowerTierKnowledgeSystem.GetPreTierStageName(1) == "Basic Conditioning", "Stage 1 should be Basic Conditioning!");
+            Debug.Assert(PowerTierKnowledgeSystem.GetPreTierStageName(2) == "Infantry Tactics", "Stage 2 should be Infantry Tactics!");
+            Debug.Assert(PowerTierKnowledgeSystem.GetPreTierStageName(3) == "Field Exercises", "Stage 3 should be Field Exercises!");
+            Debug.Assert(PowerTierKnowledgeSystem.GetPreTierStageName(4) == "Combat Readiness", "Stage 4 should be Combat Readiness!");
 
             string preTierDisplay = PowerTierKnowledgeSystem.FormatSoldierPowerTier(recruit);
-            Debug.Assert(preTierDisplay.Contains("Pre-Tier Stage 1/4 (Body Tempering)"), $"Expected Pre-Tier Stage 1/4, got: {preTierDisplay}");
+            Debug.Assert(preTierDisplay.Contains("Conditioning Stage 1/4 (Basic Conditioning)"), $"Expected Conditioning Stage 1/4, got: {preTierDisplay}");
             Debug.Log($"[Pre-Tier Init] Formatted: {preTierDisplay}");
 
             // Stepwise breakthrough through all 4 pre-tier stages up to Tier 1
@@ -325,7 +325,7 @@ namespace ArmyLife.Editor
             int recruitPerceived = PowerTierKnowledgeSystem.GetPerceivedMaxTier(recruit.powerTier, recruit.unlockedTiers11And12);
             Debug.Assert(recruitPerceived == 6, $"Recruit at Tier 1 should only perceive Tier 6 as max, got {recruitPerceived}");
             string recruitTierFormat = PowerTierKnowledgeSystem.FormatSoldierPowerTier(recruit);
-            Debug.Assert(recruitTierFormat.Contains("Tier 1 (Early)/6"), $"Format should show Tier 1 (Early)/6, got: {recruitTierFormat}");
+            Debug.Assert(recruitTierFormat.Contains("Readiness Level 1 (Class 1)/6"), $"Format should show Readiness Level 1 (Class 1)/6, got: {recruitTierFormat}");
             Debug.Assert(!PowerTierKnowledgeSystem.IsNationalGuardian(recruit.powerTier), "Tier 1 should not be National Guardian!");
             Debug.Log($"[Knowledge Fog Tier 1] Visible to soldier: {recruitTierFormat}");
 
@@ -335,17 +335,16 @@ namespace ArmyLife.Editor
             int commanderPerceived = PowerTierKnowledgeSystem.GetPerceivedMaxTier(recruit.powerTier, recruit.unlockedTiers11And12);
             Debug.Assert(commanderPerceived == 10, $"Commander at Tier 4 should perceive Tier 10 as max, got {commanderPerceived}");
             string commanderTierFormat = PowerTierKnowledgeSystem.FormatSoldierPowerTier(recruit);
-            Debug.Assert(commanderTierFormat.Contains("Tier 4 (Early)/10"), $"Format should show Tier 4 (Early)/10, got: {commanderTierFormat}");
+            Debug.Assert(commanderTierFormat.Contains("Readiness Level 4 (Class 1)/10"), $"Format should show Readiness Level 4 (Class 1)/10, got: {commanderTierFormat}");
             Debug.Assert(!PowerTierKnowledgeSystem.IsNationalGuardian(recruit.powerTier), "Tier 4 should not be National Guardian!");
             Debug.Log($"[Knowledge Fog Tier 4] Visible to soldier: {commanderTierFormat}");
 
-            // Tier 7 (Domain Lord) is a National Guardian
+            // Tier 7 is recognized
             recruit.powerTier = 7;
             recruit.subTier = PowerSubTier.Early;
             Debug.Assert(PowerTierKnowledgeSystem.IsNationalGuardian(recruit.powerTier), "Tier 7 must be recognized as National Guardian!");
             string guardianFormat = PowerTierKnowledgeSystem.FormatSoldierPowerTier(recruit);
-            Debug.Assert(guardianFormat.Contains("National Guardian"), $"Format should contain National Guardian, got: {guardianFormat}");
-            Debug.Assert(guardianFormat.Contains("Tier 7 (Early)/10"), $"Format should show Tier 7 (Early)/10, got: {guardianFormat}");
+            Debug.Assert(guardianFormat.Contains("Readiness Level 7 (Class 1)/10"), $"Format should show Readiness Level 7 (Class 1)/10, got: {guardianFormat}");
             Debug.Log($"[National Guardian] Visible to soldier: {guardianFormat}");
 
             // Tier 10 without discovery still sees max 10
@@ -354,14 +353,13 @@ namespace ArmyLife.Editor
             int apexPerceived = PowerTierKnowledgeSystem.GetPerceivedMaxTier(recruit.powerTier, recruit.unlockedTiers11And12);
             Debug.Assert(apexPerceived == 10, $"Tier 10 without secret discovery should see max 10, got {apexPerceived}");
 
-            // Discovering Ancient Sect unlocks Tiers 11 and 12
             recruit.unlockedTiers11And12 = true;
             recruit.powerTier = 11;
             recruit.subTier = PowerSubTier.Early;
             int primordialPerceived = PowerTierKnowledgeSystem.GetPerceivedMaxTier(recruit.powerTier, recruit.unlockedTiers11And12);
-            Debug.Assert(primordialPerceived == 12, $"Ancient Sect initiate should see max 12, got {primordialPerceived}");
+            Debug.Assert(primordialPerceived == 12, $"Initiate should see max 12, got {primordialPerceived}");
             string primordialFormat = PowerTierKnowledgeSystem.FormatSoldierPowerTier(recruit);
-            Debug.Assert(primordialFormat.Contains("[HIDDEN REALM]"), $"Format should contain [HIDDEN REALM], got: {primordialFormat}");
+            Debug.Assert(primordialFormat.Contains("Readiness Level 11 (Class 1)/12"), $"Format should show Readiness Level 11, got: {primordialFormat}");
             Debug.Log($"[Ancient Sect Hidden Realm] Visible to immortal: {primordialFormat}");
 
             // 3. Test Academic Study Cap (Anti-Spam)
@@ -412,10 +410,10 @@ namespace ArmyLife.Editor
             Debug.Log("<color=#00D4FF>--- Testing 4 Sub-Tiers & Progressive Difficulty Scaling ---</color>");
 
             // A. Sub-Tier Names
-            Debug.Assert(PowerTierKnowledgeSystem.GetSubTierName(PowerSubTier.Early) == "Early", "Sub-Tier 0 should be Early");
-            Debug.Assert(PowerTierKnowledgeSystem.GetSubTierName(PowerSubTier.Mid) == "Mid", "Sub-Tier 1 should be Mid");
-            Debug.Assert(PowerTierKnowledgeSystem.GetSubTierName(PowerSubTier.Late) == "Late", "Sub-Tier 2 should be Late");
-            Debug.Assert(PowerTierKnowledgeSystem.GetSubTierName(PowerSubTier.Peak) == "Peak", "Sub-Tier 3 should be Peak");
+            Debug.Assert(PowerTierKnowledgeSystem.GetSubTierName(PowerSubTier.Early) == "Class 1", "Sub-Tier 0 should be Class 1");
+            Debug.Assert(PowerTierKnowledgeSystem.GetSubTierName(PowerSubTier.Mid) == "Class 2", "Sub-Tier 1 should be Class 2");
+            Debug.Assert(PowerTierKnowledgeSystem.GetSubTierName(PowerSubTier.Late) == "Class 3", "Sub-Tier 2 should be Class 3");
+            Debug.Assert(PowerTierKnowledgeSystem.GetSubTierName(PowerSubTier.Peak) == "Senior", "Sub-Tier 3 should be Senior");
 
             // B. Climbing Difficulty Multipliers: Progressive difficulty scaling
             float diffEarly = PowerTierKnowledgeSystem.GetClimbingDifficultyFactor(1, PowerSubTier.Early);
@@ -464,7 +462,7 @@ namespace ArmyLife.Editor
 
             Debug.Assert(cultivator.subTier == PowerSubTier.Early, "Cultivator should start at Early!");
             string earlyFormat = PowerTierKnowledgeSystem.FormatSoldierPowerTier(cultivator);
-            Debug.Assert(earlyFormat.Contains("Tier 1 (Early)"), $"Expected Tier 1 (Early), got: {earlyFormat}");
+            Debug.Assert(earlyFormat.Contains("Readiness Level 1 (Class 1)"), $"Expected Class 1, got: {earlyFormat}");
 
             // Advance Early -> Mid
             bool advancedToMid = PowerCultivationEngine.AttemptBreakthrough(cultivator, null);
@@ -503,7 +501,7 @@ namespace ArmyLife.Editor
                 Debug.Log($"[Climb Step 4 - Major Realm Breakthrough] Transcended to: {PowerTierKnowledgeSystem.FormatSoldierPowerTier(cultivator)}");
             }
 
-            Debug.Log("<color=#00FFAA>========== ALL CULTIVATION KNOWLEDGE, SUB-TIERS & STUDY CAP TESTS PASSED 100%! ==========</color>");
+            Debug.Log("<color=#00FFAA>========== ALL READINESS KNOWLEDGE, SUB-TIERS & STUDY CAP TESTS PASSED 100%! ==========</color>");
         }
 
         [MenuItem("Army Life/Run 5-Button HUD & Dual Theme Simulation Test", false, 11)]

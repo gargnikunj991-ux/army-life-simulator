@@ -1,89 +1,74 @@
+using System;
 using ArmyLife.Core;
 using ArmyLife.Data;
 using UnityEngine;
 
 namespace ArmyLife.Systems
 {
+    /// <summary>
+    /// Grounded Armed Services Vocational Aptitude Battery (ASVAB) and Military Entrance Processing Station (MEPS) evaluation system.
+    /// Completely supersedes legacy fantasy talent crystal and resonance chamber apparatuses.
+    /// Evaluates recruits on arithmetic reasoning, paragraph comprehension, mechanical comprehension, and tactical aptitude.
+    /// </summary>
     public static class TalentTestingApparatus
     {
         /// <summary>
-        /// Commoners cannot view their personal talent until reaching rank E-4 (Corporal/Specialist)
-        /// to requisition the Army Resonance Chamber. Nobles view talent at birth.
+        /// Any enlisted soldier or cadet may view or verify their official MEPS / ASVAB score on record.
         /// </summary>
         public static bool CanTestSelf(SoldierProfile soldier)
         {
             if (soldier == null) return false;
-            if (soldier.nobleTitle > NobleRank.Commoner) return true; // Noble ancestral privilege
-            if (soldier.currentRank == null) return false;
-            return soldier.currentRank.unlocksSelfTalentTesting;       // E-4 clearance check
+            return true;
         }
 
         /// <summary>
-        /// Commoners cannot test family members until reaching rank E-8 (Master Sergeant).
+        /// Family members can take standard academic / military aptitude assessments.
         /// </summary>
         public static bool CanTestFamily(SoldierProfile soldier)
         {
             if (soldier == null) return false;
-            if (soldier.nobleTitle > NobleRank.Commoner) return true;
-            if (soldier.currentRank == null) return false;
-            return soldier.currentRank.unlocksFamilyTalentTesting;     // E-8 command privilege
+            return true;
         }
 
+        /// <summary>
+        /// Conducts or reviews the official Armed Forces Qualification Test (AFQT) / MEPS vocational evaluation.
+        /// </summary>
         public static bool PerformSelfApparatusTest(SoldierProfile soldier)
         {
-            if (!CanTestSelf(soldier))
-            {
-                GameEvents.OnFeedEventLogged?.Invoke("DISCIPLINE", 
-                    "<color=#FF4444>[CLEARANCE DENIED]</color> Military Regulation restricts testing apparatus access to NCOs (Rank E-4+). Your request was rejected.");
-                return false;
-            }
+            if (soldier == null) return false;
 
             soldier.isPersonalTalentRevealed = true;
 
-            string talentClassification;
-            if (soldier.talentScore >= 180) talentClassification = "<color=#FFD700>APEX TITAN CANDIDATE (S-Rank)</color>";
-            else if (soldier.talentScore >= 150) talentClassification = "<color=#AA00FF>DREADNOUGHT SEED (A-Rank)</color>";
-            else if (soldier.talentScore >= 100) talentClassification = "<color=#00AAFF>VANGUARD PRODIGY (B-Rank)</color>";
-            else if (soldier.talentScore >= 50) talentClassification = "<color=#00FF88>STANDARD OPERATIVE (C-Rank)</color>";
-            else talentClassification = "<color=#888888>BASE HYPO-REACTIVE (D-Rank)</color>";
+            int afqtScore = Mathf.Clamp(Mathf.RoundToInt((soldier.tacticalIntellect * 0.45f) + (soldier.discipline * 0.30f) + (soldier.marksmanshipScore * 0.25f)), 31, 99);
+            soldier.talentScore = afqtScore;
 
-            GameEvents.OnFeedEventLogged?.Invoke("TESTING", 
-                $"<b>[GENETIC SCANNER RESULTS]</b> Your biological aptitude for Super-Soldier Augmentations was officially measured at: <b>{soldier.talentScore} / 200</b> ({talentClassification})!");
+            string categoryDesc;
+            if (afqtScore >= 93)
+                categoryDesc = "<color=#FFD700>Category I (Top 10% • Intelligence, Special Forces & Officer Candidate Qualified)</color>";
+            else if (afqtScore >= 65)
+                categoryDesc = "<color=#00D4FF>Category II (Above Average • Signals, Combat Engineer & Technical Specialist)</color>";
+            else if (afqtScore >= 50)
+                categoryDesc = "<color=#00FFAA>Category III-A (Average • Line Infantry & Armored Reconnaissance)</color>";
+            else
+                categoryDesc = "<color=#CCCCCC>Category III-B (Minimum Enlisted Qualifying Standard)</color>";
+
+            GameEvents.OnFeedEventLogged?.Invoke("TESTING",
+                $"<b>[MEPS / ASVAB VOCATIONAL ASSESSMENT]</b> Official Armed Forces Qualification Test (AFQT) certified at: " +
+                $"<b>{afqtScore} / 99</b> ({categoryDesc})! Record placed in permanent service jacket.");
 
             GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
             return true;
         }
 
         /// <summary>
-        /// Generates a child's talent based on parental genetics with mutations.
+        /// Evaluates child inherited cognitive and vocational aptitude based on parental background.
+        /// Uses standard natural distribution without fantasy atavisms or meridian anomalies.
         /// </summary>
-        public static int RollGeneticChildTalent(int fatherTalent, int motherTalent)
+        public static int RollGeneticChildTalent(int parent1Aptitude, int parent2Aptitude)
         {
-            float average = (fatherTalent + motherTalent) / 2f;
-            float roll = Random.Range(0f, 100f);
-
-            if (roll < 7.5f)
-            {
-                // Heavenly Atavism (Super Mutation): +40 to +70 spike
-                int atavism = Mathf.RoundToInt(average + Random.Range(40, 71));
-                return Mathf.Clamp(atavism, 0, 200);
-            }
-            else if (roll < 15.0f)
-            {
-                // Meridian Degeneration: -40 to -70 drop
-                int drop = Mathf.RoundToInt(average - Random.Range(40, 71));
-                return Mathf.Clamp(drop, 0, 200);
-            }
-            else if (roll < 30.0f)
-            {
-                // Moderate Shift: +/- 20
-                return Mathf.Clamp(Mathf.RoundToInt(average + Random.Range(-20, 21)), 0, 200);
-            }
-            else
-            {
-                // Standard Inheritance (70%): +/- 10
-                return Mathf.Clamp(Mathf.RoundToInt(average + Random.Range(-10, 11)), 0, 200);
-            }
+            float average = (parent1Aptitude + parent2Aptitude) / 2f;
+            float roll = UnityEngine.Random.Range(-12f, 12f);
+            return Mathf.Clamp(Mathf.RoundToInt(average + roll), 35, 99);
         }
     }
 }

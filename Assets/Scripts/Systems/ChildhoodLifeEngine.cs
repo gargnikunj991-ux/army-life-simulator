@@ -181,15 +181,15 @@ namespace ArmyLife.Systems
             }
             else if (Mathf.Approximately(age, 10.0f))
             {
-                GameEvents.OnFeedEventLogged?.Invoke("TEMPERING",
-                    $"<color=#FFD700><b>[BODY TEMPERING • AGE 10.0]</b></color> You began youth foundational body tempering: distance running, pushups, and meridian breathing (+4 Fitness, +6 Foundational Tempering).");
+                GameEvents.OnFeedEventLogged?.Invoke("CONDITIONING",
+                    $"<color=#FFD700><b>[PHYSICAL CONDITIONING • AGE 10.0]</b></color> You began youth foundational physical conditioning: distance running, pushups, and calisthenics (+4 Fitness, +6 Combat Readiness).");
                 soldier.fitness = Mathf.Min(100f, soldier.fitness + 4f);
-                soldier.foundationalTempering = Mathf.Min(100f, soldier.foundationalTempering + 6f);
+                soldier.combatReadiness = Mathf.Min(100f, soldier.combatReadiness + 6f);
             }
             else if (Mathf.Approximately(age, 10.5f))
             {
                 GameEvents.OnFeedEventLogged?.Invoke("NUTRITION",
-                    $"<b>[BONE BROTH • AGE 10.5]</b> Your family prepared special bone-tempering herbs. Your joints feel stronger and more durable (+3 Health).");
+                    $"<b>[NUTRITION • AGE 10.5]</b> Your family prepared high-protein meals and restorative vitamins. Your joints feel stronger and more durable (+3 Health).");
                 soldier.health = Mathf.Min(100f, soldier.health + 3f);
             }
             else if (Mathf.Approximately(age, 11.0f))
@@ -452,37 +452,36 @@ namespace ArmyLife.Systems
                     "1ST BIRTHDAY TRADITION",
                     "The Grasping Ceremony (One-Year Milestone)",
                     "On your first birthday ritual, your family places traditional symbolic items before you. Which one do your tiny hands reach for?",
-                    "A Wooden Toy Dagger (+8 Fitness, +5 Tempering)",
+                    "A Wooden Toy Dagger (+8 Fitness, +5 Readiness)",
                     "An Ancient Military Scroll (+10 Intellect)",
                     "A Family Gold Sovereign (+Clan Favor, +$200 Vault)",
-                    () => { soldier.fitness += 8f; soldier.foundationalTempering += 5f; GameEvents.OnSoldierStatsUpdated?.Invoke(soldier); },
+                    () => { soldier.fitness += 8f; soldier.combatReadiness += 5f; GameEvents.OnSoldierStatsUpdated?.Invoke(soldier); },
                     () => { soldier.intellect += 10f; GameEvents.OnSoldierStatsUpdated?.Invoke(soldier); },
                     () => { soldier.clanFavor += 8f; soldier.cashBalance += 200; GameEvents.OnSoldierStatsUpdated?.Invoke(soldier); }
                 );
             }
             else if (Mathf.Approximately(age, 2.0f))
             {
-                // Age 2.0: Spilled Bio-Enhancement Serum
+                // Age 2.0: Spilled Military Ration Tonic
                 GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
-                    "LABORATORY DISCOVERY",
-                    "The Spilled Bio-Serum",
-                    "While toddling near Father's military study, you spot an unsealed vial of glowing imperial bio-enhancement serum pooling on the metal desk.",
-                    "Lick the glowing fluid! (Cellular surge vs Neural toxicity)",
+                    "STUDY ROOM DISCOVERY",
+                    "The Spilled Military Ration Tonic",
+                    "While toddling near Father's military study, you spot an unsealed flask of concentrated military vitamin tonic pooling on the desk.",
+                    "Drink the bitter tonic! (Nutritional surge vs Upset stomach)",
                     "Call out loudly for Mother (+Family Relation)",
                     "Carefully wipe it clean with your sleeve (+Discipline)",
                     () =>
                     {
                         if (UnityEngine.Random.value < 0.7f)
                         {
-                            soldier.foundationalTempering += 10f;
+                            soldier.combatReadiness += 8f;
                             soldier.fitness += 5f;
-                            GameEvents.OnFeedEventLogged?.Invoke("DILEMMA", "<color=#00FFAA>[FORTUNE]</color> Your infant biology bonded with the military nanites! Bone and muscle density reinforced (+10 Framework, +5 Fitness)!");
+                            GameEvents.OnFeedEventLogged?.Invoke("DILEMMA", "<color=#00FFAA>[FORTUNE]</color> Your body absorbed the concentrated military vitamins! (+8 Readiness, +5 Fitness)!");
                         }
                         else
                         {
-                            soldier.health = Mathf.Max(30f, soldier.health - 15f);
-                            soldier.meridianDamage += 5f;
-                            GameEvents.OnFeedEventLogged?.Invoke("DILEMMA", "<color=#FF6600>[TOXICITY RECOIL]</color> The bio-serum was too concentrated for infant receptors, causing fever and neural strain (Health -15, Neural Strain +5).");
+                            soldier.health = Mathf.Max(30f, soldier.health - 10f);
+                            GameEvents.OnFeedEventLogged?.Invoke("DILEMMA", "<color=#FF6600>[UPSET STOMACH]</color> The tonic was too concentrated for an infant, causing an upset stomach (Health -10).");
                         }
                     },
                     () =>
@@ -578,25 +577,25 @@ namespace ArmyLife.Systems
             }
             else if (Mathf.Approximately(age, 9.0f))
             {
-                // Age 9.0: Infiltrating the Forbidden Clan Martial Pavilion
+                // Age 9.0: Infiltrating the Tactical War Room
                 GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
-                    "CLAN SECRETS",
-                    "The Unlocked Martial Pavilion",
-                    "Passing through the clan courtyard at midnight, you notice the heavy iron gate to the Ancestral Martial Archive was left unlocked by an elder!",
-                    "Sneak inside and study classified cyber-neural schematics (+15 Framework)",
-                    "Respect clan tradition and run calisthenics peacefully outside (+5 Fitness, +5 Intellect)",
-                    "Lock the door and report it to Father (+10 Parent Relation, +8 Clan Favor)",
+                    "MILITARY ARCHIVES",
+                    "The Unlocked Tactical War Room",
+                    "Passing through the regimental headquarters at dusk, you notice the heavy door to the Staff Map Room was left unlocked by an officer!",
+                    "Sneak inside and study classified theater battle maps (+15 Readiness, +5 Intellect)",
+                    "Respect security rules and run calisthenics outside (+5 Fitness, +5 Discipline)",
+                    "Report the unlocked door to Father (+10 Parent Relation, +8 Merit)",
                     () =>
                     {
-                        soldier.foundationalTempering += 15f;
-                        soldier.knowsAboutCultivation = true;
-                        GameEvents.OnFeedEventLogged?.Invoke("DILEMMA", "<color=#FFD700>[SECRET UNLOCKED]</color> You studied classified blueprints of military cyberware and neural pathways! (+15 Sub-Dermal Framework, Augmentation Clearance Unlocked)!");
+                        soldier.combatReadiness += 15f;
+                        soldier.intellect += 5f;
+                        GameEvents.OnFeedEventLogged?.Invoke("DILEMMA", "<color=#FFD700>[TACTICAL INSIGHT]</color> You memorized classified regional topography and frontline defensive layouts! (+15 Readiness, +5 Intellect)!");
                     },
                     () =>
                     {
                         soldier.fitness += 5f;
-                        soldier.intellect += 5f;
-                        GameEvents.OnFeedEventLogged?.Invoke("DILEMMA", "You sat in peaceful courtyard meditation under the moonlight, refining your focus (+5 Fitness, +5 Intellect).");
+                        soldier.discipline += 5f;
+                        GameEvents.OnFeedEventLogged?.Invoke("DILEMMA", "You respected military regulations and completed calisthenics on the parade ground (+5 Fitness, +5 Discipline).");
                     },
                     () =>
                     {
@@ -685,15 +684,15 @@ namespace ArmyLife.Systems
             }
             else if (Mathf.Approximately(age, 14.5f))
             {
-                // Age 14.5: Secret Training Opportunity
+                // Age 14.5: Veteran Combat Coaching
                 GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
-                    "MARTIAL TRAINING",
-                    "The Wandering Veteran's Advice",
-                    "An old, scarred imperial veteran passing through your district offers to teach you a secret military breathing form for a few coins.",
-                    "Pay $100 and study the breathing technique diligently (+15 Tempering)",
+                    "VETERAN DRILL",
+                    "The Veteran's Close-Combat Coaching",
+                    "A scarred imperial combat veteran passing through your district offers private coaching in close-quarters trench fighting and knife defense for a small fee.",
+                    "Pay $100 for private close-combat drills (+15 Readiness, +8 Combat)",
                     "Decline and stick to official academy curriculum (+5 Merit, +4 Fitness)",
-                    "Ask him war stories about the Iron Federation (+8 Intellect)",
-                    () => { soldier.cashBalance = Math.Max(0, soldier.cashBalance - 100); soldier.foundationalTempering += 15f; soldier.knowsAboutCultivation = true; },
+                    "Ask him war stories about frontline operations (+8 Intellect)",
+                    () => { soldier.cashBalance = Math.Max(0, soldier.cashBalance - 100); soldier.combatReadiness += 15f; soldier.combatSkill += 8f; },
                     () => { soldier.meritRating += 5f; soldier.fitness += 4f; },
                     () => { soldier.intellect += 8f; }
                 );
@@ -711,7 +710,7 @@ namespace ArmyLife.Systems
                     () =>
                     {
                         soldier.participatedUndergroundRing = true;
-                        float winChance = (soldier.combatSkill * 0.5f) + (soldier.fitness * 0.3f) + (soldier.foundationalTempering * 0.2f);
+                        float winChance = (soldier.combatSkill * 0.5f) + (soldier.fitness * 0.3f) + (soldier.combatReadiness * 0.2f);
                         if (UnityEngine.Random.Range(0f, 100f) < winChance)
                         {
                             soldier.cashBalance += 250;
@@ -794,12 +793,12 @@ namespace ArmyLife.Systems
                     "NATIONAL EXAM FOCUS",
                     "Final Preparation Focus",
                     "With the National Military Ranking Exam approaching, where will you dedicate your final semester of preparation?",
-                    "Intensive High-Gravity Bootcamp (+12 Fitness, +8 Combat)",
-                    "War Room Strategy & Cyber Logistics (+15 Intellect, Cyber Track)",
-                    "Meditation & Foundational Tempering (+15 Tempering, +5 All Stats)",
+                    "Intensive Tactical Bootcamp (+12 Fitness, +8 Combat)",
+                    "War Room Strategy & Tactical Logistics (+15 Intellect, Cyber Track)",
+                    "Tactical Calisthenics & Physical Conditioning (+15 Readiness, +5 All Stats)",
                     () => { soldier.fitness += 12f; soldier.combatSkill += 8f; },
                     () => { soldier.intellect += 15f; soldier.isTechnicalSchoolGraduate = true; },
-                    () => { soldier.foundationalTempering += 15f; soldier.fitness += 5f; soldier.intellect += 5f; }
+                    () => { soldier.combatReadiness += 15f; soldier.fitness += 5f; soldier.intellect += 5f; }
                 );
             }
             else if (Mathf.Approximately(age, 17.5f))
@@ -902,17 +901,18 @@ namespace ArmyLife.Systems
                         $"<color=#00D4FF><b>[MIDNIGHT CRAMMING & NIGHT DRILLS]</b></color> You relied on pure personal determination, studying tactics by candlelight and doing midnight ruck marches. " +
                         $"Final Exam Score Boost: <b>+10 points</b>! (Intellect +10, Fitness +8, Combat +5, Health -10).");
                 },
-                // Action C: Breathing Cultivation & Mental Composure
+                // Action C: Physical Conditioning & Mental Composure
                 () =>
                 {
                     soldier.examPreparationBonus += 6;
-                    soldier.foundationalTempering = Mathf.Min(100f, soldier.foundationalTempering + 15f);
+                    soldier.combatReadiness = Mathf.Min(100f, soldier.combatReadiness + 15f);
+                    soldier.discipline = Mathf.Min(100f, soldier.discipline + 6f);
                     soldier.health = Mathf.Min(100f, soldier.health + 10f);
                     soldier.fitness = Mathf.Min(100f, soldier.fitness + 4f);
 
-                    GameEvents.OnFeedEventLogged?.Invoke("INNER SERENITY",
-                        $"<color=#00FFAA><b>[COMPOSURE & MERIDIAN TEMPERING]</b></color> You focused on mental stillness and foundational breath regulation, entering exam season with unshakeable calm. " +
-                        $"Final Exam Score Boost: <b>+6 points</b>! (Foundational Tempering +15, Health +10).");
+                    GameEvents.OnFeedEventLogged?.Invoke("DISCIPLINE",
+                        $"<color=#00FFAA><b>[COMPOSURE & PHYSICAL DRILL]</b></color> You focused on mental discipline, endurance pacing, and tactical breathing, entering exam season with unshakeable calm. " +
+                        $"Final Exam Score Boost: <b>+6 points</b>! (Readiness +15, Discipline +6, Health +10).");
                 }
             );
         }
@@ -929,7 +929,7 @@ namespace ArmyLife.Systems
             // Baseline 3 trials projection (each up to ~250 pts)
             float physicalScore = ((soldier.fitness * 0.5f) + (soldier.combatSkill * 0.5f)) * 2.2f + 25f;
             float tacticalScore = (soldier.intellect * 2.0f) + 30f;
-            float martialScore = ((soldier.combatSkill * 0.6f) + (soldier.foundationalTempering * 0.4f)) * 2.0f + 20f;
+            float martialScore = ((soldier.combatSkill * 0.6f) + (soldier.combatReadiness * 0.4f)) * 2.0f + 20f;
 
             float nobleBonus = (soldier.nobleTitle > NobleRank.Commoner) ? ((int)soldier.nobleTitle * 8f) : 0f;
             float prepBonus = soldier.examPreparationBonus * 2.0f;
@@ -1067,13 +1067,13 @@ namespace ArmyLife.Systems
             if (GameEvents.OnChildhoodDilemmaTriggered == null)
             {
                 // Headless test / automated simulation fallback when no UI is listening
-                float physicalPerf = (soldier.fitness * 0.5f) + (soldier.foundationalTempering * 0.5f);
+                float physicalPerf = (soldier.fitness * 0.5f) + (soldier.combatReadiness * 0.5f);
                 soldier.examPhysicalScore = Mathf.RoundToInt(Mathf.Clamp(physicalPerf * 2.2f + 25f, 90f, 250f));
 
                 float tacticalPerf = (soldier.intellect * 0.5f) + (soldier.combatSkill * 0.5f);
                 soldier.examTacticalScore = Mathf.RoundToInt(Mathf.Clamp(tacticalPerf * 2.2f + 25f, 90f, 250f));
 
-                float martialPerf = (soldier.combatSkill * 0.50f) + (soldier.powerTier * 15f) + (soldier.talentScore * 0.25f);
+                float martialPerf = (soldier.combatSkill * 0.50f) + (soldier.marksmanshipScore * 0.30f) + (soldier.discipline * 0.20f);
                 soldier.examMartialScore = Mathf.RoundToInt(Mathf.Clamp(martialPerf * 1.8f + 25f, 90f, 250f));
 
                 FinalizeExamAndCommission(soldier, gm);
@@ -1082,20 +1082,20 @@ namespace ArmyLife.Systems
 
             GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                 "EXAM STAGE 1: PHYSICAL TRIAL",
-                "The 5km High-Gravity Trench Run (250 pts)",
-                "The trial horn blares! You are thrown onto the brutal 5km high-gravity obstacle course: barbed wire crawls, electrified mud pits, and concrete climbing walls under simulated artillery fire.",
-                "Activate Meridian Breathing & Full Sprint (High stamina & tempering test)",
+                "The 5km Obstacle Trench Run (250 pts)",
+                "The trial horn blares! You are thrown onto the brutal 5km obstacle course: low-wire crawls, mud pits, and concrete climbing walls under simulated artillery fire.",
+                "Maintain Maximum Paced Sprint (High stamina and conditioning test)",
                 "Paced Tactical Cadence (Safe, steady energy management)",
                 "Push Past the Physical Limit with Raw Grit (+Score, Costs 15 HP)",
-                // Choice A: Meridian Breathing Sprint
+                // Choice A: Maximum Paced Sprint
                 () =>
                 {
-                    float performance = (soldier.fitness * 0.5f) + (soldier.foundationalTempering * 0.5f);
+                    float performance = (soldier.fitness * 0.5f) + (soldier.combatReadiness * 0.5f);
                     int stagePoints = Mathf.RoundToInt(Mathf.Clamp(performance * 2.2f + 25f, 90f, 250f));
                     soldier.examPhysicalScore = stagePoints;
 
                     GameEvents.OnFeedEventLogged?.Invoke("EXAM TRIAL",
-                        $"<b>[STAGE 1 RESULT]</b> Your meridian breathing surged smoothly! You vaulted the final wall in record time! " +
+                        $"<b>[STAGE 1 RESULT]</b> Your physical conditioning and pace paid off! You vaulted the final wall in record time! " +
                         $"Physical Trial Score: <color=#00FFAA><b>+{stagePoints} / 250 pts</b></color>.");
 
                     TriggerExamStage2(soldier, gm);
@@ -1182,21 +1182,21 @@ namespace ArmyLife.Systems
         {
             GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                 "EXAM STAGE 3: PROCTOR DUEL",
-                "The Live Martial Appraisal (250 pts)",
-                "Final stage! Senior Warrant Officer Proctor Gary—a towering veteran in combat armor wielding a heavy shock-blade—steps into the central ring. 'Show me your steel, candidate!'",
-                "Explosive Kinetic Strike (Direct power test; tests Combat Skill & Augmentation)",
+                "The Live Combat Appraisal (250 pts)",
+                "Final stage! Senior Drill Instructor Gary—a towering battle-hardened veteran wearing combat kit with pugil sticks—steps into the central ring. 'Show me your fighting spirit, recruit!'",
+                "Aggressive Hand-to-Hand Rush (Direct aggressive test; tests Combat Skill & Readiness)",
                 "Technical Parry & Counter-Takedown (Tests Combat Skill & Intellect)",
-                "Iron Defense: Absorb & Outlast (Tests Tempering & Fitness)",
-                // Choice A: Explosive Strike
+                "Defensive Guard: Absorb & Outlast (Tests Conditioning & Fitness)",
+                // Choice A: Aggressive Rush
                 () =>
                 {
-                    float martialRating = (soldier.combatSkill * 0.50f) + (soldier.powerTier * 15f) + (soldier.talentScore * 0.25f);
+                    float martialRating = (soldier.combatSkill * 0.50f) + (soldier.combatReadiness * 0.30f) + (soldier.discipline * 0.20f);
                     int points = Mathf.RoundToInt(Mathf.Clamp(martialRating * 1.8f + 25f, 90f, 250f));
                     soldier.examMartialScore = points;
 
                     GameEvents.OnFeedEventLogged?.Invoke("EXAM TRIAL",
-                        $"<b>[STAGE 3 RESULT]</b> Your shockwave strike forced Proctor Gary back two paces! The evaluator grins: 'Fine power, cadet!' " +
-                        $"Martial Duel Score: <color=#00FFAA><b>+{points} / 250 pts</b></color>.");
+                        $"<b>[STAGE 3 RESULT]</b> Your aggressive strike drove Instructor Gary back two paces! The evaluator grins: 'Fine fighting spirit, recruit!' " +
+                        $"Combat Evaluation Score: <color=#00FFAA><b>+{points} / 250 pts</b></color>.");
 
                     FinalizeExamAndCommission(soldier, gm);
                 },
@@ -1208,21 +1208,21 @@ namespace ArmyLife.Systems
                     soldier.examMartialScore = points;
 
                     GameEvents.OnFeedEventLogged?.Invoke("EXAM TRIAL",
-                        $"<b>[STAGE 3 RESULT]</b> You cleanly deflected his heavy slash and swept his lead leg, demonstrating pristine academy form! " +
-                        $"Martial Duel Score: <color=#00D4FF><b>+{points} / 250 pts</b></color>.");
+                        $"<b>[STAGE 3 RESULT]</b> You cleanly deflected his heavy strike and swept his lead leg, demonstrating pristine tactical form! " +
+                        $"Combat Evaluation Score: <color=#00D4FF><b>+{points} / 250 pts</b></color>.");
 
                     FinalizeExamAndCommission(soldier, gm);
                 },
-                // Choice C: Iron Defense
+                // Choice C: Defensive Guard
                 () =>
                 {
-                    float enduranceRating = (soldier.foundationalTempering * 0.55f) + (soldier.fitness * 0.45f);
+                    float enduranceRating = (soldier.combatReadiness * 0.55f) + (soldier.fitness * 0.45f);
                     int points = Mathf.RoundToInt(Mathf.Clamp(enduranceRating * 2.0f + 35f, 100f, 230f));
                     soldier.examMartialScore = points;
 
                     GameEvents.OnFeedEventLogged?.Invoke("EXAM TRIAL",
-                        $"<b>[STAGE 3 RESULT]</b> You absorbed Gary's three-hit flurry with unwavering stance, standing firm like an iron bastion! " +
-                        $"Martial Duel Score: <color=#FFD700><b>+{points} / 250 pts</b></color>.");
+                        $"<b>[STAGE 3 RESULT]</b> You absorbed Gary's three-strike flurry with unwavering stance, standing firm like an iron bastion! " +
+                        $"Combat Evaluation Score: <color=#FFD700><b>+{points} / 250 pts</b></color>.");
 
                     FinalizeExamAndCommission(soldier, gm);
                 }
@@ -1363,12 +1363,12 @@ namespace ArmyLife.Systems
         {
             if (soldier == null) return;
             soldier.fitness = Mathf.Min(100f, soldier.fitness + 5f);
-            soldier.foundationalTempering = Mathf.Min(100f, soldier.foundationalTempering + 7f);
+            soldier.combatReadiness = Mathf.Min(100f, soldier.combatReadiness + 7f);
             soldier.health = Mathf.Min(100f, soldier.health + 2f);
 
             GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
-                $"<color=#00FFAA>[BODY TEMPERING DRILL]</color> You completed an intense session of body conditioning and meridian breathing! " +
-                $"Fitness: <b>{soldier.fitness:F0}/100</b> | Foundational Tempering: <b>{soldier.foundationalTempering:F0}/100</b>.");
+                $"<color=#00FFAA>[PHYSICAL CONDITIONING DRILL]</color> You completed an intense session of body conditioning and calisthenics! " +
+                $"Fitness: <b>{soldier.fitness:F0}/100</b> | Combat Readiness: <b>{soldier.combatReadiness:F0}/100</b>.");
             GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
         }
 
@@ -1410,12 +1410,12 @@ namespace ArmyLife.Systems
             if (soldier == null) return;
 
             soldier.intellect = Mathf.Min(100f, soldier.intellect + 5f);
-            soldier.foundationalTempering = Mathf.Min(100f, soldier.foundationalTempering + 6f);
-            soldier.knowsAboutCultivation = true;
+            soldier.combatReadiness = Mathf.Min(100f, soldier.combatReadiness + 6f);
+            soldier.discipline = Mathf.Min(100f, soldier.discipline + 3f);
 
             GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
-                $"<color=#00D4FF>[MILITARY ARCHIVES]</color> You studied technical blueprints of biomechanical augmentations and neural frameworks! " +
-                $"Sub-Dermal Framework: <b>{soldier.foundationalTempering:F0}/100</b> | Intellect: <b>{soldier.intellect:F0}/100</b> (Augmentation doctrine mastered).");
+                $"<color=#00D4FF>[MILITARY TACTICAL ARCHIVES]</color> You studied field warfare doctrine, artillery tables, and squad tactics! " +
+                $"Tactical Intellect: <b>{soldier.intellect:F0}/100</b> | Readiness: <b>{soldier.combatReadiness:F0}/100</b>.");
             GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
         }
 
@@ -1438,21 +1438,21 @@ namespace ArmyLife.Systems
         {
             if (soldier == null) return;
 
-            int soupCost = 30;
-            if (soldier.cashBalance >= soupCost)
+            int mealCost = 30;
+            if (soldier.cashBalance >= mealCost)
             {
-                soldier.cashBalance -= soupCost;
+                soldier.cashBalance -= mealCost;
                 soldier.health = Mathf.Min(100f, soldier.health + 8f);
-                soldier.foundationalTempering = Mathf.Min(100f, soldier.foundationalTempering + 5f);
+                soldier.combatReadiness = Mathf.Min(100f, soldier.combatReadiness + 5f);
 
                 GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
-                    $"<color=#00FFAA>[APOTHECARY BONE BROTH]</color> You bought a steaming bowl of ginseng and iron-marrow root broth (-${soupCost})! " +
-                    $"Health restored to <b>{soldier.health:F0}/100</b> | Tempering: <b>{soldier.foundationalTempering:F0}/100</b>.");
+                    $"<color=#00FFAA>[HIGH-PROTEIN MESS RATION]</color> You bought a nutritious meal of fresh meat, grains, and restorative vitamins (-${mealCost})! " +
+                    $"Health restored to <b>{soldier.health:F0}/100</b> | Readiness: <b>{soldier.combatReadiness:F0}/100</b>.");
             }
             else
             {
                 GameEvents.OnFeedEventLogged?.Invoke("ACTIVITY",
-                    $"<color=#FF8800>[INSUFFICIENT FUNDS]</color> A nourishing bowl of apothecary bone soup costs ${soupCost}. You only have ${soldier.cashBalance}.");
+                    $"<color=#FF8800>[INSUFFICIENT FUNDS]</color> A nutritious high-protein meal costs ${mealCost}. You only have ${soldier.cashBalance}.");
             }
             GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
         }

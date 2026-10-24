@@ -22,7 +22,7 @@ namespace ArmyLife.Data
         MilitaryOfficer,        // O-1 to O-10 active duty
         MilitaryTechSchool,     // 2 years (4 semesters). Year 1 unpaid ($0), Year 2 paid $200/mo. Passes out as E-3 Specialist with tech stipends!
         MilitaryMedicalSchool,  // 3 years (6 semesters). Year 1 unpaid ($0), Years 2-3 paid $250/mo. Passes out as Combat Medic Officer!
-        MilitaryWarAcademy,     // 4 years (8 semesters). PAID FROM DAY 1 ($300/mo). MUST have Tier 1 Cultivation to pass out!
+        MilitaryWarAcademy,     // 4 years (8 semesters). PAID FROM DAY 1 ($300/mo). Officer cadet commissioning academy!
         // Civilian Tracks
         CivilianWork,           // Direct entry jobs $150/mo to $300/mo
         CivilianCollege,        // 4 years (8 semesters). Costs $100,000 for 4 years ($12,500/sem).
@@ -48,7 +48,7 @@ namespace ArmyLife.Data
         public int totalSemestersLived;         // Number of 6-month turns survived
         public bool isYouthPhase => age < 18.0f;
         public bool isRetired;                  // True if honorably discharged / retired to veteran life
-        public bool isDead;                     // True if KIA, executed, or killed by breakthrough backlash
+        public bool isDead;                     // True if KIA, executed, or fatal combat injury
         public string deathReason;
 
         [Header("Appearance & Customization (BitLife style)")]
@@ -300,31 +300,15 @@ namespace ArmyLife.Data
                 "You swear to survive the war and build a peaceful world for your child.");
         }
 
-        [Header("Power Cultivation (4 Pre-Tier Stages + 12 Tiers with 4 Sub-Tiers)")]
-        [Range(1, 4)]
-        public int preTierStage = 1;            // 1 to 4: Body Tempering, Meridian Awakening, Qi Circulation, Foundational Core
-        [Range(0, 12)]
-        public int powerTier;                   // 0 to 12 (0 = Pre-Tier Stages 1-4)
-        public PowerSubTier subTier = PowerSubTier.Early; // Early, Mid, Late, Peak within each tier
-        [Range(0f, 100f)]
-        public float tierProgressPercent;       // Progress towards next sub-tier or major tier breakthrough
-        public int failedBreakthroughCount;     // Consecutive bottleneck failures (3 = fatal / crippling!)
-        [Range(0f, 100f)]
-        public float meridianDamage;            // 0 = healthy; 50+ = severe cultivation penalty
-        public bool hasDiscoveredSecretCave;    // True if unsealed Ancient Cultivation Sect Cave
-        public bool unlockedTiers11And12;       // Secret Transcendent Realms (500 & 1,000 year lifespans)
-        public bool hasCorruptedFoundation;     // If true, locked out of Secret Cave
-
-        [Header("Talent (0 to 200 Scale)")]
-        [Range(0, 200)]
-        public int talentScore;                 // Multiplies cultivation absorption and breakthrough chance
-        public bool isPersonalTalentRevealed;   // Revealed at birth for Nobles; revealed at E-4 for Commoners
-        public bool isFamilyTalentRevealed;     // Revealed at E-8 (Master Sergeant) clearance
-
-        [Header("Core Attributes (0-100)")]
+        [Header("Grounded Military Attributes (0-100)")]
         [Range(0f, 100f)] public float health = 100f;
-        [Range(0f, 100f)] public float fitness = 50f;
+        [Range(0f, 100f)] public float physicalFitness = 50f;
+        [Range(0f, 100f)] public float marksmanshipScore = 50f;
+        [Range(0f, 100f)] public float tacticalIntellect = 50f;
+        [Range(0f, 100f)] public float discipline = 60f;
+        [Range(0f, 100f)] public float combatReadiness = 50f;
         [Range(0f, 100f)] public float combatSkill = 30f;
+        [Range(0f, 100f)] public float leadership = 50f;
         [Range(0f, 100f)] public float meritRating = 50f;
         [Range(0f, 100f)] public float politicalInfluence = 10f;
         [Range(0f, 100f)] public float clanFavor = 50f;
@@ -332,15 +316,51 @@ namespace ArmyLife.Data
         [Range(0f, 100f)] public float coFavor = 50f;
         [Range(0f, 100f)] public float happiness = 80f;
 
+        // Backward-compatible attribute aliases
+        public float fitness { get => physicalFitness; set => physicalFitness = value; }
+        public float intellect { get => tacticalIntellect; set => tacticalIntellect = value; }
+        public float foundationalTempering { get => combatReadiness; set => combatReadiness = value; }
+
+        [Header("Legacy Cultivation Mechanics (Deprecated for Pure Military Sim)")]
+        [Obsolete("Pre-tier stages are deprecated; use physicalFitness and combatReadiness.")]
+        public int preTierStage = 1;
+        [Obsolete("Meridian damage is deprecated; physical injuries are tracked via health/fitness.")]
+        public float meridianDamage = 0f;
+        [Obsolete("Secret cultivation caves are deprecated in realistic military sim.")]
+        public bool hasDiscoveredSecretCave = false;
+        [Obsolete("Fantasy talent score is deprecated; military aptitude uses marksmanshipScore/tacticalIntellect.")]
+        public int talentScore = 50;
+        [Obsolete("Personal talent reveal is deprecated; qualification scores are available upon examination.")]
+        public bool isPersonalTalentRevealed = true;
+        [Obsolete("Family talent reveal is deprecated.")]
+        public bool isFamilyTalentRevealed = true;
+        [Obsolete("Cultivation knowledge is deprecated in pure military sim.")]
+        public bool knowsAboutCultivation = false;
+        [Obsolete("Spouse talent is deprecated.")]
+        public int spouseTalent = 0;
+        [Obsolete("Power tiers are deprecated; military standing uses MilitaryRankSO and Paygrades.")]
+        public int powerTier = 0;
+        [Obsolete("Cultivation sub-tiers are deprecated.")]
+        public PowerSubTier subTier = PowerSubTier.Early;
+        [Obsolete("Tier progress percent is deprecated.")]
+        public float tierProgressPercent = 0f;
+        [Obsolete("Failed breakthroughs are deprecated.")]
+        public int failedBreakthroughCount = 0;
+        [Obsolete("Transcendent tiers are deprecated.")]
+        public bool unlockedTiers11And12 = false;
+        [Obsolete("Corrupted foundation is deprecated.")]
+        public bool hasCorruptedFoundation = false;
+        [Obsolete("Soul transfer is deprecated.")]
+        public bool hasRejectedChildSoulTransfer = false;
+
         [Header("Knowledge & Family Well-Being")]
-        public bool knowsAboutCultivation;      // False for commoners; unlocked at E-4 or noble birth
         public float familyLivingCondition = 20f; // 0=Impoverished, 40=Modest, 70=Comfortable, 100=Prominent
         public long totalSentToFamily;
         public long totalRemittancesSentToFamily { get => totalSentToFamily; set => totalSentToFamily = value; }
 
         [Header("Treasury & Military Currency")]
         public long cashBalance;
-        public long combatMeritPoints;          // Restricted military currency for serums & prototypes
+        public long combatMeritPoints;          // Restricted military currency for equipment & prototypes
 
         [Header("Military Career Tracking")]
         public int timeInCurrentRankSemesters;
@@ -355,27 +375,27 @@ namespace ArmyLife.Data
         public bool isMarried;
         public string spouseName;
         public NobleRank spouseNobleRank;
-        public int spouseTalent;
         public int childrenCount;
-        public bool hasRejectedChildSoulTransfer; // If true, locked until death -> reincarnate as youngest descendant
 
         public SoldierProfile()
         {
             health = 100f;
-            fitness = 50f;
+            physicalFitness = 50f;
+            marksmanshipScore = 50f;
+            tacticalIntellect = 50f;
+            discipline = 60f;
+            combatReadiness = 50f;
             combatSkill = 30f;
             meritRating = 50f;
             politicalInfluence = 10f;
             clanFavor = 50f;
             squadRespect = 50f;
             coFavor = 50f;
+            happiness = 80f;
+            leadership = 50f;
         }
 
         [Header("Childhood & Youth Development (Ages 0 to 18)")]
-        [Range(0f, 100f)] public float intellect = 50f;
-        [Range(0f, 100f)] public float discipline = 60f;
-        [Range(0f, 100f)] public float leadership = 50f;
-        [Range(0f, 100f)] public float foundationalTempering = 10f;
         public int examScore;
         public string siblingRivalName = "Lucian";
         public float parentRelationship = 80f;
@@ -531,26 +551,29 @@ namespace ArmyLife.Data
             }
         }
 
-        public SoldierProfile(string name, FamilyLineageSO initialLineage, int rolledTalent)
+        public SoldierProfile(string name, FamilyLineageSO initialLineage, int rolledTalent = 50)
         {
             characterName = name;
             lineage = initialLineage;
             age = 18.0f; // Directly enlists at age 18 into active military service!
             totalSemestersLived = 0;
             careerTrack = CareerTrack.MilitaryEnlisted;
-            talentScore = rolledTalent;
             isRetired = false;
             isDead = false;
             health = 100f;
-            fitness = 75f;
+            physicalFitness = 75f;
+            marksmanshipScore = Mathf.Clamp(rolledTalent / 2f, 30f, 95f);
+            tacticalIntellect = 65f;
+            discipline = 65f;
+            combatReadiness = 60f;
             combatSkill = 35f;
             meritRating = 50f;
-            intellect = 65f;
             squadRespect = 50f;
             coFavor = 50f;
             cashBalance = 350L;
             failedBreakthroughCount = 0;
             meridianDamage = 0f;
+            talentScore = rolledTalent;
             parentRelationship = 85f;
             siblingRelationship = 50f;
 
@@ -562,15 +585,14 @@ namespace ArmyLife.Data
                 clanFavor = initialLineage.startingClanFavor;
                 cashBalance = initialLineage.startingFamilyWealth;
                 powerTier = initialLineage.startingPowerTier;
-
-                // Noble houses have ancestral testing stones to reveal talent at birth
-                isPersonalTalentRevealed = (nobleTitle > NobleRank.Commoner);
             }
             else
             {
                 nobleTitle = NobleRank.Commoner;
-                isPersonalTalentRevealed = false;
             }
+
+            isPersonalTalentRevealed = true;
+            isFamilyTalentRevealed = true;
 
             InitializeDefaultClanMembers();
             InitializeSchoolPeersIfEligible();
