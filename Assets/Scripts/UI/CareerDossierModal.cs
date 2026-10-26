@@ -1,6 +1,7 @@
 using System.Text;
 using ArmyLife.Core;
 using ArmyLife.Data;
+using ArmyLife.Systems;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -14,6 +15,7 @@ namespace ArmyLife.UI
         [Header("Modal Root & Visuals")]
         public GameObject modalRoot;
         public Image modalBackdrop;
+        public Image dialogPanelImage;
 
         [Header("Header Labels")]
         public TextMeshProUGUI headerTitleText;
@@ -32,6 +34,8 @@ namespace ArmyLife.UI
         [Header("Action Buttons")]
         public Button enlistNewRecruitButton;
         public Button closeDossierButton;
+
+        private SoldierProfile currentSoldier;
 
         private void Awake()
         {
@@ -57,15 +61,24 @@ namespace ArmyLife.UI
 
         private void OnEnable()
         {
+            ThemeManager.OnThemeChanged += OnThemeChanged;
+
             if (enlistNewRecruitButton != null)
                 enlistNewRecruitButton.onClick.AddListener(OnEnlistNewRecruitClicked);
 
             if (closeDossierButton != null)
                 closeDossierButton.onClick.AddListener(CloseModal);
+
+            ThemePalette p = ThemeManager.Instance != null 
+                ? ThemeManager.Instance.GetCurrentPalette() 
+                : ThemeManager.GetPalette(ThemeMode.Dark);
+            ApplyThemePalette(p);
         }
 
         private void OnDisable()
         {
+            ThemeManager.OnThemeChanged -= OnThemeChanged;
+
             if (enlistNewRecruitButton != null)
                 enlistNewRecruitButton.onClick.RemoveListener(OnEnlistNewRecruitClicked);
 
@@ -76,10 +89,16 @@ namespace ArmyLife.UI
         public void OpenDossier(SoldierProfile soldier)
         {
             if (soldier == null) return;
+            currentSoldier = soldier;
 
             gameObject.SetActive(true);
             if (modalRoot != null) modalRoot.SetActive(true);
             transform.SetAsLastSibling();
+
+            ThemePalette p = ThemeManager.Instance != null 
+                ? ThemeManager.Instance.GetCurrentPalette() 
+                : ThemeManager.GetPalette(ThemeMode.Dark);
+            ApplyThemePalette(p);
 
             PopulateDossier(soldier);
         }
@@ -90,14 +109,75 @@ namespace ArmyLife.UI
             else gameObject.SetActive(false);
         }
 
+        private void OnThemeChanged(ThemeMode mode, ThemePalette palette)
+        {
+            ApplyThemePalette(palette);
+            if (currentSoldier != null)
+            {
+                PopulateDossier(currentSoldier);
+            }
+        }
+
+        private void ApplyThemePalette(ThemePalette p)
+        {
+            if (modalBackdrop != null)
+            {
+                modalBackdrop.color = p.mode == ThemeMode.Light 
+                    ? new Color(0.12f, 0.12f, 0.10f, 0.75f) 
+                    : new Color(0f, 0f, 0f, 0.90f);
+            }
+
+            if (dialogPanelImage != null)
+            {
+                dialogPanelImage.color = p.cardBackground;
+            }
+            else if (modalRoot != null)
+            {
+                var img = modalRoot.GetComponent<Image>();
+                if (img != null) img.color = p.cardBackground;
+            }
+
+            if (headerTitleText != null) headerTitleText.color = p.accentGold;
+            if (unitAndOriginText != null) unitAndOriginText.color = p.textSecondary;
+            if (serviceYearsText != null) serviceYearsText.color = p.textPrimary;
+            if (combatToursText != null) combatToursText.color = p.textPrimary;
+            if (finalScoreText != null) finalScoreText.color = p.accentGold;
+            if (medalsRackText != null) medalsRackText.color = p.textPrimary;
+
+            if (enlistNewRecruitButton != null)
+            {
+                var img = enlistNewRecruitButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnAgeGrowBg;
+                var txt = enlistNewRecruitButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.color = p.btnAgeGrowText;
+            }
+
+            if (closeDossierButton != null)
+            {
+                var img = closeDossierButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnNormalBg;
+                var txt = closeDossierButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.color = p.btnNormalText;
+            }
+        }
+
         private void PopulateDossier(SoldierProfile soldier)
         {
-            string rankName = soldier.currentRank != null ? soldier.currentRank.rankName : "Private Recruit";
-            string paygrade = soldier.currentRank != null ? soldier.currentRank.paygrade : "E-1";
+            ThemePalette p = ThemeManager.Instance != null 
+                ? ThemeManager.Instance.GetCurrentPalette() 
+                : ThemeManager.GetPalette(ThemeMode.Dark);
+
+            string goldHex = ColorUtility.ToHtmlStringRGB(p.accentGold);
+            string greenHex = ColorUtility.ToHtmlStringRGB(p.accentEmerald);
+            string blueHex = ColorUtility.ToHtmlStringRGB(p.accentCobalt);
+            string redHex = ColorUtility.ToHtmlStringRGB(p.accentCrimson);
+            string coyoteHex = ColorUtility.ToHtmlStringRGB(p.accentCoyote);
+
+            string rankTitle = soldier.GetRankDisplayName();
 
             if (soldierNameRankText != null)
             {
-                soldierNameRankText.text = $"<color=#00FFAA><b>{rankName.ToUpper()} {soldier.characterName.ToUpper()}</b></color> ({paygrade})";
+                soldierNameRankText.text = $"<color=#{goldHex}><b>{rankTitle.ToUpper()} • {soldier.characterName.ToUpper()}</b></color>";
             }
 
             if (unitAndOriginText != null)
@@ -111,20 +191,20 @@ namespace ArmyLife.UI
             {
                 if (soldier.isDead)
                 {
-                    serviceStatusText.text = $"<color=#FF4444><b>[STATUS: KILLED IN ACTION]</b></color>\n<i>{soldier.deathReason}</i>";
+                    serviceStatusText.text = $"<color=#{redHex}><b>[STATUS: KILLED IN ACTION]</b></color>\n<i>{soldier.deathReason}</i>";
                 }
                 else if (soldier.isRetired)
                 {
                     string careerStr = soldier.veteranCareer != VeteranCareer.None ? $" • {soldier.veteranCareer}" : "";
-                    serviceStatusText.text = $"<color=#00FFAA><b>[STATUS: HONORABLY RETIRED{careerStr.ToUpper()}]</b></color>\n<i>Awarded Full Lifetime Military Pension & Veteran Honors</i>";
+                    serviceStatusText.text = $"<color=#{greenHex}><b>[STATUS: HONORABLY RETIRED{careerStr.ToUpper()}]</b></color>\n<i>Awarded Full Lifetime Military Pension & Veteran Honors</i>";
                 }
                 else if (soldier.currentRank != null && (soldier.currentRank.paygrade == "O-10" || soldier.currentRank.rankName.Contains("General")))
                 {
-                    serviceStatusText.text = "<color=#FFD700><b>[STATUS: SUPREME VICTORY • GENERAL OF THE ARMY]</b></color>\n<i>Supreme Allied Commander of National Armed Forces</i>";
+                    serviceStatusText.text = $"<color=#{goldHex}><b>[STATUS: SUPREME VICTORY • GENERAL OF THE ARMY]</b></color>\n<i>Supreme Allied Commander of National Armed Forces</i>";
                 }
                 else
                 {
-                    serviceStatusText.text = "<color=#44D4FF><b>[STATUS: ACTIVE SERVICE RECORD]</b></color>\n<i>Serving with Honor in the Armed Forces</i>";
+                    serviceStatusText.text = $"<color=#{coyoteHex}><b>[STATUS: ACTIVE SERVICE RECORD]</b></color>\n<i>Serving with Honor in the Armed Forces</i>";
                 }
             }
 
@@ -133,13 +213,13 @@ namespace ArmyLife.UI
             int tours = soldier.totalSemestersLived;
             string wealthTitle = "Modest Commoner";
             if (soldier.cashBalance >= 10000000L || soldier.familyHouseTier == FamilyHouseTier.ImperialDynasticSeat)
-                wealthTitle = "<color=#FFD700><b>The Gilded Sovereign Myth (Apex Dynasty)</b></color>";
+                wealthTitle = $"<color=#{goldHex}><b>The Gilded Sovereign Myth (Apex Dynasty)</b></color>";
             else if (soldier.cashBalance >= 2500000L || soldier.familyHouseTier == FamilyHouseTier.SovereignImperialChateau)
-                wealthTitle = "<color=#FFAA00><b>Sovereign Royal Powerbroker</b></color>";
+                wealthTitle = $"<color=#{goldHex}><b>Sovereign Royal Powerbroker</b></color>";
             else if (soldier.cashBalance >= 500000L || soldier.familyHouseTier == FamilyHouseTier.DucalPalaceCitadel)
-                wealthTitle = "<color=#00FFAA><b>Grand Provincial Oligarch</b></color>";
+                wealthTitle = $"<color=#{greenHex}><b>Grand Provincial Oligarch</b></color>";
             else if (soldier.cashBalance >= 100000L || soldier.familyHouseTier == FamilyHouseTier.AncestralEstate)
-                wealthTitle = "<color=#00D4FF><b>Prominent Patrician Nobility</b></color>";
+                wealthTitle = $"<color=#{coyoteHex}><b>Prominent Patrician Nobility</b></color>";
             else if (soldier.cashBalance >= 25000L)
                 wealthTitle = "Comfortable Veteran";
 
@@ -158,13 +238,13 @@ namespace ArmyLife.UI
             if (combatToursText != null)
             {
                 string extLabel = soldier.consecutiveCombatSemesters >= 2 
-                    ? $"\n<color=#FFD700><b>Extended Combat Veteran:</b> {soldier.consecutiveCombatSemesters * 0.5f:F1} yrs continuous frontline service (+10% Bonus Qualified)</color>" 
+                    ? $"\n<color=#{goldHex}><b>Extended Combat Veteran:</b> {soldier.consecutiveCombatSemesters * 0.5f:F1} yrs continuous frontline service (+10% Bonus Qualified)</color>" 
                     : "";
                 string sfLabel = soldier.isSpecialForces
-                    ? $"\n<color=#FF4444><b>Special Forces Operator:</b> {soldier.specialForcesMissionsSurvived} Black Ops Missions Survived</color>"
+                    ? $"\n<color=#{redHex}><b>Special Forces Operator:</b> {soldier.specialForcesMissionsSurvived} Black Ops Missions Survived</color>"
                     : "";
                 string academyLabel = soldier.graduatedWarAcademy
-                    ? "\n<color=#00FFAA><b>War Academy Graduate:</b> Commissioned Officer (O-1)</color>"
+                    ? $"\n<color=#{greenHex}><b>War Academy Graduate:</b> Commissioned Officer (O-1)</color>"
                     : "";
 
                 int aliveSquad = 0;
@@ -172,9 +252,9 @@ namespace ArmyLife.UI
                 {
                     foreach (var m in soldier.squadMates) if (!m.isDead) aliveSquad++;
                 }
-                string squadLabel = $"\n<color=#00D4FF><b>Brothers in Arms:</b> {aliveSquad}/4 Squadmates Survived War</color>";
+                string squadLabel = $"\n<color=#{blueHex}><b>Brothers in Arms:</b> {aliveSquad}/4 Squadmates Survived War</color>";
                 string heirLabel = soldier.childHeir != null 
-                    ? $"\n<color=#FFD700><b>Next Generation Heir:</b> {soldier.childHeir.childName} {soldier.lastName} (Age {soldier.childHeir.age:F1})</color>"
+                    ? $"\n<color=#{goldHex}><b>Next Generation Heir:</b> {soldier.childHeir.childName} {soldier.lastName} (Age {soldier.childHeir.age:F1})</color>"
                     : "";
 
                 combatToursText.text = $"<b>Promotions Earned:</b> {soldier.totalPromotionsEarned} | <b>Combat:</b> {soldier.combatSkill:F0}% | <b>Discipline:</b> {soldier.intellect:F0}%{extLabel}{sfLabel}{academyLabel}{squadLabel}{heirLabel}";
@@ -188,13 +268,14 @@ namespace ArmyLife.UI
                     var sb = new StringBuilder();
                     for (int i = 0; i < soldier.earnedMedals.Count; i++)
                     {
-                        sb.AppendLine($"• <color=#FFD700><b>{soldier.earnedMedals[i]}</b></color>");
+                        sb.AppendLine($"• <color=#{goldHex}><b>{soldier.earnedMedals[i]}</b></color>");
                     }
                     medalsRackText.text = sb.ToString();
                 }
                 else
                 {
-                    medalsRackText.text = "<color=#888888>No combat decorations recorded in service file.</color>";
+                    string mutedHex = ColorUtility.ToHtmlStringRGB(p.textMuted);
+                    medalsRackText.text = $"<color=#{mutedHex}>No combat decorations recorded in service file.</color>";
                 }
             }
 
@@ -228,7 +309,7 @@ namespace ArmyLife.UI
 
             if (finalScoreText != null)
             {
-                finalScoreText.text = $"<color=#FFD700><b>CAREER LEGACY SCORE: {totalScore:N0} PTS</b></color>";
+                finalScoreText.text = $"<color=#{goldHex}><b>CAREER LEGACY SCORE: {totalScore:N0} PTS</b></color>";
             }
 
             // Update button label for Generational Continuation

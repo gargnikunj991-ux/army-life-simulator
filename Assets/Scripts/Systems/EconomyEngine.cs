@@ -101,9 +101,11 @@ namespace ArmyLife.Systems
 
             long netTakeHomeSalary = Math.Max(0L, semesterGrossSalary - semesterTax - semesterAcademyLoan - semesterCollegeLoan);
 
-            // 4. Investment Dividends (War Bonds: $30/sem each; Guild Shares: $60/sem each)
-            long bondDividends = soldier.warBondsOwned * EconomyData.WAR_BOND_SEMESTER_DIVIDEND;
-            long guildDividends = soldier.tradeGuildShares * EconomyData.TRADE_GUILD_SHARE_SEMESTER_DIVIDEND;
+            // 4. Investment Dividends (Adjusted dynamically by WartimeMarketEngine)
+            long baseBondDiv = soldier.warBondsOwned * EconomyData.WAR_BOND_SEMESTER_DIVIDEND;
+            long baseGuildDiv = soldier.tradeGuildShares * EconomyData.TRADE_GUILD_SHARE_SEMESTER_DIVIDEND;
+            long bondDividends = WartimeMarketEngine.GetAdjustedBondDividend(baseBondDiv);
+            long guildDividends = WartimeMarketEngine.GetAdjustedTradeGuildDividend(baseGuildDiv);
             long totalDividends = bondDividends + guildDividends;
             soldier.investmentDividendsLastSemester = totalDividends;
 
@@ -124,6 +126,7 @@ namespace ArmyLife.Systems
                         // The Iron Vanguard Commandos capture high-value enemy commanders
                         semesterCombatBounties += (long)UnityEngine.Random.Range(4000L, 8000L);
                     }
+                    semesterCombatBounties = WartimeMarketEngine.GetAdjustedCombatBounty(semesterCombatBounties);
                     soldier.combatBountiesEarned += semesterCombatBounties;
                 }
                 else
@@ -132,13 +135,16 @@ namespace ArmyLife.Systems
                     if (soldier.isFlightDuty && UnityEngine.Random.value < 0.35f)
                     {
                         semesterCombatBounties = (long)UnityEngine.Random.Range(1500L, 3000L);
+                        semesterCombatBounties = WartimeMarketEngine.GetAdjustedCombatBounty(semesterCombatBounties);
                         soldier.combatBountiesEarned += semesterCombatBounties;
                     }
                 }
             }
 
-            // 7. Housing Living Costs / Upkeep (Air Force gets 20% discount on housing expenses)
-            long housingUpkeep = EconomyData.GetHousingSemesterCost(soldier.housingTier, soldier.militaryBranch);
+            // 7. Housing Living Costs / Upkeep (Adjusted dynamically by WartimeMarketEngine)
+            long housingUpkeep = (soldier.careerTrack == CareerTrack.MilitaryRecruitBasic)
+                ? 0L
+                : WartimeMarketEngine.GetAdjustedHousingCost(soldier.housingTier, soldier.militaryBranch);
             soldier.totalHousingExpensesPaid += housingUpkeep;
 
             // Air Force base housing living condition advantage: +15% Morale, +10% Health recovery
@@ -237,7 +243,8 @@ namespace ArmyLife.Systems
             }
 
             efficiency = Mathf.Clamp(efficiency, 0.60f, 2.20f);
-            return (long)(baseRevenue * efficiency);
+            long unadjustedRev = (long)(baseRevenue * efficiency);
+            return WartimeMarketEngine.GetAdjustedBusinessRevenue(soldier.ownedBusiness, unadjustedRev);
         }
 
         private static void LogSemesterFinancialFeed(

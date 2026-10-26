@@ -1,5 +1,6 @@
 using ArmyLife.Core;
 using ArmyLife.Data;
+using ArmyLife.UI;
 using UnityEngine;
 
 namespace ArmyLife.Systems
@@ -61,7 +62,7 @@ namespace ArmyLife.Systems
                     "National Exam Honors (> 50%)",
                     $"National Exam Result: {soldier.examScore}/750 ({scorePercent:F1}%)\n" +
                     "High honors! You qualify for Imperial Military Academies or Prestigious University Degrees.",
-                    "ARMY WAR ACADEMY (2 Yrs, $50k Tuition -> The Iron Vanguard)",
+                    "ARMY WAR ACADEMY (2 Yrs, $100k Tuition -> The Iron Vanguard)",
                     "AIR FORCE FLIGHT ACADEMY (3 Yrs, $200k Tuition -> Celestial Valkyries)",
                     "IMPERIAL UNIVERSITY DEGREE ($100,000 Tuition -> High Civil Office)",
                     () => EnrollInWarAcademy(soldier, takeLoan: soldier.cashBalance < EconomyData.ARMY_ACADEMY_TUITION_COST, deductionPercent: 0.15f, branch: MilitaryBranch.Army),
@@ -275,6 +276,8 @@ namespace ArmyLife.Systems
                         soldier.currentRank = e1Rank;
                         soldier.timeInCurrentRankSemesters = 0;
                         soldier.accumulatedPromotionPoints = 0;
+                        soldier.isInCombatDeployment = true;
+                        soldier.currentTheater = WarTheaterType.ArdenRidgeTrenchLines;
 
                         if (soldier.militaryBranch == MilitaryBranch.AirForce)
                         {
@@ -283,15 +286,21 @@ namespace ArmyLife.Systems
                                 : "Air Base Ground Logistics & Avionics";
 
                             GameEvents.OnFeedEventLogged?.Invoke("GRADUATION",
-                                "<color=#00D4FF><b>[AIR FORCE BASIC TRAINING CONCLUDED • AIRMAN E-1]</b></color> You completed 1 year of aviation recruit conditioning! " +
-                                $"Commissioned as <b>Airman (E-1)</b> in {soldier.assignedDepartment}. Monthly military pay begins and superior air base quarters activated!");
+                                "<color=#00D4FF><b>[AIR FORCE BASIC TRAINING CONCLUDED • AIRMAN E-1]</b></color> You completed 1 year of aviation recruit conditioning (100% government funded)! " +
+                                $"Commissioned as <b>Airman (E-1)</b> in {soldier.assignedDepartment}. Monthly military pay begins with superior air base quarters and flight bonus (+15% Flight Pay)! " +
+                                "Career progression open to NCO ranks and Officer Commissioning (Ensign / Flight Lieutenant O-1)!");
+                            GameEvents.OnFeedEventLogged?.Invoke("DEPLOYMENT ORDERS",
+                                "<color=#FF4444><b>[MOBILIZATION ORDER • ACTIVE DEPLOYMENT]</b></color> High Command has assigned your squadron to forward combat operations at <b>Arden Ridge Trench Lines</b>! Prepare for active deployment next tour!");
                         }
                         else
                         {
                             soldier.assignedDepartment = "Line Infantry Regiment";
                             GameEvents.OnFeedEventLogged?.Invoke("GRADUATION",
-                                "<color=#00FFAA><b>[BASIC TRAINING CONCLUDED • PRIVATE E-1]</b></color> You completed the grueling 6-month recruit drills! " +
-                                "You earned your private stripes (E-1). Your monthly military pay and frontline combat bounty eligibility begin.");
+                                "<color=#00FFAA><b>[BASIC TRAINING CONCLUDED • PRIVATE E-1]</b></color> You completed the grueling 6-month recruit drills (100% government funded)! " +
+                                "You earned your private stripes (E-1). Your monthly military pay and frontline combat bounty eligibility begin. " +
+                                "Career progression open to NCO ranks and Officer Commissioning (2nd Lieutenant O-1)!");
+                            GameEvents.OnFeedEventLogged?.Invoke("DEPLOYMENT ORDERS",
+                                "<color=#FF4444><b>[MOBILIZATION ORDER • ACTIVE FRONTLINE]</b></color> High Command has assigned your fireteam to the frontline trenches of <b>Arden Ridge</b>! Prepare for active combat deployment next tour!");
                         }
                     }
                     else
@@ -396,8 +405,49 @@ namespace ArmyLife.Systems
                     {
                         if (soldier.isAcademyTop10Percent && !soldier.isSpecialForces && !soldier.isSpecialForcesCandidate)
                         {
-                            GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
-                                $"<color=#FFD700><b>[{branchSfName.ToUpper()} SELECTION QUALIFIED • TOP 10%]</b></color> Your top 10% class standing (<b>{soldier.academyPerformanceScore:F1}%</b>) has officially qualified you to volunteer for elite <b>{branchSfName} Special Forces</b>!");
+                            if (soldier.age > 30.0f)
+                            {
+                                GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
+                                    $"<color=#888888>[SPECIAL FORCES AGE LIMIT EXCEEDED • MAX AGE 30]</color> Although you placed in the Top 10% ({soldier.academyPerformanceScore:F1}%), Special Forces regulations mandate candidates must be Age 30 or younger (Current Age: {soldier.age:F1}). You will proceed on the standard Officer command track.");
+                            }
+                            else
+                            {
+                                GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
+                                    $"<color=#FFD700><b>[{branchSfName.ToUpper()} SELECTION QUALIFIED • TOP 10%]</b></color> Your top 10% class standing (<b>{soldier.academyPerformanceScore:F1}%</b>) has officially qualified you to volunteer for elite <b>{branchSfName} Special Forces</b>!");
+
+                                string sfCat = "SPECIAL FORCES SELECTION • TOP 10% CADET";
+                                string sfTitle = $"SELECTION INVITATION: {branchSfName.ToUpper()}!";
+                                string sfDesc = 
+                                    $"<color=#FFD700><b>ACADEMY TOP 10% HONORS • SPECIAL FORCES SELECTION INVITATION:</b></color>\n\n" +
+                                    $"Special Operations Command has arrived at {branchAcademyName} to evaluate top-tier cadets! " +
+                                    $"With a stellar academic and physical rating of <b>{soldier.academyPerformanceScore:F1}% (Top 10% Standing)</b>, " +
+                                    $"you have been granted a coveted ticket to attend **Special Forces Assessment & Selection (SFAS)**!\n\n" +
+                                    $"<color=#FF8866><b>NOTE:</b> An invitation is NOT a guaranteed appointment.</color> Thousands of soldiers dream of wearing the Beret, but over <b>70% wash out</b> during Hell Week and the 40-mile Crucible. " +
+                                    $"Only candidates with unbreakable mental grit and physical conditioning survive to earn the Beret, <b>+$800/mo Elite Stipend</b>, and legendary military respect.\n\n" +
+                                    $"Will you volunteer to face the Selection Crucible?";
+
+                                string choiceAccept = $"⚡ REPORT TO SELECTION (THE CRUCIBLE)\n<size=75%>(Face 70% Attrition Selection Course • Earn Beret & Immense Respect)</size>";
+                                string choiceDecline = "🎖️ DECLINE & CONTINUE STANDARD CADET TRACK\n<size=75%>(Commission as Standard Line Officer upon Graduation)</size>";
+
+                                var dilemma = DilemmaModal.Instance ?? Object.FindAnyObjectByType<DilemmaModal>(FindObjectsInactive.Include);
+                                if (dilemma != null)
+                                {
+                                    dilemma.DisplayDilemma(
+                                        sfCat,
+                                        sfTitle,
+                                        sfDesc,
+                                        choiceAccept,
+                                        choiceDecline,
+                                        null,
+                                        () => { if (gm != null) gm.JoinSpecialForcesFromAcademy(); },
+                                        () => {
+                                            GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
+                                                $"You declined the {branchSfName} recruiter's invitation, opting to remain on the standard officer command pipeline.");
+                                        },
+                                        null
+                                    );
+                                }
+                            }
                         }
                     }
 
@@ -430,10 +480,60 @@ namespace ArmyLife.Systems
                         }
 
                         string officerTitle = (soldier.militaryBranch == MilitaryBranch.AirForce) ? "Flight Lieutenant (O-1)" : "2nd Lieutenant (O-1)";
+                        soldier.isInCombatDeployment = true;
+                        soldier.currentTheater = WarTheaterType.PortIronAmphibiousFront;
+
                         GameEvents.OnFeedEventLogged?.Invoke("GRADUATION",
                             $"<color=#FFD700><b>[{branchAcademyName.ToUpper()} GRADUATION • COMMISSIONED {officerTitle.ToUpper()}]</b></color> " +
                             $"You conquered the {maxAcademySemesters / 2}-year {branchAcademyName}!{honorsText} " +
                             $"Directly commissioned as an Imperial Officer <b>({soldier.currentRank?.rankName ?? officerTitle})</b> with full command authority and ${(soldier.currentRank?.baseMonthlySalary ?? 3800):N0}/mo base salary!");
+
+                        GameEvents.OnFeedEventLogged?.Invoke("DEPLOYMENT ORDERS",
+                            $"<color=#FF4444><b>[MOBILIZATION ORDER • COMMISSIONED OFFICER DEPLOYMENT]</b></color> High Command has assigned your platoon to active combat in <b>Port Iron Amphibious Front</b>! Prepare to lead your unit in combat next semester!");
+
+                        // Offer Special Forces Commission if Top 10% honors earned and not already in SF
+                        if (soldier.isAcademyTop10Percent && !soldier.isSpecialForces && !soldier.isSpecialForcesCandidate)
+                        {
+                            if (soldier.age > 30.0f)
+                            {
+                                GameEvents.OnFeedEventLogged?.Invoke("GRADUATION",
+                                    $"<color=#888888>[SPECIAL FORCES AGE LIMIT EXCEEDED • MAX AGE 30]</color> Graduated with honors, but candidate age exceeds the Special Forces entry limit of Age 30 (Current: {soldier.age:F1}). Assigned directly to line officer command.");
+                            }
+                            else
+                            {
+                                string sfCat = "SPECIAL FORCES SELECTION • TOP 10% GRADUATE";
+                                string sfTitle = $"TOP 10% SELECTION INVITATION: {branchSfName.ToUpper()}!";
+                                string sfDesc = 
+                                    $"<color=#FFD700><b>GRADUATION HIGH HONORS • SPECIAL FORCES SELECTION INVITATION:</b></color>\n\n" +
+                                    $"You graduated in the <b>Top 10% of your class</b> ({soldier.academyPerformanceScore:F1}%) with the <i>Imperial Honors Saber</i>!\n\n" +
+                                    $"Special Operations Command has granted you an elite invitation to attend <b>Special Forces Assessment & Selection (SFAS)</b>.\n\n" +
+                                    $"<color=#FF8866><b>CRITICAL:</b> Selection is NOT a direct appointment.</color> You must survive the 1-year high-attrition Crucible where over <b>70% of candidates wash out</b>. " +
+                                    $"Special Forces soldiers hold immense prestige and respect over regular troops—every soldier dreams of joining, but only the most relentless survive Hell Week.\n\n" +
+                                    $"Will you report to the Selection Course or take standard regimental command?";
+
+                                string choiceAccept = $"⚡ REPORT TO SELECTION (THE CRUCIBLE)\n<size=75%>(Face 70% Attrition Selection Course • Earn Beret & Immense Respect)</size>";
+                                string choiceDecline = "🎖️ REPORT TO STANDARD REGIMENTAL COMMAND\n<size=75%>(Direct Commission as Standard Line Officer O-1)</size>";
+
+                                var dilemma = DilemmaModal.Instance ?? Object.FindAnyObjectByType<DilemmaModal>(FindObjectsInactive.Include);
+                                if (dilemma != null)
+                                {
+                                    dilemma.DisplayDilemma(
+                                        sfCat,
+                                        sfTitle,
+                                        sfDesc,
+                                        choiceAccept,
+                                        choiceDecline,
+                                        null,
+                                        () => { if (gm != null) gm.JoinSpecialForcesFromAcademy(); },
+                                        () => {
+                                            GameEvents.OnFeedEventLogged?.Invoke("GRADUATION",
+                                                $"You chose standard regimental duty over special operations, reporting to {soldier.assignedDepartment}.");
+                                        },
+                                        null
+                                    );
+                                }
+                            }
+                        }
                     }
                     break;
 

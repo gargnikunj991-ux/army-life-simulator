@@ -636,6 +636,15 @@ namespace ArmyLife.Systems
 
         private static void TriggerGarrisonPoliticsDilemma(SoldierProfile s, GameManager gm)
         {
+            // 50% chance to draw from the 15 high-stakes Economic & Military Graft Dilemmas
+            if (UnityEngine.Random.value < 0.50f)
+            {
+                if (EconomicDilemmaDeck.TryTriggerEconomicDilemma(s, () => GameEvents.OnSoldierStatsUpdated?.Invoke(s)))
+                {
+                    return;
+                }
+            }
+
             int roll = UnityEngine.Random.Range(1, 11);
 
             switch (roll)
@@ -866,6 +875,15 @@ namespace ArmyLife.Systems
 
         private static void TriggerCivilianLifeDilemma(SoldierProfile s, GameManager gm)
         {
+            // 50% chance to draw from high-stakes Economic & Civilian Dilemmas
+            if (UnityEngine.Random.value < 0.50f)
+            {
+                if (EconomicDilemmaDeck.TryTriggerEconomicDilemma(s, () => GameEvents.OnSoldierStatsUpdated?.Invoke(s)))
+                {
+                    return;
+                }
+            }
+
             int roll = UnityEngine.Random.Range(1, 4);
 
             switch (roll)

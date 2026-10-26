@@ -24,6 +24,30 @@ namespace ArmyLife.Systems
         public static Action<MailLetter, MailResponseOption, MailResolutionResult> OnLetterResolved;
         public static Action<FurloughResult> OnFurloughCompleted;
 
+        /// <summary>
+        /// Explicitly triggers a mail call inquiry from the soldier's activity menu.
+        /// </summary>
+        public static List<MailLetter> RollMailCallEvent(SoldierProfile soldier)
+        {
+            if (soldier == null || soldier.isDead || soldier.isYouthPhase) return new List<MailLetter>();
+
+            int currentYear = TimeCycleManager.Instance != null ? TimeCycleManager.Instance.currentYear : 2026;
+            var letters = DispatchSemesterMailCall(soldier, currentYear, 1, soldier.isInCombatDeployment);
+            var modal = ArmyLife.UI.MailCallModal.Instance ?? UnityEngine.Object.FindAnyObjectByType<ArmyLife.UI.MailCallModal>(FindObjectsInactive.Include);
+
+            if (letters != null && letters.Count > 0 && modal != null)
+            {
+                modal.OpenMailQueue(letters);
+            }
+            else
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("MAIL CALL",
+                    $"<color=#00D4FF>[REGIMENTAL FIELD POST]</color> You visited the mail clerk desk. No letters arrived today from the homefront. You sent a short field postal card home.");
+            }
+
+            return letters;
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoSubscribeToEvents()
         {
@@ -39,10 +63,10 @@ namespace ArmyLife.Systems
             // Dispatch semiannual mail call
             var letters = DispatchSemesterMailCall(soldier, year, semester, isDeployment);
 
-            // If UI modal is active, trigger first letter in queue
+            // If UI modal is available, trigger first letter in queue
             if (letters != null && letters.Count > 0)
             {
-                var modal = UnityEngine.Object.FindAnyObjectByType<ArmyLife.UI.MailCallModal>();
+                var modal = ArmyLife.UI.MailCallModal.Instance ?? UnityEngine.Object.FindAnyObjectByType<ArmyLife.UI.MailCallModal>(FindObjectsInactive.Include);
                 if (modal != null)
                 {
                     modal.OpenMailQueue(letters);

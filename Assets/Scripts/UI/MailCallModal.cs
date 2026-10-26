@@ -75,14 +75,44 @@ namespace ArmyLife.UI
             if (option2Button != null) option2Button.onClick.AddListener(() => OnOptionButtonClicked(1));
             if (option3Button != null) option3Button.onClick.AddListener(() => OnOptionButtonClicked(2));
             if (closeButton != null) closeButton.onClick.AddListener(CloseModal);
+
+            ThemeManager.OnThemeChanged += OnThemeChanged;
+            ThemePalette p = ThemeManager.Instance != null 
+                ? ThemeManager.Instance.GetCurrentPalette() 
+                : ThemeManager.GetPalette(ThemeMode.Dark);
+            ApplyThemePalette(p);
         }
 
         private void OnDisable()
         {
+            ThemeManager.OnThemeChanged -= OnThemeChanged;
             if (option1Button != null) option1Button.onClick.RemoveAllListeners();
             if (option2Button != null) option2Button.onClick.RemoveAllListeners();
             if (option3Button != null) option3Button.onClick.RemoveAllListeners();
             if (closeButton != null) closeButton.onClick.RemoveAllListeners();
+        }
+
+        private void OnThemeChanged(ThemeMode mode, ThemePalette palette)
+        {
+            ApplyThemePalette(palette);
+        }
+
+        private void ApplyThemePalette(ThemePalette p)
+        {
+            if (modalBackdropImage != null)
+            {
+                modalBackdropImage.color = p.mode == ThemeMode.Light 
+                    ? new Color(0.12f, 0.12f, 0.10f, 0.75f) 
+                    : new Color(0f, 0f, 0f, 0.90f);
+            }
+
+            if (closeButton != null)
+            {
+                var img = closeButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnNormalBg;
+                var txt = closeButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.color = p.btnNormalText;
+            }
         }
 
         /// <summary>

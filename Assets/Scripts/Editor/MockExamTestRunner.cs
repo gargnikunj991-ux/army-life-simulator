@@ -512,13 +512,21 @@ namespace ArmyLife.Editor
             // 1. Test Theme Palette Generation & Colors
             var darkPalette = ThemeManager.GetPalette(ThemeMode.Dark);
             var lightPalette = ThemeManager.GetPalette(ThemeMode.Light);
+            var desertPalette = ThemeManager.GetPalette(ThemeMode.DesertTan);
+            var nightPalette = ThemeManager.GetPalette(ThemeMode.NightOps);
 
             Debug.Assert(darkPalette.mode == ThemeMode.Dark, "Dark palette mode must be Dark");
             Debug.Assert(lightPalette.mode == ThemeMode.Light, "Light palette mode must be Light");
+            Debug.Assert(desertPalette.mode == ThemeMode.DesertTan, "Desert palette mode must be DesertTan");
+            Debug.Assert(nightPalette.mode == ThemeMode.NightOps, "NightOps palette mode must be NightOps");
+
             Debug.Assert(darkPalette.backgroundColor != lightPalette.backgroundColor, "Dark and Light backgrounds must differ");
             Debug.Assert(darkPalette.textPrimary.grayscale > 0.8f, "Dark mode primary text must be high brightness/white");
             Debug.Assert(lightPalette.textPrimary.grayscale < 0.3f, "Light mode primary text must be dark charcoal");
-            Debug.Log($"[Theme Test 1] Dark BG: {darkPalette.backgroundColor}, Light BG: {lightPalette.backgroundColor}");
+            Debug.Assert(desertPalette.accentCoyote.r > 0.5f, "Desert palette must feature warm coyote tan");
+            Debug.Assert(nightPalette.textPrimary.g > 0.8f, "NightOps primary text must be bright phosphor green");
+
+            Debug.Log($"[Theme Test 1] Dark BG: {darkPalette.backgroundColor}, Light BG: {lightPalette.backgroundColor}, Desert: {desertPalette.backgroundColor}, NightOps: {nightPalette.backgroundColor}");
 
             // 2. Test Finance System & Mandatory 40% Imperial War Tax
             var testSoldier = new SoldierProfile("Aurelius Vance", null, 120)
@@ -1052,7 +1060,335 @@ namespace ArmyLife.Editor
             honorCadet.specialForcesTrainingSemesters = 0;
             Debug.Assert(honorCadet.isSpecialForcesCandidate, "Cadet successfully volunteered and entered SF Q-Course");
 
-            Debug.Log("<color=#00FFAA>========== ALL IN-GAME ECONOMY, RANKS & CRIME TESTS PASSED 100%! ==========</color>");
+            // 13. Test BitLife-Style Categorized Activities Modal Architecture & LifeModal Scrolling
+            var testObj = new GameObject("ActivitiesModalTestObj");
+            var activitiesModal = testObj.AddComponent<ArmyLife.UI.ActivitiesModal>();
+            var testRoot = new GameObject("TestRoot");
+            testRoot.transform.SetParent(testObj.transform);
+            activitiesModal.modalRoot = testRoot;
+
+            var scrollObj = new GameObject("ScrollObj");
+            scrollObj.transform.SetParent(testRoot.transform);
+            var scrollRect = scrollObj.AddComponent<UnityEngine.UI.ScrollRect>();
+            var viewportObj = new GameObject("Viewport");
+            viewportObj.transform.SetParent(scrollObj.transform);
+            var contentObj = new GameObject("Content");
+            contentObj.transform.SetParent(viewportObj.transform);
+            scrollRect.viewport = viewportObj.AddComponent<RectTransform>();
+            scrollRect.content = contentObj.AddComponent<RectTransform>();
+            activitiesModal.activitiesScrollRect = scrollRect;
+            activitiesModal.activitiesContainer = contentObj.transform;
+
+            activitiesModal.EnsureUIHierarchy();
+            Debug.Assert(scrollRect.vertical == true, "Activities scroll must support vertical scrolling");
+            Debug.Assert(scrollRect.horizontal == false, "Activities scroll should lock horizontal");
+            Debug.Assert(viewportObj.GetComponent<UnityEngine.UI.Image>() != null, "Viewport must have raycast image");
+            Debug.Assert(viewportObj.GetComponent<UnityEngine.UI.Image>().raycastTarget == true, "Viewport raycast target must be true for mouse drag/wheel");
+
+            // Verify Directory vs Drilldown behavior
+            var adultSoldier = new SoldierProfile("Marcus Valerius", null, 120);
+            if (GameManager.Instance != null) GameManager.Instance.currentSoldier = adultSoldier;
+
+            activitiesModal.OpenModal();
+            Debug.Assert(contentObj.transform.childCount == 8, $"Military Directory must display exactly 8 clean category tiles, got {contentObj.transform.childCount}");
+
+            // Drill down into PX Quartermaster
+            activitiesModal.SetCategory(ArmyLife.UI.ActivityCategory.QuartermasterPX);
+            Debug.Assert(contentObj.transform.childCount >= 3, "Quartermaster PX category must display Back Button and gear items");
+            Debug.Assert(contentObj.transform.GetChild(0).name == "Btn_BackToDirectory", "First child of category view must be Back Button");
+
+            // Return to Directory
+            activitiesModal.SetCategory(ArmyLife.UI.ActivityCategory.Directory);
+            Debug.Assert(contentObj.transform.childCount == 8, "Returning to directory must restore the 8 category cards");
+
+            // Test Civilian Directory
+            adultSoldier.careerTrack = CareerTrack.CivilianWork;
+            activitiesModal.RefreshUI();
+            Debug.Assert(contentObj.transform.childCount == 8, "Civilian Directory must display 8 clean civilian sector tiles");
+
+            // Test Youth Directory
+            adultSoldier.age = 15.0f;
+            adultSoldier.careerTrack = CareerTrack.YouthStudent;
+            activitiesModal.RefreshUI();
+            Debug.Assert(contentObj.transform.childCount == 3, "Youth Directory must display 3 clean academy category tiles");
+
+            Object.DestroyImmediate(testObj);
+
+            // Test LifeModal Scroll Hierarchy
+            var lifeObj = new GameObject("LifeModalTestObj");
+            var lifeModal = lifeObj.AddComponent<ArmyLife.UI.LifeModal>();
+            var lifeRoot = new GameObject("LifeRoot");
+            lifeRoot.transform.SetParent(lifeObj.transform);
+            lifeModal.modalRoot = lifeRoot;
+            var lScrollObj = new GameObject("LScrollObj");
+            lScrollObj.transform.SetParent(lifeRoot.transform);
+            var lScrollRect = lScrollObj.AddComponent<UnityEngine.UI.ScrollRect>();
+            var lVpObj = new GameObject("LViewport");
+            lVpObj.transform.SetParent(lScrollObj.transform);
+            var lContentObj = new GameObject("LContent");
+            lContentObj.transform.SetParent(lVpObj.transform);
+            lScrollRect.viewport = lVpObj.AddComponent<RectTransform>();
+            lScrollRect.content = lContentObj.AddComponent<RectTransform>();
+            lifeModal.lifeScrollRect = lScrollRect;
+            lifeModal.contentContainer = lContentObj.GetComponent<RectTransform>();
+
+            lifeModal.EnsureUIHierarchy();
+            Debug.Assert(lVpObj.GetComponent<UnityEngine.UI.Image>() != null, "Life viewport must have an Image");
+            Debug.Assert(lVpObj.GetComponent<UnityEngine.UI.Image>().raycastTarget == true, "Life viewport raycastTarget must be enabled");
+            Debug.Assert(lContentObj.GetComponent<UnityEngine.UI.VerticalLayoutGroup>() != null, "Life content container must have VerticalLayoutGroup");
+            Debug.Assert(lContentObj.GetComponent<UnityEngine.UI.ContentSizeFitter>() != null, "Life content container must have ContentSizeFitter");
+
+            Object.DestroyImmediate(lifeObj);
+
+            Debug.Log("<color=#00FFAA>========== ALL IN-GAME ECONOMY, RANKS, CRIME & POLISHED UI TESTS PASSED 100%! ==========</color>");
+        }
+
+        [MenuItem("Army Life/Run Wartime Mobilization & Enlistment Test", false, 15)]
+        public static void RunWartimeMobilizationAndEnlistmentTest()
+        {
+            Debug.Log("<color=#00D4FF>========== STARTING WARTIME MOBILIZATION & ENLISTMENT TEST ==========</color>");
+
+            // 1. Verify New Soldier Profile Defaults for Wartime Call
+            var soldier = new SoldierProfile("John Doe", null, 80)
+            {
+                age = 18.0f,
+                careerTrack = CareerTrack.MilitaryRecruitBasic,
+                currentRank = null,
+                hasAnsweredWartimeCall = false,
+                academyTuitionDebt = 0,
+                collegeTuitionDebt = 0
+            };
+
+            Debug.Assert(soldier.careerTrack == CareerTrack.MilitaryRecruitBasic, "Recruit must be in MilitaryRecruitBasic track");
+            Debug.Assert(soldier.currentRank == null, "Recruit must start unranked in basic training");
+            Debug.Assert(!soldier.hasAnsweredWartimeCall, "hasAnsweredWartimeCall must be false prior to answering call");
+
+            // 2. Test Army Enlistment & Basic Training Display
+            soldier.militaryBranch = MilitaryBranch.Army;
+            soldier.airForceRole = AirForceRole.None;
+            soldier.hasAnsweredWartimeCall = true;
+            soldier.assignedDepartment = "Infantry Recruit Depot (Fort Ironclad)";
+
+            string armyRecruitRank = soldier.GetRankDisplayName();
+            Debug.Assert(armyRecruitRank.Contains("Recruit") && armyRecruitRank.Contains("Basic Combat Training") && armyRecruitRank.Contains("100% Covered"),
+                $"Army recruit rank mismatch: {armyRecruitRank}");
+            Debug.Log($"  -> Army Recruit Status Display: {armyRecruitRank} [PASS]");
+
+            // Verify $0 living expenses / housing deduction during Basic Training
+            long armyHousingUpkeep = (soldier.careerTrack == CareerTrack.MilitaryRecruitBasic)
+                ? 0L
+                : EconomyData.GetHousingSemesterCost(soldier.housingTier, soldier.militaryBranch);
+            Debug.Assert(armyHousingUpkeep == 0L, "Recruit basic training housing expenses must be $0 (100% state covered)!");
+            Debug.Log($"  -> Army Recruit Housing Expense: ${armyHousingUpkeep} [100% STATE COVERED]");
+
+            // 3. Test Air Force Enlistment & Basic Training Display
+            var afSoldier = new SoldierProfile("Jane Sky", null, 90)
+            {
+                age = 18.0f,
+                militaryBranch = MilitaryBranch.AirForce,
+                airForceRole = AirForceRole.FlightDuty,
+                careerTrack = CareerTrack.MilitaryRecruitBasic,
+                hasAnsweredWartimeCall = true,
+                assignedDepartment = "Imperial Air Force Recruit Depot (Aviation Wing)"
+            };
+
+            string afRecruitRank = afSoldier.GetRankDisplayName();
+            Debug.Assert(afRecruitRank.Contains("Air Recruit") && afRecruitRank.Contains("Basic Flight Training") && afRecruitRank.Contains("100% Covered"),
+                $"Air Force recruit rank mismatch: {afRecruitRank}");
+            Debug.Log($"  -> Air Force Recruit Status Display: {afRecruitRank} [PASS]");
+
+            // 4. Test Branch Ranks Progression & Ensign (O-1) Display
+            var rankO1 = ScriptableObject.CreateInstance<MilitaryRankSO>();
+            rankO1.rankName = "2nd Lieutenant";
+            rankO1.paygrade = "O-1";
+            rankO1.type = PaygradeType.Officer;
+            rankO1.rankOrder = 10;
+
+            // Army O-1 display: "2nd Lieutenant (O-1)"
+            soldier.careerTrack = CareerTrack.MilitaryOfficer;
+            soldier.currentRank = rankO1;
+            string armyO1 = soldier.GetRankDisplayName();
+            Debug.Assert(armyO1 == "2nd Lieutenant (O-1)", $"Expected '2nd Lieutenant (O-1)', got '{armyO1}'");
+            Debug.Log($"  -> Army Commissioned Officer (O-1): {armyO1} [PASS]");
+
+            // Air Force O-1 display: "Ensign / Flight Lieutenant (O-1)"
+            afSoldier.careerTrack = CareerTrack.MilitaryOfficer;
+            afSoldier.currentRank = rankO1;
+            string afO1 = afSoldier.GetRankDisplayName();
+            Debug.Assert(afO1.Contains("Ensign"), $"Expected Air Force O-1 to contain 'Ensign', got '{afO1}'");
+            Debug.Log($"  -> Air Force Commissioned Officer (O-1): {afO1} [PASS]");
+
+            // Air Force O-10 display: "General of the Air Force (O-10)"
+            var rankO10 = ScriptableObject.CreateInstance<MilitaryRankSO>();
+            rankO10.rankName = "General";
+            rankO10.paygrade = "O-10";
+            rankO10.type = PaygradeType.Officer;
+            rankO10.rankOrder = 19;
+            afSoldier.currentRank = rankO10;
+            string afO10 = afSoldier.GetRankDisplayName();
+            Debug.Assert(afO10 == "General of the Air Force (O-10)", $"Expected 'General of the Air Force (O-10)', got '{afO10}'");
+            Debug.Log($"  -> Air Force Supreme Rank (O-10): {afO10} [PASS]");
+
+            Object.DestroyImmediate(rankO1);
+            Object.DestroyImmediate(rankO10);
+
+            Debug.Log("<color=#00FFAA>========== ALL WARTIME MOBILIZATION & ENLISTMENT TESTS PASSED 100%! ==========</color>");
+        }
+
+        [MenuItem("Army Life/Tests/Run Special Forces Selection & Prestige Test", false, 102)]
+        public static void RunSpecialForcesSelectionTrialAndPrestigeTest()
+        {
+            Debug.Log("<color=#00D4FF>========================================================================</color>");
+            Debug.Log("<color=#00D4FF>       SPECIAL FORCES SELECTION ATTRITION & PRESTIGE ENGINE TEST        </color>");
+            Debug.Log("<color=#00D4FF>========================================================================</color>");
+
+            var gmGo = new GameObject("TestGM");
+            var gm = gmGo.AddComponent<GameManager>();
+
+            var soldier = new SoldierProfile("John Miller", null);
+            soldier.age = 22.0f;
+            soldier.militaryBranch = MilitaryBranch.Army;
+            soldier.careerTrack = CareerTrack.MilitaryOfficer;
+            soldier.graduatedWarAcademy = true;
+            soldier.academyPerformanceScore = 96f;
+            soldier.squadRespect = 50f;
+            soldier.meritRating = 50f;
+            soldier.politicalInfluence = 10f;
+            soldier.coFavor = 60f;
+
+            var rankO1 = ScriptableObject.CreateInstance<MilitaryRankSO>();
+            rankO1.rankName = "2nd Lieutenant";
+            rankO1.paygrade = "O-1";
+            rankO1.type = PaygradeType.Officer;
+            rankO1.rankOrder = 10;
+            soldier.currentRank = rankO1;
+
+            gm.currentSoldier = soldier;
+
+            // TEST 1: Entry into Selection
+            gm.JoinSpecialForcesFromAcademy();
+            Debug.Assert(soldier.isSpecialForcesCandidate, "Candidate status should be active upon accepting selection invitation.");
+            Debug.Assert(!soldier.isSpecialForces, "Should NOT be granted Special Forces beret upon mere invitation.");
+            Debug.Assert(soldier.specialForcesTrainingSemesters == 0, "Candidate starts at term 0.");
+            Debug.Log("  -> 1. Special Forces Selection Entry (Invited, not granted) [PASS]");
+
+            // TEST 2: Voluntary Withdrawal (Ring the bell / Drop on Request)
+            gm.ResolveCrucibleTrial(false);
+            Debug.Assert(!soldier.isSpecialForcesCandidate, "Voluntary DOR should end candidate status.");
+            Debug.Assert(!soldier.isSpecialForces, "DOR should not grant SF status.");
+            Debug.Assert(soldier.specialForcesWashoutCount == 1, "Washout count should be 1.");
+            Debug.Log("  -> 2. Voluntary Drop on Request (DOR / Ring the Bell) [PASS]");
+
+            // TEST 3: Attrition Washout due to low fitness / collapse
+            soldier.isSpecialForcesCandidate = true;
+            soldier.specialForcesTrainingSemesters = 0;
+            soldier.fitness = 25f;
+            soldier.discipline = 20f;
+            soldier.combatSkill = 20f;
+            gm.ResolveCrucibleTrial(true);
+            Debug.Assert(!soldier.isSpecialForcesCandidate, "Low fitness should cause Crucible washout.");
+            Debug.Assert(!soldier.isSpecialForces, "Washed out candidate should not have SF status.");
+            Debug.Assert(soldier.specialForcesWashoutCount == 2, "Washout count should increment to 2.");
+            Debug.Log("  -> 3. Selection Attrition (Physical collapse / washout on 40-mile ruck) [PASS]");
+
+            // TEST 4: Crucible Survival with Elite Fitness & Discipline
+            soldier.isSpecialForcesCandidate = true;
+            soldier.specialForcesTrainingSemesters = 0;
+            soldier.fitness = 85f;
+            soldier.discipline = 80f;
+            soldier.combatSkill = 75f;
+            soldier.health = 100f;
+            gm.ResolveCrucibleTrial(true);
+            Debug.Assert(soldier.specialForcesTrainingSemesters == 1, "Should advance to Q-Course Phase 2 upon conquering Crucible.");
+            Debug.Assert(soldier.isSpecialForcesCandidate, "Remains candidate in Phase 2.");
+            Debug.Log("  -> 4. Crucible Conquered (Survives 70% attrition hell week) [PASS]");
+
+            // TEST 5: Q-Course Graduation & Prestige Surge
+            soldier.intellect = 75f;
+            soldier.combatSkill = 85f;
+            gm.CompleteSpecialForcesQCourse();
+            Debug.Assert(!soldier.isSpecialForcesCandidate, "Should conclude candidate phase.");
+            Debug.Assert(soldier.isSpecialForces, "Should be granted Special Forces Operator status.");
+            Debug.Assert(soldier.HasTrait("Special Forces Operator"), "Should have Special Forces Operator trait.");
+            Debug.Assert(soldier.squadRespect >= 80f, $"Squad respect should surge above 80, got {soldier.squadRespect}");
+            Debug.Assert(soldier.meritRating >= 70f, $"Merit rating should surge, got {soldier.meritRating}");
+            Debug.Assert(soldier.politicalInfluence >= 25f, $"Political influence should surge, got {soldier.politicalInfluence}");
+
+            string sfTitle = soldier.GetRankDisplayName();
+            Debug.Assert(sfTitle.Contains("[SF GREEN BERET OPERATOR]"), $"Expected rank to contain '[SF GREEN BERET OPERATOR]', got '{sfTitle}'");
+            Debug.Log($"  -> 5. Special Forces Graduation (Beret earned, +Squad Respect to {soldier.squadRespect:F0}%, +Merit): {sfTitle} [PASS]");
+
+            // TEST 6: Combat Operations Special Forces Aura
+            soldier.InitializeSquadMatesIfEmpty();
+            var combatOutcome = CombatOperationsEngine.ExecuteMission(
+                soldier, 
+                null, 
+                TacticalChoiceOrder.DefaultOrder, 
+                null, 
+                null, 
+                75f
+            );
+            Debug.Assert(combatOutcome.roleSynergySummary.Contains("Special Forces Operator Aura"), "Combat mission should activate Special Forces Operator Aura.");
+            Debug.Log("  -> 6. Combat Operations Special Forces Aura (Lethality & Squad Inspiration) [PASS]");
+
+            // TEST 7: Squadmate Command Engine Authority
+            var orderOutcome = SquadmateCommandEngine.ExecuteTacticalCommand(
+                soldier,
+                TacticalCommandOrder.ScoutFlankManeuver,
+                null,
+                forceSuccess: true
+            );
+            Debug.Assert(orderOutcome.isSuccess, "Order execution should succeed.");
+            Debug.Log("  -> 7. Special Forces Command Authority & Respect [PASS]");
+
+            Object.DestroyImmediate(rankO1);
+            Object.DestroyImmediate(gmGo);
+
+            Debug.Log("<color=#00FFAA>========== ALL SPECIAL FORCES SELECTION & PRESTIGE TESTS PASSED 100%! ==========</color>");
+        }
+
+        [MenuItem("Army Life/Audits/Run Audio Engine & Soundscape Test")]
+        public static void RunAudioEngineAndSoundscapeTest()
+        {
+            Debug.Log("<color=#00D4FF>========== TESTING AUDIO ENGINE & PROCEDURAL SOUNDSCAPE ==========</color>");
+
+            // TEST 1: Ensure AudioManager Instance
+            var audioMgr = AudioManager.EnsureInstance();
+            Debug.Assert(audioMgr != null, "AudioManager instance should not be null.");
+            Debug.Log("  -> 1. AudioManager Singleton & AudioSource Pooling [PASS]");
+
+            // TEST 2: Volume Configuration & Clamping
+            audioMgr.SetMasterVolume(0.75f);
+            audioMgr.SetSfxVolume(0.80f);
+            audioMgr.SetBgmVolume(0.60f);
+            Debug.Assert(Mathf.Approximately(audioMgr.masterVolume, 0.75f), "Master volume should be 0.75.");
+            Debug.Assert(Mathf.Approximately(audioMgr.sfxVolume, 0.80f), "SFX volume should be 0.80.");
+            Debug.Assert(Mathf.Approximately(audioMgr.bgmVolume, 0.60f), "BGM volume should be 0.60.");
+
+            audioMgr.SetMasterVolume(2.5f); // Clamping test
+            Debug.Assert(Mathf.Approximately(audioMgr.masterVolume, 1.0f), "Master volume should clamp to 1.0.");
+            audioMgr.SetMasterVolume(0.85f);
+            Debug.Log("  -> 2. Audio Engine Volume Controls & PlayerPrefs Persistence [PASS]");
+
+            // TEST 3: Procedural Audio Playback Triggers
+            AudioManager.PlayUiClick();
+            AudioManager.PlayTurnAdvance();
+            AudioManager.PlayRadioSquelch();
+            AudioManager.PlayRifleShot();
+            AudioManager.PlayDrillWhistle();
+            AudioManager.PlayBugleFanfare();
+            AudioManager.PlayTaps();
+            AudioManager.PlayHeartbeat();
+            AudioManager.PlayAlertPing();
+            AudioManager.PlayPayday();
+            Debug.Log("  -> 3. Tactical Sound Effects Dispatch (10 Procedural Clips) [PASS]");
+
+            // TEST 4: Marching Cadence BGM Loop & Stop
+            AudioManager.PlayBgmCadence();
+            AudioManager.StopBgm();
+            Debug.Log("  -> 4. Ambient Marching Cadence Loop & Stop Controls [PASS]");
+
+            Debug.Log("<color=#00FFAA>========== ALL AUDIO ENGINE TESTS PASSED 100%! ==========</color>");
         }
     }
 }

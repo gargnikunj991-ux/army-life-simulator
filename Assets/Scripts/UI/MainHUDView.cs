@@ -48,6 +48,9 @@ namespace ArmyLife.UI
         public SchoolModal schoolModal;
         public YouthActivitiesModal youthActivitiesModal;
         public CareerDossierModal careerDossierModal;
+        public MailCallModal mailCallModal;
+        public MedalRibbonRackModal medalRibbonRackModal;
+        public TacticalMinigamesModal tacticalMinigamesModal;
 
         [Header("5 Core Bottom Action Buttons")]
         public Button lifeButton;
@@ -87,7 +90,12 @@ namespace ArmyLife.UI
 
             if (GameManager.Instance != null && GameManager.Instance.currentSoldier != null)
             {
-                UpdateHUD(GameManager.Instance.currentSoldier);
+                var s = GameManager.Instance.currentSoldier;
+                UpdateHUD(s);
+                if (!s.hasAnsweredWartimeCall && s.age <= 18.5f && !s.isDead && !s.isRetired)
+                {
+                    GameManager.Instance.TriggerWartimeMobilizationPopup();
+                }
             }
 
             // Apply Theme
@@ -109,7 +117,12 @@ namespace ArmyLife.UI
 
             if (GameManager.Instance != null && GameManager.Instance.currentSoldier != null)
             {
-                UpdateHUD(GameManager.Instance.currentSoldier);
+                var s = GameManager.Instance.currentSoldier;
+                UpdateHUD(s);
+                if (!s.hasAnsweredWartimeCall && s.age <= 18.5f && !s.isDead && !s.isRetired)
+                {
+                    GameManager.Instance.TriggerWartimeMobilizationPopup();
+                }
             }
             ThemeMode mode = ThemeManager.Instance != null ? ThemeManager.Instance.CurrentMode : ThemeMode.Dark;
             ApplyThemePalette(ThemeManager.GetPalette(mode));
@@ -132,6 +145,9 @@ namespace ArmyLife.UI
             if (schoolModal == null) schoolModal = SchoolModal.Instance ?? FindAnyObjectByType<SchoolModal>(FindObjectsInactive.Include);
             if (youthActivitiesModal == null) youthActivitiesModal = YouthActivitiesModal.Instance ?? FindAnyObjectByType<YouthActivitiesModal>(FindObjectsInactive.Include);
             if (careerDossierModal == null) careerDossierModal = CareerDossierModal.Instance ?? FindAnyObjectByType<CareerDossierModal>(FindObjectsInactive.Include);
+            if (mailCallModal == null) mailCallModal = MailCallModal.Instance ?? FindAnyObjectByType<MailCallModal>(FindObjectsInactive.Include);
+            if (medalRibbonRackModal == null) medalRibbonRackModal = MedalRibbonRackModal.Instance ?? FindAnyObjectByType<MedalRibbonRackModal>(FindObjectsInactive.Include);
+            if (tacticalMinigamesModal == null) tacticalMinigamesModal = TacticalMinigamesModal.Instance ?? FindAnyObjectByType<TacticalMinigamesModal>(FindObjectsInactive.Include);
 
             // 2. Bottom buttons auto-link
             var buttons = GetComponentsInChildren<Button>(true);
@@ -246,34 +262,7 @@ namespace ArmyLife.UI
             // Rank & Origin
             if (rankLabel != null)
             {
-                string rankStr;
-                if (soldier.isDead)
-                {
-                    rankStr = "<color=#FF4444>Fallen Hero (KIA)</color>";
-                }
-                else if (soldier.isRetired)
-                {
-                    rankStr = $"[RETIRED] {(soldier.currentRank != null ? soldier.currentRank.rankName : "Veteran")}";
-                }
-                else if (soldier.careerTrack == CareerTrack.MilitaryWarAcademy)
-                {
-                    rankStr = $"Officer Cadet (War Academy Year {(soldier.academySemestersCompleted / 2) + 1})";
-                }
-                else if (soldier.isSpecialForcesCandidate)
-                {
-                    rankStr = "Special Forces Candidate (Q-Course)";
-                }
-                else if (soldier.isSpecialForces)
-                {
-                    rankStr = $"[SF OPERATOR] {(soldier.currentRank != null ? $"{soldier.currentRank.rankName} ({soldier.currentRank.paygrade})" : "Private E-1")}";
-                }
-                else
-                {
-                    rankStr = (soldier.currentRank != null) 
-                        ? $"{soldier.currentRank.rankName} ({soldier.currentRank.paygrade})" 
-                        : "Private Recruit (E-1)";
-                }
-                rankLabel.text = rankStr;
+                rankLabel.text = soldier.GetRankDisplayName();
             }
 
             if (nobleTitleLabel != null)
@@ -296,7 +285,7 @@ namespace ArmyLife.UI
                 }
                 else if (soldier.careerTrack == CareerTrack.MilitaryRecruitBasic)
                 {
-                    monthlyPayLabel.text = "<color=#888888>$0 / mo (Unpaid Basic Training)</color>";
+                    monthlyPayLabel.text = "<color=#00FFAA>$0 / mo (Basic Training • 100% State Funded)</color>";
                 }
                 else if (soldier.careerTrack == CareerTrack.CivilianCollege)
                 {
@@ -377,6 +366,7 @@ namespace ArmyLife.UI
 
         public void OnLifeButtonClicked()
         {
+            AudioManager.PlayUiClick();
             if (lifeModal != null)
             {
                 lifeModal.OpenModal();
@@ -394,6 +384,7 @@ namespace ArmyLife.UI
 
         public void OnFinanceButtonClicked()
         {
+            AudioManager.PlayUiClick();
             if (financeModal != null)
             {
                 financeModal.OpenModal();
@@ -411,6 +402,7 @@ namespace ArmyLife.UI
 
         public void OnAdvanceSemesterClicked()
         {
+            AudioManager.PlayTurnAdvance();
             if (GameManager.Instance != null && GameManager.Instance.currentSoldier != null)
             {
                 if (GameManager.Instance.currentSoldier.isDead)
@@ -435,6 +427,7 @@ namespace ArmyLife.UI
 
         public void OnRelationshipsButtonClicked()
         {
+            AudioManager.PlayUiClick();
             if (relationshipsModal != null)
             {
                 relationshipsModal.OpenModal();
@@ -452,6 +445,7 @@ namespace ArmyLife.UI
 
         public void OnActivitiesButtonClicked()
         {
+            AudioManager.PlayUiClick();
             if (activitiesModal != null)
             {
                 activitiesModal.OpenModal();
@@ -473,6 +467,7 @@ namespace ArmyLife.UI
 
         public void OnSettingsButtonClicked()
         {
+            AudioManager.PlayUiClick();
             if (settingsModal != null)
             {
                 settingsModal.OpenModal();
@@ -490,6 +485,7 @@ namespace ArmyLife.UI
 
         public void OnReturnToMenuClicked()
         {
+            AudioManager.PlayUiClick();
             if (OpeningSceneController.Instance != null)
             {
                 OpeningSceneController.Instance.ShowOpeningScreen();
@@ -545,6 +541,8 @@ namespace ArmyLife.UI
 
         private void ApplyThemePalette(ThemePalette p)
         {
+            if (Camera.main != null) Camera.main.backgroundColor = p.backgroundColor;
+
             if (headerPanelImage != null) headerPanelImage.color = p.panelBackground;
             if (subHeaderPanelImage != null) subHeaderPanelImage.color = p.cardBackground;
             if (feedContainerImage != null) feedContainerImage.color = p.subCardBackground;
@@ -553,9 +551,44 @@ namespace ArmyLife.UI
 
             if (nameLabel != null) nameLabel.color = p.textPrimary;
             if (ageAndCalendarLabel != null) ageAndCalendarLabel.color = p.textSecondary;
+            if (rankLabel != null) rankLabel.color = p.accentGold;
+            if (nobleTitleLabel != null) nobleTitleLabel.color = p.accentCoyote;
             if (cashBalanceLabel != null) cashBalanceLabel.color = p.accentEmerald;
-            if (cmpBalanceLabel != null) cmpBalanceLabel.color = p.accentPurple;
+            if (cmpBalanceLabel != null) cmpBalanceLabel.color = p.accentGold;
+            if (monthlyPayLabel != null) monthlyPayLabel.color = p.textSecondary;
             if (powerTierLabel != null) powerTierLabel.color = p.textPrimary;
+
+            // Top Buttons
+            if (settingsButton != null)
+            {
+                var img = settingsButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnNormalBg;
+                var txt = settingsButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.color = p.btnNormalText;
+            }
+            if (returnToMenuButton != null)
+            {
+                var img = returnToMenuButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnNormalBg;
+                var txt = returnToMenuButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.color = p.btnNormalText;
+            }
+
+            // Stat Gauge Sliders & Text
+            ApplySliderTheme(healthSlider, p.healthBarColor, p.barBackgroundColor);
+            if (healthBarText != null) healthBarText.color = p.textPrimary;
+
+            ApplySliderTheme(fitnessSlider, p.fitnessBarColor, p.barBackgroundColor);
+            if (fitnessBarText != null) fitnessBarText.color = p.textPrimary;
+
+            ApplySliderTheme(combatSkillSlider, p.combatBarColor, p.barBackgroundColor);
+            if (combatBarText != null) combatBarText.color = p.textPrimary;
+
+            ApplySliderTheme(intellectSlider, p.intellectBarColor, p.barBackgroundColor);
+            if (intellectBarText != null) intellectBarText.color = p.textPrimary;
+
+            ApplySliderTheme(meritSlider, p.accentGold, p.barBackgroundColor);
+            ApplySliderTheme(influenceSlider, p.accentCobalt, p.barBackgroundColor);
 
             // Recolor buttons if present
             if (lifeButton != null)
@@ -596,6 +629,24 @@ namespace ArmyLife.UI
                 if (img != null) img.color = p.btnNormalBg;
                 var txt = activitiesButton.GetComponentInChildren<TextMeshProUGUI>();
                 if (txt != null) txt.color = p.btnNormalText;
+            }
+        }
+
+        private void ApplySliderTheme(Slider slider, Color fillColor, Color bgColor)
+        {
+            if (slider == null) return;
+
+            if (slider.fillRect != null)
+            {
+                var fillImg = slider.fillRect.GetComponent<Image>();
+                if (fillImg != null) fillImg.color = fillColor;
+            }
+
+            Transform bgTransform = slider.transform.Find("Background");
+            if (bgTransform != null)
+            {
+                var bgImg = bgTransform.GetComponent<Image>();
+                if (bgImg != null) bgImg.color = bgColor;
             }
         }
     }

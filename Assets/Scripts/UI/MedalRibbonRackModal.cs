@@ -686,7 +686,7 @@ namespace ArmyLife.UI
         // PROCEDURAL RUNTIME UI CREATION (Self-healing fallback)
         // =========================================================================================
 
-        private void EnsureUIStructure()
+        public void EnsureUIStructure()
         {
             if (_isInitialized && modalRoot != null) return;
 

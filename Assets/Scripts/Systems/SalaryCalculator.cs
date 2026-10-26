@@ -46,7 +46,8 @@ namespace ArmyLife.Systems
             // 2. Civilian Employment Tracks
             if (soldier.careerTrack == CareerTrack.CivilianWork || soldier.careerTrack == CareerTrack.CivilianProfessional)
             {
-                return soldier.civilianSalaryPerMonth > 0 ? soldier.civilianSalaryPerMonth : 150L;
+                long baseCiv = soldier.civilianSalaryPerMonth > 0 ? soldier.civilianSalaryPerMonth : 150L;
+                return WartimeMarketEngine.GetAdjustedCivilianSalary(baseCiv);
             }
             if (soldier.careerTrack == CareerTrack.CivilianCollege)
             {

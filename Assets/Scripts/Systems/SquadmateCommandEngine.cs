@@ -389,6 +389,13 @@ namespace ArmyLife.Systems
                 else if (order == TacticalCommandOrder.HoldDefenseToTheLast) successChance += 10f;
             }
 
+            // 3. Special Forces Operator Command Authority:
+            // Regular soldiers follow an elite operator with absolute trust and discipline (+15% Success chance)
+            if (leader.isSpecialForces)
+            {
+                successChance += 15f;
+            }
+
             successChance = Mathf.Clamp(successChance, 10f, 95f);
 
             bool isSuccess = forceSuccess.HasValue ? forceSuccess.Value : (UnityEngine.Random.value * 100f < successChance);
@@ -513,8 +520,10 @@ namespace ArmyLife.Systems
 
             if (isSuccess)
             {
-                leader.squadRespect = Mathf.Min(100f, leader.squadRespect + 5f);
-                leader.coFavor = Mathf.Min(100f, leader.coFavor + 4f);
+                float respectGain = leader.isSpecialForces ? 9f : 5f;
+                float coGain = leader.isSpecialForces ? 6f : 4f;
+                leader.squadRespect = Mathf.Min(100f, leader.squadRespect + respectGain);
+                leader.coFavor = Mathf.Min(100f, leader.coFavor + coGain);
 
                 // Squadmates gain battle experience and morale
                 if (leader.squadMates != null)

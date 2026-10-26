@@ -112,18 +112,23 @@ namespace ArmyLife.UI
 
         private void UpdateTabButtonVisuals()
         {
+            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
+            bool isMilitary = s != null && !s.isCivilian;
+
             if (clanTabButtonText != null)
             {
+                string tab1Title = isMilitary ? "FIRETEAM SQUAD" : "CLAN & FAMILY";
                 clanTabButtonText.text = (currentTab == ActiveTab.Clan) 
-                    ? "<b>CLAN & FAMILY [ACTIVE]</b>" 
-                    : "CLAN & FAMILY";
+                    ? $"<b>{tab1Title} [ACTIVE]</b>" 
+                    : tab1Title;
             }
 
             if (friendsTabButtonText != null)
             {
+                string tab2Title = isMilitary ? "HOMEFRONT & PEERS" : "FRIENDS & COMRADES";
                 friendsTabButtonText.text = (currentTab == ActiveTab.Friends) 
-                    ? "<b>FRIENDS & COMRADES [ACTIVE]</b>" 
-                    : "FRIENDS & COMRADES";
+                    ? $"<b>{tab2Title} [ACTIVE]</b>" 
+                    : tab2Title;
             }
         }
 
@@ -132,42 +137,77 @@ namespace ArmyLife.UI
             var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
             if (s == null) return;
 
-            s.InitializeDefaultClanMembers();
+            bool isMilitary = !s.isCivilian;
 
-            if (titleText != null)
+            if (isMilitary)
             {
-                titleText.text = $"HOUSE {s.lastName.ToUpper()} - CLAN DECISIONS";
+                s.InitializeSquadMatesIfEmpty();
+
+                if (titleText != null)
+                {
+                    titleText.text = "FIRETEAM SQUAD • 1ST PLATOON";
+                }
+
+                if (clanOverviewText != null)
+                {
+                    clanOverviewText.text = 
+                        $"<b>Band of Brothers:</b> Your sworn fireteam comrades. Maintain high trust and readiness; their combat specialties directly protect your life under enemy fire!\n" +
+                        $"<i>Cigarettes: <b>{s.cigarettesCount} packs</b> | Field Medkits: <b>{s.fieldMedkitsCount} kits</b> | Squad Morale: <b>{s.happiness:F0}%</b></i>";
+                }
+
+                if (clanMembersContainer == null) return;
+
+                for (int i = clanMembersContainer.childCount - 1; i >= 0; i--)
+                {
+                    Destroy(clanMembersContainer.GetChild(i).gameObject);
+                }
+
+                foreach (var mate in s.squadMates)
+                {
+                    CreateSquadmateRow(mate, s);
+                }
             }
-
-            if (clanOverviewText != null)
+            else
             {
-                string rankName = s.nobleTitle > NobleRank.Commoner ? $"{s.nobleTitle} House" : "Commoner Family";
-                clanOverviewText.text = 
-                    $"<b>Noble Lineage:</b> {rankName}   |   <b>Clan Succession Favor:</b> +{s.clanSuccessionScore} Favor   |   <b>Clan Standing:</b> {s.clanFavor:F0}%\n" +
-                    $"<i>Take crucial decisions regarding family succession, filial duty, and clan alliances.</i>";
-            }
+                s.InitializeDefaultClanMembers();
 
-            if (clanMembersContainer == null) return;
+                if (titleText != null)
+                {
+                    titleText.text = $"HOUSE {s.lastName.ToUpper()} - CLAN DECISIONS";
+                }
 
-            for (int i = clanMembersContainer.childCount - 1; i >= 0; i--)
-            {
-                Destroy(clanMembersContainer.GetChild(i).gameObject);
-            }
+                if (clanOverviewText != null)
+                {
+                    string rankName = s.nobleTitle > NobleRank.Commoner ? $"{s.nobleTitle} House" : "Commoner Family";
+                    clanOverviewText.text = 
+                        $"<b>Noble Lineage:</b> {rankName}   |   <b>Clan Succession Favor:</b> +{s.clanSuccessionScore} Favor   |   <b>Clan Standing:</b> {s.clanFavor:F0}%\n" +
+                        $"<i>Take crucial decisions regarding family succession, filial duty, and clan alliances.</i>";
+                }
 
-            foreach (var m in s.clanMembers)
-            {
-                CreateClanMemberRow(m, s);
+                if (clanMembersContainer == null) return;
+
+                for (int i = clanMembersContainer.childCount - 1; i >= 0; i--)
+                {
+                    Destroy(clanMembersContainer.GetChild(i).gameObject);
+                }
+
+                foreach (var m in s.clanMembers)
+                {
+                    CreateClanMemberRow(m, s);
+                }
             }
         }
 
-        private void CreateClanMemberRow(ClanMember member, SoldierProfile soldier)
+        private void CreateSquadmateRow(SquadMate mate, SoldierProfile soldier)
         {
-            var rowObj = new GameObject($"ClanMember_{member.name}");
+            var rowObj = new GameObject($"Squadmate_{mate.nickname}");
             rowObj.transform.SetParent(clanMembersContainer, false);
 
             var rowImg = rowObj.AddComponent<Image>();
-            ThemeMode mode = ThemeManager.Instance != null ? ThemeManager.Instance.CurrentMode : ThemeMode.Dark;
-            rowImg.color = (mode == ThemeMode.Dark) ? new Color(0.14f, 0.17f, 0.22f) : new Color(0.90f, 0.92f, 0.96f);
+            ThemePalette p = ThemeManager.Instance != null 
+                ? ThemeManager.Instance.GetCurrentPalette() 
+                : ThemeManager.GetPalette(ThemeMode.Dark);
+            rowImg.color = p.subCardBackground;
 
             var rowLayout = rowObj.AddComponent<VerticalLayoutGroup>();
             rowLayout.padding = new RectOffset(16, 16, 12, 12);
@@ -185,7 +225,108 @@ namespace ArmyLife.UI
             infoObj.transform.SetParent(rowObj.transform, false);
             var infoText = infoObj.AddComponent<TextMeshProUGUI>();
             infoText.fontSize = 24;
-            infoText.color = (mode == ThemeMode.Dark) ? Color.white : new Color(0.1f, 0.14f, 0.2f);
+            infoText.color = p.textPrimary;
+
+            if (mate.isDead)
+            {
+                infoText.text = $"<color=#FF4444><b>[KIA • FALLEN HERO]</b></color> <b>{mate.GetDisplayName()}</b> ({mate.roleTitle})\n" +
+                                $"<size=20>Died: <i>{mate.deathReason}</i> | Battles Survived: <b>{mate.battlesSurvived}</b></size>";
+            }
+            else
+            {
+                string statusColor = mate.isInjured ? "#FF8800" : (mate.fatigue > 70f ? "#FFCC00" : "#00FFAA");
+                string statusText = mate.isInjured ? $"Injured ({mate.injuryStatus})" : (mate.fatigue > 70f ? "Fatigued" : "Combat Ready");
+
+                infoText.text = $"<b>{mate.GetDisplayName()}</b> ({mate.roleTitle}) - <i>{mate.personalityTrait}</i>\n" +
+                                $"<size=20>Comradeship: <b>{mate.relationship:F0}%</b> | Morale: <b>{mate.morale:F0}%</b> | Fatigue: <b>{mate.fatigue:F0}%</b> | Status: <color={statusColor}><b>{statusText}</b></color> | Battles: <b>{mate.battlesSurvived}</b></size>";
+            }
+
+            // Action Buttons Row
+            var btnRow = new GameObject("ButtonsRow");
+            btnRow.transform.SetParent(rowObj.transform, false);
+            var hLayout = btnRow.AddComponent<HorizontalLayoutGroup>();
+            hLayout.spacing = 10;
+            hLayout.childControlHeight = true;
+            hLayout.childControlWidth = true;
+            hLayout.childForceExpandHeight = false;
+            hLayout.childForceExpandWidth = true;
+            var hFitter = btnRow.AddComponent<ContentSizeFitter>();
+            hFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            if (mate.isDead)
+            {
+                CreateActionButton(btnRow.transform, "VISIT MEMORIAL", new Color(0.40f, 0.20f, 0.20f), () =>
+                {
+                    GameEvents.OnFeedEventLogged?.Invoke("MEMORIAL",
+                        $"<color=#FF8866>[BATTLEFIELD MEMORIAL]</color> You visited the grave marker of your fallen brother, <b>{mate.GetDisplayName()}</b> ({mate.roleTitle}). You left a spent shell casing in salute.");
+                    RefreshClanView();
+                });
+
+                CreateActionButton(btnRow.transform, "REQUISITION RECRUIT", new Color(0.20f, 0.45f, 0.65f), () =>
+                {
+                    SquadmateCommandEngine.RecruitReplacement(soldier, mate.role);
+                    RefreshClanView();
+                });
+            }
+            else
+            {
+                // 1. Share Smoke
+                CreateActionButton(btnRow.transform, "SHARE SMOKE (1 CIG)", new Color(0.20f, 0.50f, 0.40f), () =>
+                {
+                    SquadmateCommandEngine.ShareCigarettesWithSquad(soldier, mate);
+                    RefreshClanView();
+                });
+
+                // 2. Bandage / First Aid
+                CreateActionButton(btnRow.transform, "TREAT TRAUMA (1 MEDKIT)", new Color(0.70f, 0.25f, 0.25f), () =>
+                {
+                    SquadmateCommandEngine.BandageSquadmate(soldier, mate);
+                    RefreshClanView();
+                });
+
+                // 3. Tactical Drill & Bond
+                CreateActionButton(btnRow.transform, "TACTICAL DRILL", new Color(0.25f, 0.45f, 0.70f), () =>
+                {
+                    mate.relationship = Mathf.Min(100f, mate.relationship + 6f);
+                    mate.fatigue = Mathf.Max(0f, mate.fatigue - 8f);
+                    mate.morale = Mathf.Min(100f, mate.morale + 5f);
+                    soldier.combatSkill = Mathf.Min(100f, soldier.combatSkill + 1.5f);
+                    GameEvents.OnFeedEventLogged?.Invoke("DRILLS",
+                        $"<color=#00D4FF>[FIRETEAM DRILL]</color> You ran live-fire breaching drills with <b>{mate.GetDisplayName()}</b>. Cohesion and morale improved (+6 Comradeship, -8 Fatigue, +1.5 Combat Skill)!");
+                    GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
+                    RefreshClanView();
+                });
+            }
+        }
+
+        private void CreateClanMemberRow(ClanMember member, SoldierProfile soldier)
+        {
+            var rowObj = new GameObject($"ClanMember_{member.name}");
+            rowObj.transform.SetParent(clanMembersContainer, false);
+
+            var rowImg = rowObj.AddComponent<Image>();
+            ThemePalette p = ThemeManager.Instance != null 
+                ? ThemeManager.Instance.GetCurrentPalette() 
+                : ThemeManager.GetPalette(ThemeMode.Dark);
+            rowImg.color = p.subCardBackground;
+
+            var rowLayout = rowObj.AddComponent<VerticalLayoutGroup>();
+            rowLayout.padding = new RectOffset(16, 16, 12, 12);
+            rowLayout.spacing = 6;
+            rowLayout.childControlHeight = true;
+            rowLayout.childControlWidth = true;
+            rowLayout.childForceExpandHeight = false;
+            rowLayout.childForceExpandWidth = true;
+
+            var fitter = rowObj.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            // Info text
+            var infoObj = new GameObject("Info");
+            infoObj.transform.SetParent(rowObj.transform, false);
+            var infoText = infoObj.AddComponent<TextMeshProUGUI>();
+            infoText.fontSize = 24;
+            infoText.color = p.textPrimary;
             infoText.text = $"<b>{member.name}</b> ({member.roleTitle})\n" +
                             $"<size=20>Relationship: <b>{member.relationship:F0}%</b> | Trait: <i>{member.personalityTrait}</i></size>";
 
@@ -318,8 +459,10 @@ namespace ArmyLife.UI
             rowObj.transform.SetParent(friendsContainer, false);
 
             var rowImg = rowObj.AddComponent<Image>();
-            ThemeMode mode = ThemeManager.Instance != null ? ThemeManager.Instance.CurrentMode : ThemeMode.Dark;
-            rowImg.color = (mode == ThemeMode.Dark) ? new Color(0.14f, 0.17f, 0.22f) : new Color(0.90f, 0.92f, 0.96f);
+            ThemePalette p = ThemeManager.Instance != null 
+                ? ThemeManager.Instance.GetCurrentPalette() 
+                : ThemeManager.GetPalette(ThemeMode.Dark);
+            rowImg.color = p.subCardBackground;
 
             var rowLayout = rowObj.AddComponent<VerticalLayoutGroup>();
             rowLayout.padding = new RectOffset(16, 16, 12, 12);
@@ -337,9 +480,11 @@ namespace ArmyLife.UI
             infoObj.transform.SetParent(rowObj.transform, false);
             var infoText = infoObj.AddComponent<TextMeshProUGUI>();
             infoText.fontSize = 24;
-            infoText.color = (mode == ThemeMode.Dark) ? Color.white : new Color(0.1f, 0.14f, 0.2f);
+            infoText.color = p.textPrimary;
             
-            string friendTag = peer.isCrush ? " <color=#FF69B4>[CRUSH]</color>" : (peer.isFriend ? " <color=#00FFAA>[FRIEND]</color>" : "");
+            string friendColorHex = ColorUtility.ToHtmlStringRGB(p.accentEmerald);
+            string crushColorHex = ColorUtility.ToHtmlStringRGB(p.accentGold);
+            string friendTag = peer.isCrush ? $" <color=#{crushColorHex}>[CRUSH]</color>" : (peer.isFriend ? $" <color=#{friendColorHex}>[FRIEND]</color>" : "");
             infoText.text = $"<b>{peer.name}</b> ({peer.role}){friendTag}\n" +
                             $"<size=20>Relationship: <b>{peer.relationship:F0}%</b> | Personality: <i>{peer.personalityTrait}</i></size>";
 
@@ -446,10 +591,38 @@ namespace ArmyLife.UI
 
         private void ApplyThemePalette(ThemePalette p)
         {
+            if (modalBackdropImage != null)
+            {
+                modalBackdropImage.color = p.mode == ThemeMode.Light 
+                    ? new Color(0.12f, 0.12f, 0.10f, 0.75f) 
+                    : new Color(0f, 0f, 0f, 0.90f);
+            }
             if (dialogPanelImage != null) dialogPanelImage.color = p.panelBackground;
-            if (titleText != null) titleText.color = p.textPrimary;
+            if (titleText != null) titleText.color = p.accentGold;
             if (clanOverviewText != null) clanOverviewText.color = p.textSecondary;
             if (friendsOverviewText != null) friendsOverviewText.color = p.textSecondary;
+
+            if (clanTabButton != null)
+            {
+                var img = clanTabButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnNormalBg;
+                if (clanTabButtonText != null) clanTabButtonText.color = p.btnNormalText;
+            }
+
+            if (friendsTabButton != null)
+            {
+                var img = friendsTabButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnNormalBg;
+                if (friendsTabButtonText != null) friendsTabButtonText.color = p.btnNormalText;
+            }
+
+            if (closeButton != null)
+            {
+                var img = closeButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnNormalBg;
+                var txt = closeButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.color = p.btnNormalText;
+            }
         }
     }
 }

@@ -105,6 +105,7 @@ namespace ArmyLife.UI
 
         public void OpenModal()
         {
+            AudioManager.PlayUiClick();
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
             if (modalRoot != null) modalRoot.SetActive(true);
@@ -281,6 +282,13 @@ namespace ArmyLife.UI
                         $"<color=#00FF88><b>Net Monthly Take-Home Pay:</b> +${monthlyNetWithHousing:N0} / mo</color>\n" +
                         $"<color=#00FFAA><b>Estimated Semester Net Cashflow:</b> +${semesterNetCashflow:N0} / sem</color>\n" +
                         "<i>Imperial Decree: 40% of military compensation is deducted for logistics and wartime ammunition reserves.</i>";
+                }
+
+                if (WartimeMarketEngine.CurrentState.activeShock != MacroEconomicShock.NormalStagnant)
+                {
+                    string marketBanner = $"<color=#FF8844><b>[MARKET: {WartimeMarketEngine.CurrentState.headlineText.ToUpper()}]</b></color>\n" +
+                                           $"<i>{WartimeMarketEngine.CurrentState.descriptiveNarrative} ({WartimeMarketEngine.CurrentState.shockDurationRemaining} sem remaining)</i>\n\n";
+                    monthlyBreakdownText.text = marketBanner + monthlyBreakdownText.text;
                 }
             }
 
@@ -484,6 +492,7 @@ namespace ArmyLife.UI
 
             s.cashBalance -= EconomyData.WAR_BOND_COST;
             s.warBondsOwned++;
+            AudioManager.PlayPayday();
             s.meritRating = Mathf.Min(100f, s.meritRating + 8f);
             s.politicalInfluence = Mathf.Min(100f, s.politicalInfluence + 5f);
             s.happiness = Mathf.Min(100f, s.happiness + 5f);
@@ -510,6 +519,7 @@ namespace ArmyLife.UI
 
             s.cashBalance -= EconomyData.TRADE_GUILD_SHARE_COST;
             s.tradeGuildShares++;
+            AudioManager.PlayPayday();
             s.politicalInfluence = Mathf.Min(100f, s.politicalInfluence + 8f);
             s.happiness = Mathf.Min(100f, s.happiness + 4f);
 
@@ -561,6 +571,7 @@ namespace ArmyLife.UI
                 long pay = Math.Min(1000L, s.academyTuitionDebt);
                 s.cashBalance -= pay;
                 s.academyTuitionDebt -= pay;
+                AudioManager.PlayPayday();
                 GameEvents.OnFeedEventLogged?.Invoke("DEBT",
                     $"<color=#00FFAA>[PRINCIPAL REPAID]</color> You paid <b>${pay:N0}</b> towards your War Academy loan! Remaining debt: <b>${s.academyTuitionDebt:N0}</b>.");
             }
@@ -569,6 +580,7 @@ namespace ArmyLife.UI
                 long pay = Math.Min(1000L, s.collegeTuitionDebt);
                 s.cashBalance -= pay;
                 s.collegeTuitionDebt -= pay;
+                AudioManager.PlayPayday();
                 GameEvents.OnFeedEventLogged?.Invoke("DEBT",
                     $"<color=#00FFAA>[PRINCIPAL REPAID]</color> You paid <b>${pay:N0}</b> towards your Imperial College student debt! Remaining debt: <b>${s.collegeTuitionDebt:N0}</b>.");
             }
@@ -598,6 +610,7 @@ namespace ArmyLife.UI
             s.cashBalance -= EconomyData.SQUAD_MESS_DRINKS_COST;
             s.squadRespect = Mathf.Min(100f, s.squadRespect + 20f);
             s.happiness = Mathf.Min(100f, s.happiness + 10f);
+            AudioManager.PlayPayday();
 
             if (s.squadMates != null)
             {
@@ -648,15 +661,41 @@ namespace ArmyLife.UI
 
         private void ApplyThemePalette(ThemePalette p)
         {
+            if (modalBackdropImage != null)
+            {
+                modalBackdropImage.color = p.mode == ThemeMode.Light 
+                    ? new Color(0.12f, 0.12f, 0.10f, 0.75f) 
+                    : new Color(0f, 0f, 0f, 0.90f);
+            }
             if (dialogPanelImage != null) dialogPanelImage.color = p.panelBackground;
-            if (titleText != null) titleText.color = p.textPrimary;
-            if (cashBalanceText != null) cashBalanceText.color = p.textPrimary;
-            if (cmpBalanceText != null) cmpBalanceText.color = p.textPrimary;
+            if (titleText != null) titleText.color = p.accentGold;
+            if (cashBalanceText != null) cashBalanceText.color = p.accentEmerald;
+            if (cmpBalanceText != null) cmpBalanceText.color = p.accentGold;
             if (monthlyBreakdownText != null) monthlyBreakdownText.color = p.textSecondary;
             if (familyWealthStatusText != null) familyWealthStatusText.color = p.textSecondary;
             if (warBondStatusText != null) warBondStatusText.color = p.textSecondary;
             if (portfolioBreakdownText != null) portfolioBreakdownText.color = p.textSecondary;
             if (spendingBreakdownText != null) spendingBreakdownText.color = p.textSecondary;
+
+            StyleFinanceButton(closeButton, p);
+            StyleFinanceButton(send200Button, p);
+            StyleFinanceButton(send500Button, p);
+            StyleFinanceButton(send1000Button, p);
+            StyleFinanceButton(buyWarBondButton, p);
+            StyleFinanceButton(emergencyAdvanceButton, p);
+            StyleFinanceButton(buyTradeGuildShareButton, p);
+            StyleFinanceButton(payDebt1000Button, p);
+            StyleFinanceButton(treatSquadButton, p);
+            StyleFinanceButton(specialistHospitalButton, p);
+        }
+
+        private void StyleFinanceButton(Button btn, ThemePalette p)
+        {
+            if (btn == null) return;
+            var img = btn.GetComponent<Image>();
+            if (img != null) img.color = p.btnNormalBg;
+            var txt = btn.GetComponentInChildren<TextMeshProUGUI>();
+            if (txt != null) txt.color = p.btnNormalText;
         }
     }
 }

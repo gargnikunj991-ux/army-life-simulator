@@ -54,6 +54,7 @@ namespace ArmyLife.Editor
             var gm = coreObj.AddComponent<GameManager>();
             var timeManager = coreObj.AddComponent<TimeCycleManager>();
             var themeManager = coreObj.AddComponent<ThemeManager>();
+            var audioManager = coreObj.AddComponent<AudioManager>();
 
             // Auto-populate Game Data into GameManager
             gm.powerTierDatabase = LoadAllAssets<PowerTierSO>("Assets/GameData/PowerTiers");
@@ -979,6 +980,9 @@ namespace ArmyLife.Editor
             CreateRelationshipsModal(rootPanel.transform, hudView);
             CreateActivitiesModal(rootPanel.transform, hudView);
             CreateCareerDossierModal(rootPanel.transform, hudView);
+            CreateMailCallModal(rootPanel.transform, hudView);
+            CreateMedalRibbonRackModal(rootPanel.transform, hudView);
+            CreateTacticalMinigamesModal(rootPanel.transform, hudView);
 
             // Initial view states: Opening screen active, HUD hidden
             openingPanel.SetActive(true);
@@ -1275,15 +1279,23 @@ namespace ArmyLife.Editor
             thLayout.childForceExpandHeight = false;
             thLayout.childForceExpandWidth = true;
 
-            var darkBtn = CreateButton("DarkThemeBtn", themeRow.transform, "DARK MODE", new Color(0.18f, 0.22f, 0.30f));
+            var darkBtn = CreateButton("DarkThemeBtn", themeRow.transform, "TACTICAL DRAB", new Color(0.14f, 0.19f, 0.15f));
             ctrl.darkThemeButton = darkBtn.GetComponent<Button>();
             ctrl.darkThemeButtonText = darkBtn.GetComponentInChildren<TextMeshProUGUI>();
 
-            var lightBtn = CreateButton("LightThemeBtn", themeRow.transform, "LIGHT MODE", new Color(0.78f, 0.82f, 0.88f));
+            var lightBtn = CreateButton("LightThemeBtn", themeRow.transform, "CLASSIFIED DOSSIER", new Color(0.78f, 0.75f, 0.69f));
             ctrl.lightThemeButton = lightBtn.GetComponent<Button>();
             ctrl.lightThemeButtonText = lightBtn.GetComponentInChildren<TextMeshProUGUI>();
             var lightTxt = ctrl.lightThemeButtonText;
-            if (lightTxt != null) lightTxt.color = new Color(0.1f, 0.12f, 0.16f);
+            if (lightTxt != null) lightTxt.color = new Color(0.1f, 0.12f, 0.1f);
+
+            var desertBtn = CreateButton("DesertThemeBtn", themeRow.transform, "DESERT COYOTE", new Color(0.22f, 0.18f, 0.15f));
+            ctrl.desertThemeButton = desertBtn.GetComponent<Button>();
+            ctrl.desertThemeButtonText = desertBtn.GetComponentInChildren<TextMeshProUGUI>();
+
+            var nightOpsBtn = CreateButton("NightOpsThemeBtn", themeRow.transform, "NIGHT OPS HUD", new Color(0.08f, 0.14f, 0.09f));
+            ctrl.nightOpsThemeButton = nightOpsBtn.GetComponent<Button>();
+            ctrl.nightOpsThemeButtonText = nightOpsBtn.GetComponentInChildren<TextMeshProUGUI>();
 
             // 2. Difficulty Row
             var diffLabel = CreateText("DiffLabel", contentObj.transform, "<b>GAMEPLAY DIFFICULTY:</b>", 22, TextAlignmentOptions.Left, FontStyles.Bold, Color.white);
@@ -1797,6 +1809,9 @@ namespace ArmyLife.Editor
 
             var viewport = CreateUIElement("Viewport", scrollObj.transform);
             SetFullScreen(viewport.GetComponent<RectTransform>());
+            var vpImg = viewport.AddComponent<Image>();
+            vpImg.color = Color.clear;
+            vpImg.raycastTarget = true;
             viewport.AddComponent<RectMask2D>();
             scroll.viewport = viewport.GetComponent<RectTransform>();
 
@@ -1819,6 +1834,7 @@ namespace ArmyLife.Editor
 
             var fitter = content.AddComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            ctrl.activitiesScrollRect = scroll;
             ctrl.activitiesContainer = content.transform;
 
             var closeBtn = CreateButton("CloseBtn", box.transform, "CLOSE ACTIVITIES", new Color(0.35f, 0.40f, 0.45f));
@@ -1944,6 +1960,39 @@ namespace ArmyLife.Editor
             ctrl.closeDossierButton = closeBtn.GetComponent<Button>();
 
             overlay.SetActive(false);
+            modalObj.SetActive(true);
+        }
+
+        private static void CreateMailCallModal(Transform parent, MainHUDView hudView)
+        {
+            var modalObj = CreateUIElement("MailCallModal", parent);
+            SetFullScreen(modalObj.GetComponent<RectTransform>());
+            var ctrl = modalObj.AddComponent<MailCallModal>();
+            hudView.mailCallModal = ctrl;
+            ctrl.EnsureUIHierarchy();
+            if (ctrl.modalRoot != null) ctrl.modalRoot.SetActive(false);
+            modalObj.SetActive(true);
+        }
+
+        private static void CreateMedalRibbonRackModal(Transform parent, MainHUDView hudView)
+        {
+            var modalObj = CreateUIElement("MedalRibbonRackModal", parent);
+            SetFullScreen(modalObj.GetComponent<RectTransform>());
+            var ctrl = modalObj.AddComponent<MedalRibbonRackModal>();
+            hudView.medalRibbonRackModal = ctrl;
+            ctrl.EnsureUIStructure();
+            if (ctrl.modalRoot != null) ctrl.modalRoot.SetActive(false);
+            modalObj.SetActive(true);
+        }
+
+        private static void CreateTacticalMinigamesModal(Transform parent, MainHUDView hudView)
+        {
+            var modalObj = CreateUIElement("TacticalMinigamesModal", parent);
+            SetFullScreen(modalObj.GetComponent<RectTransform>());
+            var ctrl = modalObj.AddComponent<TacticalMinigamesModal>();
+            hudView.tacticalMinigamesModal = ctrl;
+            ctrl.EnsureUIHierarchy();
+            if (ctrl.modalRoot != null) ctrl.modalRoot.SetActive(false);
             modalObj.SetActive(true);
         }
 

@@ -23,8 +23,14 @@ namespace ArmyLife.UI
         [Header("Theme Selection")]
         public Button darkThemeButton;
         public Button lightThemeButton;
+        public Button desertThemeButton;
+        public Button nightOpsThemeButton;
+        public Button cycleThemeButton;
         public TextMeshProUGUI darkThemeButtonText;
         public TextMeshProUGUI lightThemeButtonText;
+        public TextMeshProUGUI desertThemeButtonText;
+        public TextMeshProUGUI nightOpsThemeButtonText;
+        public TextMeshProUGUI cycleThemeButtonText;
 
         [Header("Gameplay Difficulty")]
         public Button difficultyStoryButton;
@@ -112,6 +118,21 @@ namespace ArmyLife.UI
                     lightThemeButton = b;
                     lightThemeButtonText = b.GetComponentInChildren<TextMeshProUGUI>();
                 }
+                else if (desertThemeButton == null && (bName.Contains("desert") || bName.Contains("coyote") || bName.Contains("tan") || bName.Contains("arid")))
+                {
+                    desertThemeButton = b;
+                    desertThemeButtonText = b.GetComponentInChildren<TextMeshProUGUI>();
+                }
+                else if (nightOpsThemeButton == null && (bName.Contains("night") || bName.Contains("ops") || bName.Contains("hud") || bName.Contains("phosphor")))
+                {
+                    nightOpsThemeButton = b;
+                    nightOpsThemeButtonText = b.GetComponentInChildren<TextMeshProUGUI>();
+                }
+                else if (cycleThemeButton == null && (bName.Contains("cycle") || bName.Contains("switchtheme")))
+                {
+                    cycleThemeButton = b;
+                    cycleThemeButtonText = b.GetComponentInChildren<TextMeshProUGUI>();
+                }
                 else if (difficultyStoryButton == null && bName.Contains("story")) difficultyStoryButton = b;
                 else if (difficultyRealisticButton == null && (bName.Contains("real") || bName.Contains("norm"))) difficultyRealisticButton = b;
                 else if (difficultyIroncladButton == null && (bName.Contains("iron") || bName.Contains("hard"))) difficultyIroncladButton = b;
@@ -119,6 +140,47 @@ namespace ArmyLife.UI
                 else if (paceFastButton == null && bName.Contains("fast")) paceFastButton = b;
                 else if (returnToTitleButton == null && (bName.Contains("title") || bName.Contains("menu"))) returnToTitleButton = b;
                 else if (resignCommissionButton == null && bName.Contains("resign")) resignCommissionButton = b;
+            }
+
+            // Runtime self-healing: ensure DesertTan and NightOps buttons exist in ThemeRow
+            if (darkThemeButton != null && darkThemeButton.transform.parent != null)
+            {
+                var themeRowTransform = darkThemeButton.transform.parent;
+                if (desertThemeButton == null)
+                {
+                    var existing = themeRowTransform.Find("DesertThemeBtn");
+                    if (existing != null)
+                    {
+                        desertThemeButton = existing.GetComponent<Button>();
+                        desertThemeButtonText = existing.GetComponentInChildren<TextMeshProUGUI>();
+                    }
+                    else
+                    {
+                        var obj = Instantiate(darkThemeButton.gameObject, themeRowTransform);
+                        obj.name = "DesertThemeBtn";
+                        desertThemeButton = obj.GetComponent<Button>();
+                        desertThemeButtonText = obj.GetComponentInChildren<TextMeshProUGUI>();
+                        if (desertThemeButtonText != null) desertThemeButtonText.text = "DESERT COYOTE";
+                    }
+                }
+
+                if (nightOpsThemeButton == null)
+                {
+                    var existing = themeRowTransform.Find("NightOpsThemeBtn");
+                    if (existing != null)
+                    {
+                        nightOpsThemeButton = existing.GetComponent<Button>();
+                        nightOpsThemeButtonText = existing.GetComponentInChildren<TextMeshProUGUI>();
+                    }
+                    else
+                    {
+                        var obj = Instantiate(darkThemeButton.gameObject, themeRowTransform);
+                        obj.name = "NightOpsThemeBtn";
+                        nightOpsThemeButton = obj.GetComponent<Button>();
+                        nightOpsThemeButtonText = obj.GetComponentInChildren<TextMeshProUGUI>();
+                        if (nightOpsThemeButtonText != null) nightOpsThemeButtonText.text = "NIGHT OPS HUD";
+                    }
+                }
             }
 
             var sliders = GetComponentsInChildren<Slider>(true);
@@ -159,6 +221,9 @@ namespace ArmyLife.UI
             if (closeButton != null) closeButton.onClick.AddListener(CloseModal);
             if (darkThemeButton != null) darkThemeButton.onClick.AddListener(OnDarkThemeClicked);
             if (lightThemeButton != null) lightThemeButton.onClick.AddListener(OnLightThemeClicked);
+            if (desertThemeButton != null) desertThemeButton.onClick.AddListener(OnDesertThemeClicked);
+            if (nightOpsThemeButton != null) nightOpsThemeButton.onClick.AddListener(OnNightOpsThemeClicked);
+            if (cycleThemeButton != null) cycleThemeButton.onClick.AddListener(OnCycleThemeClicked);
 
             if (difficultyStoryButton != null) difficultyStoryButton.onClick.AddListener(() => SetDifficulty("Story"));
             if (difficultyRealisticButton != null) difficultyRealisticButton.onClick.AddListener(() => SetDifficulty("Realistic"));
@@ -179,6 +244,9 @@ namespace ArmyLife.UI
             if (closeButton != null) closeButton.onClick.RemoveListener(CloseModal);
             if (darkThemeButton != null) darkThemeButton.onClick.RemoveListener(OnDarkThemeClicked);
             if (lightThemeButton != null) lightThemeButton.onClick.RemoveListener(OnLightThemeClicked);
+            if (desertThemeButton != null) desertThemeButton.onClick.RemoveListener(OnDesertThemeClicked);
+            if (nightOpsThemeButton != null) nightOpsThemeButton.onClick.RemoveListener(OnNightOpsThemeClicked);
+            if (cycleThemeButton != null) cycleThemeButton.onClick.RemoveListener(OnCycleThemeClicked);
 
             if (difficultyStoryButton != null) difficultyStoryButton.onClick.RemoveAllListeners();
             if (difficultyRealisticButton != null) difficultyRealisticButton.onClick.RemoveAllListeners();
@@ -273,15 +341,75 @@ namespace ArmyLife.UI
             UpdateThemeButtonsUI(ThemeMode.Light);
         }
 
+        private void OnDesertThemeClicked()
+        {
+            if (ThemeManager.Instance != null)
+            {
+                ThemeManager.Instance.SetTheme(ThemeMode.DesertTan);
+            }
+            UpdateThemeButtonsUI(ThemeMode.DesertTan);
+        }
+
+        private void OnNightOpsThemeClicked()
+        {
+            if (ThemeManager.Instance != null)
+            {
+                ThemeManager.Instance.SetTheme(ThemeMode.NightOps);
+            }
+            UpdateThemeButtonsUI(ThemeMode.NightOps);
+        }
+
+        private void OnCycleThemeClicked()
+        {
+            if (ThemeManager.Instance != null)
+            {
+                ThemeManager.Instance.CycleNextTheme();
+                UpdateThemeButtonsUI(ThemeManager.Instance.CurrentMode);
+            }
+        }
+
         private void UpdateThemeButtonsUI(ThemeMode mode)
         {
+            ThemePalette p = ThemeManager.GetPalette(mode);
+
             if (darkThemeButtonText != null)
             {
-                darkThemeButtonText.text = mode == ThemeMode.Dark ? "<b>DARK MODE [ACTIVE]</b>" : "DARK MODE";
+                darkThemeButtonText.text = mode == ThemeMode.Dark ? "<b>TACTICAL DRAB [ACTIVE]</b>" : "TACTICAL DRAB";
             }
             if (lightThemeButtonText != null)
             {
-                lightThemeButtonText.text = mode == ThemeMode.Light ? "<b>LIGHT MODE [ACTIVE]</b>" : "LIGHT MODE";
+                lightThemeButtonText.text = mode == ThemeMode.Light ? "<b>CLASSIFIED DOSSIER [ACTIVE]</b>" : "CLASSIFIED DOSSIER";
+            }
+            if (desertThemeButtonText != null)
+            {
+                desertThemeButtonText.text = mode == ThemeMode.DesertTan ? "<b>DESERT COYOTE [ACTIVE]</b>" : "DESERT COYOTE";
+            }
+            if (nightOpsThemeButtonText != null)
+            {
+                nightOpsThemeButtonText.text = mode == ThemeMode.NightOps ? "<b>NIGHT OPS HUD [ACTIVE]</b>" : "NIGHT OPS HUD";
+            }
+            if (cycleThemeButtonText != null)
+            {
+                cycleThemeButtonText.text = $"THEME: <b>{ThemeManager.GetThemeDisplayName(mode).ToUpper()}</b>";
+            }
+
+            HighlightThemeButton(darkThemeButton, darkThemeButtonText, mode == ThemeMode.Dark, p);
+            HighlightThemeButton(lightThemeButton, lightThemeButtonText, mode == ThemeMode.Light, p);
+            HighlightThemeButton(desertThemeButton, desertThemeButtonText, mode == ThemeMode.DesertTan, p);
+            HighlightThemeButton(nightOpsThemeButton, nightOpsThemeButtonText, mode == ThemeMode.NightOps, p);
+        }
+
+        private void HighlightThemeButton(Button btn, TextMeshProUGUI txt, bool isActive, ThemePalette p)
+        {
+            if (btn == null) return;
+            var img = btn.GetComponent<Image>();
+            if (img != null)
+            {
+                img.color = isActive ? p.btnAgeGrowBg : p.btnNormalBg;
+            }
+            if (txt != null)
+            {
+                txt.color = isActive ? p.btnAgeGrowText : p.btnNormalText;
             }
         }
 
@@ -370,12 +498,14 @@ namespace ArmyLife.UI
         {
             PlayerPrefs.SetFloat(PREF_MASTER_VOL, val);
             if (masterVolumeLabel != null) masterVolumeLabel.text = $"Master Volume: {Mathf.RoundToInt(val * 100)}%";
+            if (AudioManager.Instance != null) AudioManager.Instance.SetMasterVolume(val);
         }
 
         private void OnSfxVolumeChanged(float val)
         {
             PlayerPrefs.SetFloat(PREF_SFX_VOL, val);
             if (sfxVolumeLabel != null) sfxVolumeLabel.text = $"Sound FX: {Mathf.RoundToInt(val * 100)}%";
+            if (AudioManager.Instance != null) AudioManager.Instance.SetSfxVolume(val);
         }
 
         private void OnReturnToTitleClicked()
@@ -410,12 +540,27 @@ namespace ArmyLife.UI
 
         private void ApplyThemePalette(ThemePalette p)
         {
+            if (modalBackdropImage != null)
+            {
+                modalBackdropImage.color = p.mode == ThemeMode.Light 
+                    ? new Color(0.12f, 0.12f, 0.10f, 0.75f) 
+                    : new Color(0f, 0f, 0f, 0.90f);
+            }
+
             if (dialogPanelImage != null) dialogPanelImage.color = p.cardBackground;
-            if (titleText != null) titleText.color = p.accentCobalt;
+            if (titleText != null) titleText.color = p.accentGold;
             if (difficultyDescriptionText != null) difficultyDescriptionText.color = p.textSecondary;
             if (pacingDescriptionText != null) pacingDescriptionText.color = p.textSecondary;
             if (masterVolumeLabel != null) masterVolumeLabel.color = p.textPrimary;
             if (sfxVolumeLabel != null) sfxVolumeLabel.color = p.textPrimary;
+
+            if (closeButton != null)
+            {
+                var img = closeButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnNormalBg;
+                var txt = closeButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.color = p.btnNormalText;
+            }
 
             // Recolor all section header labels inside the modal content
             if (modalRoot != null)

@@ -95,6 +95,7 @@ namespace ArmyLife.UI
         private MinigameTab currentTab = MinigameTab.Checkpoint;
         private CheckpointVehicleCase currentCase;
         private bool checkpointResolved;
+        private bool isBindingsInitialized = false;
 
         // Firing Range State
         private List<TargetPopup> activeTargets;
@@ -121,6 +122,7 @@ namespace ArmyLife.UI
                 return;
             }
 
+            EnsureUIHierarchy();
             EnsureUIBindings();
 
             if (modalRoot != null)
@@ -167,6 +169,8 @@ namespace ArmyLife.UI
 
         public void OpenModal(MinigameTab tab = MinigameTab.Checkpoint)
         {
+            EnsureUIHierarchy();
+            EnsureUIBindings();
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
 
@@ -359,6 +363,8 @@ namespace ArmyLife.UI
             if (!isTargetActive || currentTargetIndex >= activeTargets.Count) return;
             isTargetActive = false;
 
+            AudioManager.PlayRifleShot();
+
             var target = activeTargets[currentTargetIndex];
             var soldier = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
 
@@ -373,6 +379,8 @@ namespace ArmyLife.UI
         {
             if (!isTargetActive || currentTargetIndex >= activeTargets.Count) return;
             isTargetActive = false;
+
+            AudioManager.PlayUiClick();
 
             var target = activeTargets[currentTargetIndex];
             var soldier = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
@@ -437,6 +445,15 @@ namespace ArmyLife.UI
                     soldier.AddMedal(finalResult.badgeAwarded);
                 }
                 GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
+            }
+
+            if (finalResult.tier != QualificationTier.Unqualified)
+            {
+                AudioManager.PlayBugleFanfare();
+            }
+            else
+            {
+                AudioManager.PlayAlertPing();
             }
 
             if (certificatePanel != null) certificatePanel.SetActive(true);
@@ -542,8 +559,222 @@ namespace ArmyLife.UI
         // EVENT BINDINGS & SAFETY
         // =====================================================================
 
+        /// <summary>
+        /// Robust programmatic UI builder that creates the full tactical minigames hierarchy
+        /// (Checkpoint Desk, Firing Range, Barracks Dice) if not already wired in editor/scene.
+        /// </summary>
+        public void EnsureUIHierarchy()
+        {
+            if (modalRoot != null && checkpointViewRoot != null && firingRangeViewRoot != null && barracksDiceViewRoot != null)
+                return;
+
+            var rootRect = GetComponent<RectTransform>();
+            if (rootRect == null) rootRect = gameObject.AddComponent<RectTransform>();
+            SetFullScreen(rootRect);
+
+            // 1. Overlay Backdrop
+            if (modalRoot == null)
+            {
+                var overlayObj = CreateUIElement("TacticalModalOverlay", transform);
+                SetFullScreen(overlayObj.GetComponent<RectTransform>());
+                modalBackdrop = overlayObj.AddComponent<Image>();
+                modalBackdrop.color = new Color(0.04f, 0.05f, 0.08f, 0.94f);
+                modalRoot = overlayObj;
+            }
+
+            // 2. Main Frame Card
+            var cardObj = CreateUIElement("MainFrameCard", modalRoot.transform);
+            var cardRect = cardObj.GetComponent<RectTransform>();
+            cardRect.anchorMin = new Vector2(0.03f, 0.02f);
+            cardRect.anchorMax = new Vector2(0.97f, 0.98f);
+            cardRect.offsetMin = Vector2.zero;
+            cardRect.offsetMax = Vector2.zero;
+            var cardImg = cardObj.AddComponent<Image>();
+            cardImg.color = new Color(0.10f, 0.12f, 0.16f, 1f);
+
+            // 3. Top Header Bar
+            var headerObj = CreateUIElement("TopHeaderBar", cardObj.transform);
+            SetRect(headerObj.GetComponent<RectTransform>(), 0f, 0.93f, 1f, 1f);
+            var headerBg = headerObj.AddComponent<Image>();
+            headerBg.color = new Color(0.15f, 0.18f, 0.24f);
+
+            var titleText = CreateText("HeaderTitle", headerObj.transform,
+                "TACTICAL SIMULATIONS & DRILLS", 28, TextAlignmentOptions.Left, FontStyles.Bold, new Color(0.95f, 0.82f, 0.35f));
+            SetRect(titleText.GetComponent<RectTransform>(), 0.04f, 0f, 0.80f, 1f);
+
+            closeModalButton = CreateButton("CloseBtn", headerObj.transform, out _, "X", new Color(0.65f, 0.20f, 0.20f));
+            SetRect(closeModalButton.GetComponent<RectTransform>(), 0.85f, 0.12f, 0.97f, 0.88f);
+
+            // 4. Tab Navigation Bar
+            var tabRowObj = CreateUIElement("TabRow", cardObj.transform);
+            SetRect(tabRowObj.GetComponent<RectTransform>(), 0.02f, 0.865f, 0.98f, 0.925f);
+            var tabHLayout = tabRowObj.AddComponent<HorizontalLayoutGroup>();
+            tabHLayout.spacing = 6f;
+            tabHLayout.childForceExpandWidth = true;
+            tabHLayout.childForceExpandHeight = true;
+
+            tabCheckpointButton = CreateButton("TabCheckpoint", tabRowObj.transform, out _, "CHECKPOINT", new Color(0.20f, 0.25f, 0.35f));
+            tabFiringRangeButton = CreateButton("TabFiringRange", tabRowObj.transform, out _, "FIRING RANGE", new Color(0.20f, 0.25f, 0.35f));
+            tabBarracksDiceButton = CreateButton("TabBarracksDice", tabRowObj.transform, out _, "BARRACKS DICE", new Color(0.20f, 0.25f, 0.35f));
+
+            // Content Area Container
+            var contentArea = CreateUIElement("ContentArea", cardObj.transform);
+            SetRect(contentArea.GetComponent<RectTransform>(), 0.02f, 0.02f, 0.98f, 0.855f);
+
+            // ==========================================
+            // VIEW A: CHECKPOINT DESK
+            // ==========================================
+            checkpointViewRoot = CreateUIElement("CheckpointView", contentArea.transform);
+            SetFullScreen(checkpointViewRoot.GetComponent<RectTransform>());
+
+            var cpCaseBox = CreateUIElement("CaseBox", checkpointViewRoot.transform);
+            SetRect(cpCaseBox.GetComponent<RectTransform>(), 0f, 0.92f, 1f, 1f);
+            checkpointCaseIdText = CreateText("CaseIdText", cpCaseBox.transform, "GATE POST CASE: CP-000", 22, TextAlignmentOptions.Left, FontStyles.Bold, new Color(0f, 0.85f, 1f));
+            SetFullScreen(checkpointCaseIdText.GetComponent<RectTransform>());
+
+            var bulletinBox = CreateUIElement("BulletinBox", checkpointViewRoot.transform);
+            SetRect(bulletinBox.GetComponent<RectTransform>(), 0f, 0.81f, 1f, 0.91f);
+            var bulletinImg = bulletinBox.AddComponent<Image>();
+            bulletinImg.color = new Color(0.20f, 0.16f, 0.06f, 0.9f);
+            intelBulletinText = CreateText("BulletinText", bulletinBox.transform, "BOLO: Watch for smuggled contraband and expired transit permits.", 18, TextAlignmentOptions.Left, FontStyles.Italic, new Color(1f, 0.85f, 0.3f));
+            SetRect(intelBulletinText.GetComponent<RectTransform>(), 0.02f, 0.05f, 0.98f, 0.95f);
+
+            var passportBox = CreateUIElement("PassportBox", checkpointViewRoot.transform);
+            SetRect(passportBox.GetComponent<RectTransform>(), 0f, 0.52f, 1f, 0.80f);
+            var passImg = passportBox.AddComponent<Image>();
+            passImg.color = new Color(0.12f, 0.14f, 0.18f);
+            passportDetailsText = CreateText("PassportText", passportBox.transform, "TRANSIT PASSPORT DETAILS", 18, TextAlignmentOptions.TopLeft, FontStyles.Normal, Color.white);
+            SetRect(passportDetailsText.GetComponent<RectTransform>(), 0.02f, 0.04f, 0.98f, 0.96f);
+
+            var manifestBox = CreateUIElement("ManifestBox", checkpointViewRoot.transform);
+            SetRect(manifestBox.GetComponent<RectTransform>(), 0f, 0.35f, 1f, 0.51f);
+            var manImg = manifestBox.AddComponent<Image>();
+            manImg.color = new Color(0.12f, 0.14f, 0.18f);
+            manifestDetailsText = CreateText("ManifestText", manifestBox.transform, "CARGO MANIFEST DETAILS", 18, TextAlignmentOptions.TopLeft, FontStyles.Normal, Color.white);
+            SetRect(manifestDetailsText.GetComponent<RectTransform>(), 0.02f, 0.04f, 0.98f, 0.96f);
+
+            var vehicleBox = CreateUIElement("VehicleBox", checkpointViewRoot.transform);
+            SetRect(vehicleBox.GetComponent<RectTransform>(), 0f, 0.22f, 1f, 0.34f);
+            var vehImg = vehicleBox.AddComponent<Image>();
+            vehImg.color = new Color(0.12f, 0.14f, 0.18f);
+            vehicleInfoText = CreateText("VehicleText", vehicleBox.transform, "VEHICLE DETAILS", 18, TextAlignmentOptions.TopLeft, FontStyles.Normal, Color.white);
+            SetRect(vehicleInfoText.GetComponent<RectTransform>(), 0.02f, 0.04f, 0.98f, 0.96f);
+
+            checkpointVerdictText = CreateText("VerdictText", checkpointViewRoot.transform, "", 20, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0f, 1f, 0.4f));
+            SetRect(checkpointVerdictText.GetComponent<RectTransform>(), 0f, 0.14f, 1f, 0.21f);
+
+            var cpButtonsBox = CreateUIElement("CheckpointButtonsRow", checkpointViewRoot.transform);
+            SetRect(cpButtonsBox.GetComponent<RectTransform>(), 0f, 0.01f, 1f, 0.13f);
+            var cpHLayout = cpButtonsBox.AddComponent<HorizontalLayoutGroup>();
+            cpHLayout.spacing = 6f;
+            cpHLayout.childForceExpandWidth = true;
+            cpHLayout.childForceExpandHeight = true;
+
+            approvePassButton = CreateButton("ApprovePassBtn", cpButtonsBox.transform, out _, "APPROVE PASS", new Color(0.18f, 0.55f, 0.28f));
+            searchCargoButton = CreateButton("SearchCargoBtn", cpButtonsBox.transform, out _, "SEARCH CARGO", new Color(0.65f, 0.45f, 0.15f));
+            detainDriverButton = CreateButton("DetainDriverBtn", cpButtonsBox.transform, out _, "DETAIN DRIVER", new Color(0.65f, 0.20f, 0.20f));
+            nextVehicleButton = CreateButton("NextVehicleBtn", cpButtonsBox.transform, out _, "NEXT VEHICLE", new Color(0.25f, 0.40f, 0.65f));
+
+            // ==========================================
+            // VIEW B: FIRING RANGE
+            // ==========================================
+            firingRangeViewRoot = CreateUIElement("FiringRangeView", contentArea.transform);
+            SetFullScreen(firingRangeViewRoot.GetComponent<RectTransform>());
+
+            rangeScoreboardText = CreateText("ScoreboardText", firingRangeViewRoot.transform, "QUALIFICATION SCORE: 0 / 0", 24, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0f, 0.85f, 1f));
+            SetRect(rangeScoreboardText.GetComponent<RectTransform>(), 0f, 0.90f, 1f, 0.98f);
+
+            var targetDisplayBox = CreateUIElement("TargetDisplayBox", firingRangeViewRoot.transform);
+            SetRect(targetDisplayBox.GetComponent<RectTransform>(), 0.05f, 0.46f, 0.95f, 0.88f);
+            var tgtImg = targetDisplayBox.AddComponent<Image>();
+            tgtImg.color = new Color(0.08f, 0.10f, 0.14f);
+
+            targetInfoText = CreateText("TargetInfoText", targetDisplayBox.transform, "READY ON FIRING LINE\nPress Start to begin.", 26, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+            SetRect(targetInfoText.GetComponent<RectTransform>(), 0.05f, 0.35f, 0.95f, 0.90f);
+
+            timerCountdownText = CreateText("TimerCountdownText", targetDisplayBox.transform, "Window: --", 22, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.85f, 0.2f));
+            SetRect(timerCountdownText.GetComponent<RectTransform>(), 0.05f, 0.08f, 0.95f, 0.30f);
+
+            trialFeedbackText = CreateText("TrialFeedbackText", firingRangeViewRoot.transform, "", 22, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.3f, 1f, 0.5f));
+            SetRect(trialFeedbackText.GetComponent<RectTransform>(), 0.05f, 0.33f, 0.95f, 0.44f);
+
+            var fireButtonsBox = CreateUIElement("FireButtonsRow", firingRangeViewRoot.transform);
+            SetRect(fireButtonsBox.GetComponent<RectTransform>(), 0.05f, 0.18f, 0.95f, 0.31f);
+            var frHLayout = fireButtonsBox.AddComponent<HorizontalLayoutGroup>();
+            frHLayout.spacing = 10f;
+            frHLayout.childForceExpandWidth = true;
+            frHLayout.childForceExpandHeight = true;
+
+            fireShotButton = CreateButton("FireShotBtn", fireButtonsBox.transform, out _, "PULL TRIGGER (FIRE)", new Color(0.70f, 0.20f, 0.20f));
+            holdFireButton = CreateButton("HoldFireBtn", fireButtonsBox.transform, out _, "HOLD FIRE", new Color(0.30f, 0.45f, 0.60f));
+
+            startRangeButton = CreateButton("StartRangeBtn", firingRangeViewRoot.transform, out _, "COMMENCE FIRING QUALIFICATION", new Color(0.18f, 0.60f, 0.30f));
+            SetRect(startRangeButton.GetComponent<RectTransform>(), 0.10f, 0.04f, 0.90f, 0.15f);
+
+            // Certificate Panel Overlay
+            certificatePanel = CreateUIElement("CertificatePanel", firingRangeViewRoot.transform);
+            SetFullScreen(certificatePanel.GetComponent<RectTransform>());
+            var certBg = certificatePanel.AddComponent<Image>();
+            certBg.color = new Color(0.05f, 0.07f, 0.10f, 0.95f);
+
+            certificateSummaryText = CreateText("CertSummaryText", certificatePanel.transform, "MARKSMANSHIP QUALIFICATION CERTIFICATE", 24, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.95f, 0.85f, 0.35f));
+            SetRect(certificateSummaryText.GetComponent<RectTransform>(), 0.08f, 0.35f, 0.92f, 0.80f);
+
+            closeCertificateButton = CreateButton("CloseCertBtn", certificatePanel.transform, out _, "DISMISS CERTIFICATE", new Color(0.25f, 0.45f, 0.70f));
+            SetRect(closeCertificateButton.GetComponent<RectTransform>(), 0.20f, 0.18f, 0.80f, 0.28f);
+            certificatePanel.SetActive(false);
+
+            // ==========================================
+            // VIEW C: BARRACKS CRAPS
+            // ==========================================
+            barracksDiceViewRoot = CreateUIElement("BarracksDiceView", contentArea.transform);
+            SetFullScreen(barracksDiceViewRoot.GetComponent<RectTransform>());
+
+            diceOpponentText = CreateText("OpponentText", barracksDiceViewRoot.transform, "OPPONENT: Corporal Vance | BARRACKS CRAPS", 22, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+            SetRect(diceOpponentText.GetComponent<RectTransform>(), 0f, 0.90f, 1f, 0.98f);
+
+            currentWagerText = CreateText("CurrentWagerText", barracksDiceViewRoot.transform, "Current Bet: $50", 22, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0f, 1f, 0.5f));
+            SetRect(currentWagerText.GetComponent<RectTransform>(), 0f, 0.81f, 1f, 0.89f);
+
+            var wagerBox = CreateUIElement("WagerButtonsRow", barracksDiceViewRoot.transform);
+            SetRect(wagerBox.GetComponent<RectTransform>(), 0.05f, 0.70f, 0.95f, 0.79f);
+            var wHLayout = wagerBox.AddComponent<HorizontalLayoutGroup>();
+            wHLayout.spacing = 8f;
+            wHLayout.childForceExpandWidth = true;
+            wHLayout.childForceExpandHeight = true;
+
+            wager20Button = CreateButton("Wager20Btn", wagerBox.transform, out _, "$20", new Color(0.20f, 0.25f, 0.35f));
+            wager50Button = CreateButton("Wager50Btn", wagerBox.transform, out _, "$50", new Color(0.20f, 0.25f, 0.35f));
+            wager100Button = CreateButton("Wager100Btn", wagerBox.transform, out _, "$100", new Color(0.20f, 0.25f, 0.35f));
+            wager250Button = CreateButton("Wager250Btn", wagerBox.transform, out _, "$250", new Color(0.20f, 0.25f, 0.35f));
+
+            var diceDisplayBox = CreateUIElement("DiceDisplayBox", barracksDiceViewRoot.transform);
+            SetRect(diceDisplayBox.GetComponent<RectTransform>(), 0.05f, 0.34f, 0.95f, 0.67f);
+            var diceBoxImg = diceDisplayBox.AddComponent<Image>();
+            diceBoxImg.color = new Color(0.08f, 0.10f, 0.14f);
+
+            playerDiceText = CreateText("PlayerDiceText", diceDisplayBox.transform, "YOUR ROLL: [ - ] [ - ]", 26, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0f, 0.85f, 1f));
+            SetRect(playerDiceText.GetComponent<RectTransform>(), 0.05f, 0.52f, 0.95f, 0.92f);
+
+            opponentDiceText = CreateText("OpponentDiceText", diceDisplayBox.transform, "OPPONENT: [ - ] [ - ]", 26, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.65f, 0.35f));
+            SetRect(opponentDiceText.GetComponent<RectTransform>(), 0.05f, 0.08f, 0.95f, 0.48f);
+
+            diceOutcomeText = CreateText("DiceOutcomeText", barracksDiceViewRoot.transform, "Place your bet and roll the bones!", 22, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.85f, 0.3f));
+            SetRect(diceOutcomeText.GetComponent<RectTransform>(), 0.05f, 0.20f, 0.95f, 0.32f);
+
+            rollDiceButton = CreateButton("RollDiceBtn", barracksDiceViewRoot.transform, out _, "ROLL THE DICE (2d6)", new Color(0.18f, 0.65f, 0.35f));
+            SetRect(rollDiceButton.GetComponent<RectTransform>(), 0.10f, 0.04f, 0.90f, 0.16f);
+
+            checkpointViewRoot.SetActive(true);
+            firingRangeViewRoot.SetActive(false);
+            barracksDiceViewRoot.SetActive(false);
+        }
+
         private void EnsureUIBindings()
         {
+            if (isBindingsInitialized) return;
+            isBindingsInitialized = true;
+
             if (closeModalButton != null) closeModalButton.onClick.AddListener(CloseModal);
 
             if (tabCheckpointButton != null) tabCheckpointButton.onClick.AddListener(() => SwitchTab(MinigameTab.Checkpoint));
@@ -573,7 +804,120 @@ namespace ArmyLife.UI
             if (rollDiceButton != null) rollDiceButton.onClick.AddListener(OnRollDiceClicked);
         }
 
-        private void BindEventListeners() { }
-        private void UnbindEventListeners() { }
+        private static GameObject CreateUIElement(string name, Transform parent)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            return go;
+        }
+
+        private static void SetFullScreen(RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+        }
+
+        private static void SetRect(RectTransform rt, float xMin, float yMin, float xMax, float yMax)
+        {
+            rt.anchorMin = new Vector2(xMin, yMin);
+            rt.anchorMax = new Vector2(xMax, yMax);
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+        }
+
+        private static TextMeshProUGUI CreateText(string name, Transform parent, string text, float fontSize,
+            TextAlignmentOptions alignment, FontStyles fontStyle, Color color)
+        {
+            var go = CreateUIElement(name, parent);
+            var tmp = go.AddComponent<TextMeshProUGUI>();
+            tmp.text = text;
+            tmp.fontSize = fontSize;
+            tmp.alignment = alignment;
+            tmp.fontStyle = fontStyle;
+            tmp.color = color;
+            tmp.enableWordWrapping = true;
+            return tmp;
+        }
+
+        private static Button CreateButton(string name, Transform parent, out TextMeshProUGUI label, string text, Color bgColor)
+        {
+            var go = CreateUIElement(name, parent);
+            var img = go.AddComponent<Image>();
+            img.color = bgColor;
+            var btn = go.AddComponent<Button>();
+
+            label = CreateText("Label", go.transform, text, 18, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+            SetFullScreen(label.GetComponent<RectTransform>());
+
+            return btn;
+        }
+
+        private void BindEventListeners()
+        {
+            ThemeManager.OnThemeChanged += OnThemeChanged;
+            ThemePalette p = ThemeManager.Instance != null 
+                ? ThemeManager.Instance.GetCurrentPalette() 
+                : ThemeManager.GetPalette(ThemeMode.Dark);
+            ApplyThemePalette(p);
+        }
+
+        private void UnbindEventListeners()
+        {
+            ThemeManager.OnThemeChanged -= OnThemeChanged;
+        }
+
+        private void OnThemeChanged(ThemeMode mode, ThemePalette palette)
+        {
+            ApplyThemePalette(palette);
+        }
+
+        private void ApplyThemePalette(ThemePalette p)
+        {
+            if (modalBackdrop != null)
+            {
+                modalBackdrop.color = p.mode == ThemeMode.Light 
+                    ? new Color(0.12f, 0.12f, 0.10f, 0.75f) 
+                    : new Color(0f, 0f, 0f, 0.90f);
+            }
+
+            if (checkpointViewRoot != null)
+            {
+                var img = checkpointViewRoot.GetComponent<Image>();
+                if (img != null) img.color = p.cardBackground;
+            }
+            if (firingRangeViewRoot != null)
+            {
+                var img = firingRangeViewRoot.GetComponent<Image>();
+                if (img != null) img.color = p.cardBackground;
+            }
+            if (barracksDiceViewRoot != null)
+            {
+                var img = barracksDiceViewRoot.GetComponent<Image>();
+                if (img != null) img.color = p.cardBackground;
+            }
+
+            StyleTabButton(tabCheckpointButton, currentTab == MinigameTab.Checkpoint, p);
+            StyleTabButton(tabFiringRangeButton, currentTab == MinigameTab.FiringRange, p);
+            StyleTabButton(tabBarracksDiceButton, currentTab == MinigameTab.BarracksDice, p);
+
+            if (closeModalButton != null)
+            {
+                var img = closeModalButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnNormalBg;
+                var txt = closeModalButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.color = p.btnNormalText;
+            }
+        }
+
+        private void StyleTabButton(Button btn, bool isActive, ThemePalette p)
+        {
+            if (btn == null) return;
+            var img = btn.GetComponent<Image>();
+            if (img != null) img.color = isActive ? p.btnAgeGrowBg : p.btnNormalBg;
+            var txt = btn.GetComponentInChildren<TextMeshProUGUI>();
+            if (txt != null) txt.color = isActive ? p.btnAgeGrowText : p.btnNormalText;
+        }
     }
 }

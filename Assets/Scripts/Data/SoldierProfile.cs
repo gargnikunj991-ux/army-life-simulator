@@ -67,6 +67,7 @@ namespace ArmyLife.Data
         [Header("Military Standing & Branch")]
         public MilitaryBranch militaryBranch = MilitaryBranch.Army;
         public AirForceRole airForceRole = AirForceRole.None;
+        public bool hasAnsweredWartimeCall = false; // Set to true after player chooses their service branch
         public bool isFlightDuty => militaryBranch == MilitaryBranch.AirForce && airForceRole == AirForceRole.FlightDuty;
         public int flightHoursLogged = 0;
         public MilitaryRankSO currentRank;
@@ -77,6 +78,7 @@ namespace ArmyLife.Data
         public bool isInCombatDeployment;       // True during frontline tours (+Hazard Pay)
         public bool isVoluntaryExtendedTour;    // If true, soldier volunteers to stay on the battlefield longer than 6 months
         public int consecutiveCombatSemesters;  // Number of continuous 6-month frontline combat semesters
+        public int garrisonSemestersInRow;      // Number of continuous 6-month garrison refit semesters
         public bool hasExtendedTourPayBonus => consecutiveCombatSemesters >= 2; // True if continuously deployed >= 1 year (> 2 semesters)
         public bool isOfficer => currentRank != null && currentRank.type == PaygradeType.Officer;
         public int medalsEarnedCount;
@@ -133,6 +135,72 @@ namespace ArmyLife.Data
         public string specialForcesRoleTitle => (militaryBranch == MilitaryBranch.AirForce) 
             ? EconomyData.AIRFORCE_SPECIAL_FORCES_ROLE 
             : EconomyData.ARMY_SPECIAL_FORCES_ROLE;
+
+        /// <summary>
+        /// Returns the authentic branch-specific rank title (e.g. Ensign O-1 for Air Force, 2nd Lt O-1 for Army, or Recruit in Basic Training).
+        /// </summary>
+        public string GetRankDisplayName()
+        {
+            if (isDead) return "Fallen Hero (KIA)";
+            if (isRetired) return $"[RETIRED] {(currentRank != null ? currentRank.rankName : "Veteran")}";
+
+            if (careerTrack == CareerTrack.MilitaryRecruitBasic)
+            {
+                return (militaryBranch == MilitaryBranch.AirForce)
+                    ? "Air Recruit (Basic Flight Training • 100% Covered)"
+                    : "Recruit (Basic Combat Training • 100% Covered)";
+            }
+
+            if (careerTrack == CareerTrack.MilitaryWarAcademy)
+            {
+                string branchName = (militaryBranch == MilitaryBranch.AirForce) ? "Flight" : "War";
+                return $"Officer Cadet ({branchName} Academy Year {(academySemestersCompleted / 2) + 1})";
+            }
+
+            if (isSpecialForcesCandidate)
+            {
+                return "Special Forces Candidate (Q-Course)";
+            }
+
+            if (currentRank == null)
+            {
+                return (militaryBranch == MilitaryBranch.AirForce) ? "Airman Basic (E-1)" : "Private Recruit (E-1)";
+            }
+
+            // Air Force specific designations:
+            if (militaryBranch == MilitaryBranch.AirForce)
+            {
+                string afRank = currentRank.paygrade switch
+                {
+                    "E-1" => "Airman Basic (E-1)",
+                    "E-2" => "Airman (E-2)",
+                    "E-3" => "Airman First Class (E-3)",
+                    "E-4" => "Senior Airman (E-4)",
+                    "E-5" => "Staff Sergeant (E-5)",
+                    "E-6" => "Technical Sergeant (E-6)",
+                    "E-7" => "Master Sergeant (E-7)",
+                    "E-8" => "Senior Master Sergeant (E-8)",
+                    "E-9" => "Chief Master Sergeant (E-9)",
+                    "O-1" => "Ensign / Flight Lieutenant (O-1)",
+                    "O-2" => "1st Lieutenant (O-2)",
+                    "O-3" => "Flight Captain (O-3)",
+                    "O-4" => "Squadron Leader / Major (O-4)",
+                    "O-5" => "Wing Commander / Lt Col (O-5)",
+                    "O-6" => "Group Captain / Colonel (O-6)",
+                    "O-7" => "Air Commodore / Brig Gen (O-7)",
+                    "O-8" => "Air Vice-Marshal (O-8)",
+                    "O-9" => "Air Marshal (O-9)",
+                    "O-10" => "General of the Air Force (O-10)",
+                    _ => $"{currentRank.rankName} ({currentRank.paygrade})"
+                };
+
+                return isSpecialForces ? $"[SF VALKYRIE OPERATOR] {afRank}" : afRank;
+            }
+
+            // Army designations:
+            string armyRank = $"{currentRank.rankName} ({currentRank.paygrade})";
+            return isSpecialForces ? $"[SF GREEN BERET OPERATOR] {armyRank}" : armyRank;
+        }
 
         public bool HasMedal(string medalName)
         {
@@ -220,6 +288,7 @@ namespace ArmyLife.Data
         public int specialForcesTrainingSemesters;       // 0 to 2 semesters
         public bool hasCOSpecialForcesRecommendation;    // Direct enlisted recommendation from commanding officer
         public int specialForcesMissionsSurvived;        // Tracks special operations completed
+        public int specialForcesWashoutCount = 0;       // Times washed out of selection (can re-try if fitness builds up)
 
         [Header("Brothers in Arms (Persistent Squadmates)")]
         public List<SquadMate> squadMates = new List<SquadMate>();

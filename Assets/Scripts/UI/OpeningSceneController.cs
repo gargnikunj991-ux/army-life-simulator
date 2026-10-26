@@ -274,8 +274,94 @@ namespace ArmyLife.UI
             WireEventListeners();
             RefreshMenuState();
 
+            ThemeManager.OnThemeChanged += OnThemeChanged;
+            ThemePalette p = ThemeManager.Instance != null 
+                ? ThemeManager.Instance.GetCurrentPalette() 
+                : ThemeManager.GetPalette(ThemeMode.Dark);
+            ApplyThemePalette(p);
+
             // Always display the opening screen first when game boots up
             ShowOpeningScreen();
+        }
+
+        private void OnDestroy()
+        {
+            ThemeManager.OnThemeChanged -= OnThemeChanged;
+        }
+
+        private void OnThemeChanged(ThemeMode mode, ThemePalette palette)
+        {
+            ApplyThemePalette(palette);
+            RefreshMenuState();
+        }
+
+        public void ApplyThemePalette(ThemePalette p)
+        {
+            if (Camera.main != null) Camera.main.backgroundColor = p.backgroundColor;
+
+            if (openingScreenPanel != null)
+            {
+                var img = openingScreenPanel.GetComponent<Image>();
+                if (img != null) img.color = p.backgroundColor;
+            }
+
+            if (characterCreationModal != null)
+            {
+                var img = characterCreationModal.GetComponent<Image>();
+                if (img != null) img.color = p.cardBackground;
+            }
+
+            if (manageLivesModal != null)
+            {
+                var img = manageLivesModal.GetComponent<Image>();
+                if (img != null) img.color = p.cardBackground;
+            }
+
+            if (createNewLifeButton != null)
+            {
+                var img = createNewLifeButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnAgeGrowBg;
+                var txt = createNewLifeButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.color = p.btnAgeGrowText;
+            }
+
+            if (continueOrManageButton != null)
+            {
+                var img = continueOrManageButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnNormalBg;
+            }
+
+            if (settingsButton != null)
+            {
+                var img = settingsButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnNormalBg;
+                var txt = settingsButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.color = p.btnNormalText;
+            }
+
+            if (confirmStartLifeButton != null)
+            {
+                var img = confirmStartLifeButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnAgeGrowBg;
+                var txt = confirmStartLifeButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.color = p.btnAgeGrowText;
+            }
+
+            if (cancelCreationButton != null)
+            {
+                var img = cancelCreationButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnNormalBg;
+                var txt = cancelCreationButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.color = p.btnNormalText;
+            }
+
+            if (closeManageLivesButton != null)
+            {
+                var img = closeManageLivesButton.GetComponent<Image>();
+                if (img != null) img.color = p.btnNormalBg;
+                var txt = closeManageLivesButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null) txt.color = p.btnNormalText;
+            }
         }
 
         private void InitLineageList()
@@ -389,8 +475,13 @@ namespace ArmyLife.UI
             var lives = LifePersistenceManager.GetAllLives();
             int count = lives != null ? lives.Count : 0;
 
+            ThemePalette p = ThemeManager.Instance != null 
+                ? ThemeManager.Instance.GetCurrentPalette() 
+                : ThemeManager.GetPalette(ThemeMode.Dark);
+
             if (totalLivesCountLabel != null)
             {
+                totalLivesCountLabel.color = p.textSecondary;
                 totalLivesCountLabel.text = count > 0 
                     ? $"Active Military Service Records: <b>{count}</b>" 
                     : "No Recorded Service Lives Found";
@@ -403,7 +494,7 @@ namespace ArmyLife.UI
                     // 0 lives: Button disabled
                     continueOrManageButton.interactable = false;
                     continueOrManageButtonText.text = "CONTINUE (NO SAVES)";
-                    continueOrManageButtonText.color = new Color(0.6f, 0.6f, 0.6f, 0.6f);
+                    continueOrManageButtonText.color = p.textMuted;
                 }
                 else if (count == 1)
                 {
@@ -412,14 +503,14 @@ namespace ArmyLife.UI
                     continueOrManageButton.interactable = true;
                     string status = singleLife.isDead ? " [DECEASED]" : (singleLife.isRetired ? " [RETIRED]" : "");
                     continueOrManageButtonText.text = $"CONTINUE ({singleLife.characterName}{status})";
-                    continueOrManageButtonText.color = new Color(0.3f, 1f, 0.6f);
+                    continueOrManageButtonText.color = p.accentEmerald;
                 }
                 else
                 {
                     // More than 1 life: "MANAGE LIVES"
                     continueOrManageButton.interactable = true;
                     continueOrManageButtonText.text = $"MANAGE LIVES ({count})";
-                    continueOrManageButtonText.color = new Color(0.4f, 0.8f, 1f);
+                    continueOrManageButtonText.color = p.accentGold;
                 }
             }
         }
@@ -450,6 +541,7 @@ namespace ArmyLife.UI
 
         private void OnContinueOrManageClicked()
         {
+            AudioManager.PlayUiClick();
             var lives = LifePersistenceManager.GetAllLives();
             int count = lives != null ? lives.Count : 0;
 
@@ -467,6 +559,7 @@ namespace ArmyLife.UI
 
         private void ResumeLifeById(string lifeId)
         {
+            AudioManager.PlayTurnAdvance();
             ShowMainHUD();
 
             if (GameManager.Instance != null)
@@ -481,6 +574,7 @@ namespace ArmyLife.UI
 
         private void OnCreateNewLifeClicked()
         {
+            AudioManager.PlayUiClick();
             if (characterCreationModal != null)
             {
                 if (openingScreenPanel != null) openingScreenPanel.SetActive(false);
@@ -672,6 +766,8 @@ namespace ArmyLife.UI
             string skinTone = SkinTones[selectedSkinToneIndex];
 
             // Activate Main HUD first so all event listeners (BitLifeFeedView, MainHUDView) are registered!
+            AudioManager.PlayTurnAdvance();
+            AudioManager.PlayDrillWhistle();
             ShowMainHUD();
 
             if (GameManager.Instance != null)

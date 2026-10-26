@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using ArmyLife.Data;
 using ArmyLife.Systems;
+using ArmyLife.UI;
 using UnityEngine;
 
 namespace ArmyLife.Core
@@ -34,6 +35,10 @@ namespace ArmyLife.Core
         {
             // Do not force-spawn Ethan Vance if no soldier is loaded.
             // OpeningSceneController will handle showing the menu or character creation.
+            if (currentSoldier != null && !currentSoldier.hasAnsweredWartimeCall && currentSoldier.age <= 18.5f && !currentSoldier.isDead && !currentSoldier.isRetired)
+            {
+                TriggerWartimeMobilizationPopup();
+            }
         }
 
         public void ResumeLife(string lifeId)
@@ -147,11 +152,15 @@ namespace ArmyLife.Core
             currentSoldier.birthCity = city;
             currentSoldier.isBornInImperialState = isImperial;
 
-            // Direct Enlistment: Start at Age 18.0 in Year 2026 as Private Recruit (E-1)!
+            // Direct Enlistment: Start at Age 18.0 in Year 2026!
             currentSoldier.age = 18.0f;
             currentSoldier.totalSemestersLived = 0;
-            currentSoldier.careerTrack = CareerTrack.MilitaryEnlisted;
-            currentSoldier.currentRank = GetRankByPaygrade("E-1");
+            currentSoldier.careerTrack = CareerTrack.MilitaryRecruitBasic;
+            currentSoldier.currentRank = null; // Unranked recruit in Basic Training
+            currentSoldier.militarySchoolSemestersCompleted = 0;
+            currentSoldier.hasAnsweredWartimeCall = false;
+            currentSoldier.academyTuitionDebt = 0;
+            currentSoldier.collegeTuitionDebt = 0; // All basic training expenses 100% covered by the government during wartime emergency
 
             // Apply Background Origin Bonuses
             switch (origin)
@@ -223,12 +232,14 @@ namespace ArmyLife.Core
 
             string imperialBadge = isImperial ? " <color=#FFD700>[IMPERIAL CROWN DOMAIN]</color>" : "";
             GameEvents.OnFeedEventLogged?.Invoke("ENLISTMENT",
-                $"<color=#00FFAA><b>[ENLISTMENT DAY • AGE 18.0]</b></color> You stood before the military commission in <b>{city}</b>, province of <b>{state}</b> ({birthCountry}){imperialBadge}, raised your right hand, and swore the oath of service! " +
-                $"Assigned to active duty as a <b>{currentSoldier.currentRank?.rankName ?? "Private Recruit"} (E-1)</b>. " +
+                $"<color=#00FFAA><b>[ENLISTMENT DAY • AGE 18.0]</b></color> You stood before the military commission in <b>{city}</b>, province of <b>{state}</b> ({birthCountry}){imperialBadge}, raised your right hand, and swore the oath of service to your country! " +
                 $"Background Origin: <b>{origin}</b> (Trait: <i>{currentSoldier.originTrait}</i>). " +
                 $"Appearance: <i>{hairStyle}, {hairColor} hair, {eyeColor} eyes, {skinTone} ({looks:F0}% Looks)</i>.");
 
             GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+
+            // Trigger the Wartime Mobilization Call to Arms popup
+            TriggerWartimeMobilizationPopup();
         }
 
         /// <summary>
@@ -241,11 +252,14 @@ namespace ArmyLife.Core
             // 0. If soldier is dead, stop and prompt
             if (currentSoldier.isDead)
             {
+                AudioManager.PlayTaps();
                 GameEvents.OnFeedEventLogged?.Invoke("SERVICE END",
                     $"<color=#FF4444><b>[SERVICE RECORD CONCLUDED]</b></color> {currentSoldier.characterName} has fallen in the line of duty ({currentSoldier.deathReason}). Review your career dossier or enlist a new recruit from the main menu.");
                 GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
                 return;
             }
+
+            AudioManager.PlayTurnAdvance();
 
             // 1. Advance Calendar Clock (+0.5 yrs / 6 months)
             if (TimeCycleManager.Instance != null)
@@ -259,8 +273,10 @@ namespace ArmyLife.Core
             }
             currentSoldier.timeInCurrentRankSemesters++;
 
-            // 2. War Academy / Special Forces Training vs Frontline Active Duty
-            if (currentSoldier.careerTrack == CareerTrack.MilitaryWarAcademy)
+            // 2. War Academy / Basic Training / Technical School vs Frontline Active Duty
+            if (currentSoldier.careerTrack == CareerTrack.MilitaryWarAcademy ||
+                currentSoldier.careerTrack == CareerTrack.MilitaryRecruitBasic ||
+                currentSoldier.careerTrack == CareerTrack.MilitaryTechSchool)
             {
                 currentSoldier.consecutiveCombatSemesters = 0;
                 currentSoldier.isInCombatDeployment = false;
@@ -268,216 +284,13 @@ namespace ArmyLife.Core
             }
             else if (currentSoldier.isSpecialForcesCandidate)
             {
-                currentSoldier.consecutiveCombatSemesters = 0;
-                currentSoldier.isInCombatDeployment = false;
-                currentSoldier.specialForcesTrainingSemesters++;
-
-                currentSoldier.combatSkill = Mathf.Min(100f, currentSoldier.combatSkill + Random.Range(8f, 14f));
-                currentSoldier.fitness = Mathf.Min(100f, currentSoldier.fitness + Random.Range(6f, 10f));
-                currentSoldier.discipline = Mathf.Min(100f, currentSoldier.discipline + 6f);
-
-                if (currentSoldier.specialForcesTrainingSemesters == 1)
-                {
-                    GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES",
-                        "<color=#FF8800><b>[SPECIAL FORCES QUALIFICATION • PHASE 1 (SELECTION & HELL DRILLS)]</b></color> " +
-                        "You endured 6 months of brutal mountain survival, counter-terror tactics, and live-fire room clearing! (+Combat Skill, +Fitness). Final qualification term ahead.");
-                }
-                else if (currentSoldier.specialForcesTrainingSemesters >= 2)
-                {
-                    currentSoldier.isSpecialForcesCandidate = false;
-                    currentSoldier.isSpecialForces = true;
-
-                    string sfName = currentSoldier.specialForcesBranchName;
-                    string sfRole = currentSoldier.specialForcesRoleTitle;
-                    string sfMedal = (currentSoldier.militaryBranch == MilitaryBranch.AirForce) 
-                        ? "Celestial Valkyrie Wings" 
-                        : "Iron Vanguard Black Beret";
-
-                    currentSoldier.AddTrait(sfRole);
-                    currentSoldier.AddMedal(sfMedal);
-
-                    GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES",
-                        $"<color=#FFD700><b>[SPECIAL FORCES GRADUATION • {sfName.ToUpper()}]</b></color> " +
-                        $"You conquered the grueling 1-year selection course! Inducted into <b>{sfName}</b> as a <b>{sfRole}</b> and awarded the <i>{sfMedal}</i>! " +
-                        "You now draw an exclusive <b>+$800/mo Elite Hazard Stipend</b>, but will deploy on the deadliest classified black-ops missions!");
-                }
+                ProcessSpecialForcesCandidateProgression();
+                return;
             }
             else if (currentSoldier.isInCombatDeployment)
             {
-                currentSoldier.consecutiveCombatSemesters++;
-                string extensionBadge = currentSoldier.isVoluntaryExtendedTour ? " <color=#FF8800>[VOLUNTARY EXTENDED TOUR]</color>" : "";
-                string payBonusBadge = currentSoldier.hasExtendedTourPayBonus ? " <color=#FFD700>[+10% VETERAN COMBAT PAY ACTIVE]</color>" : "";
-
-                var theater = WarTheaterInfo.GetInfo(currentSoldier.currentTheater);
-                currentSoldier.toursInCurrentTheater++;
-
-                // Protective Gear & Squad Scout bonuses
-                float gearProtection = 0f;
-                if (currentSoldier.hasSteelHelmet) gearProtection += 5f;
-                if (currentSoldier.hasBallisticVest) gearProtection += 8f;
-                if (currentSoldier.hasLuckyWatch) gearProtection += 4f;
-                var scout = currentSoldier.squadMates.Find(m => m.role == SquadRole.LeadScout && !m.isDead);
-                if (scout != null && scout.relationship >= 50f) gearProtection += 4f;
-
-                if (currentSoldier.isSpecialForces)
-                {
-                    // Special Forces Covert Black-Ops Mission: High Pay, Higher Lethality Risk, Rapid Experience Scaling
-                    GameEvents.OnFeedEventLogged?.Invoke("SPEC-OPS",
-                        $"<color=#FF3333><b>[SPECIAL OPERATIONS OP • {theater.theaterName.ToUpper()}]</b></color>{extensionBadge}{payBonusBadge} " +
-                        $"Covert penetration raid. Weather: <i>{theater.weatherAndEnvironment}</i>. Special hazard pay <b>+$800/mo</b> active.");
-
-                    int rankOrder = currentSoldier.currentRank != null ? currentSoldier.currentRank.rankOrder : 1;
-                    float rankExpBonus = rankOrder * 1.5f;
-                    float skillMitigation = currentSoldier.combatSkill * 0.35f;
-                    float sfCasualtyThreshold = Mathf.Clamp((48f * theater.baseHazardModifier) - rankExpBonus - skillMitigation - gearProtection, 10f, 55f);
-
-                    float sfRoll = Random.value * 100f;
-                    if (sfRoll < sfCasualtyThreshold)
-                    {
-                        float woundDmg = Random.Range(20f, 45f);
-                        currentSoldier.health = Mathf.Max(0f, currentSoldier.health - woundDmg);
-
-                        if (currentSoldier.health <= 0f)
-                        {
-                            var medic = currentSoldier.squadMates.Find(m => m.role == SquadRole.CombatMedic && !m.isDead);
-                            if (medic != null && medic.relationship >= 40f && Random.value < 0.65f)
-                            {
-                                currentSoldier.health = 20f;
-                                medic.relationship = Mathf.Min(100f, medic.relationship + 15f);
-                                medic.battlesSurvived++;
-                                currentSoldier.AddMedal("Imperial Wound Star");
-                                GameEvents.OnFeedEventLogged?.Invoke("MEDIC RESCUE",
-                                    $"<color=#00FFAA><b>[HEROIC MEDIC RESCUE • BROTHERS IN ARMS]</b></color> You collapsed from a fatal bullet wound! " +
-                                    $"{medic.GetDisplayName()} charged through enemy fire, dragged you behind cover, and applied arterial tourniquets! " +
-                                    "Your life was saved! (Health restored to 20%).");
-                            }
-                            else if (currentSoldier.fieldMedkitsCount > 0)
-                            {
-                                currentSoldier.fieldMedkitsCount--;
-                                currentSoldier.health = 18f;
-                                currentSoldier.AddMedal("Imperial Wound Star");
-                                GameEvents.OnFeedEventLogged?.Invoke("FIELD TRAUMA",
-                                    "<color=#00FFAA><b>[EMERGENCY MEDKIT CONSUMED]</b></color> Facing fatal blood loss, you rammed your emergency PX trauma syrette into the wound (-1 Medkit). You survived with 18% Health!");
-                            }
-                            else
-                            {
-                                currentSoldier.isDead = true;
-                                currentSoldier.deathReason = $"Killed in Action (KIA) during a high-stakes Special Forces night assault in {theater.theaterName}";
-                                currentSoldier.AddMedal("Special Operations Valor Cross (Posthumous)");
-                                GameEvents.OnFeedEventLogged?.Invoke("KIA",
-                                    $"<color=#FF0000><b>[KILLED IN ACTION • SPECIAL FORCES]</b></color> Ambushed behind enemy lines in {theater.theaterName}. You sacrificed your life so your team could escape. Posthumously awarded the <b>Special Operations Valor Cross</b>.");
-                                LifePersistenceManager.SaveSoldierLife(currentSoldier);
-                                GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
-                                return;
-                            }
-                        }
-                        else
-                        {
-                            currentSoldier.AddMedal("Imperial Wound Star");
-                            GameEvents.OnFeedEventLogged?.Invoke("CASUALTY",
-                                $"<color=#FF6644>[SPEC-OPS CASUALTY]</color> Wounded by enemy fire during an extraction (-{woundDmg:F0} Health). Awarded <b>Imperial Wound Star</b>.");
-                        }
-                    }
-                    else
-                    {
-                        currentSoldier.specialForcesMissionsSurvived++;
-                        float expGain = Random.Range(7f, 13f) + (rankOrder * 0.8f);
-                        currentSoldier.combatSkill = Mathf.Min(100f, currentSoldier.combatSkill + expGain);
-                        currentSoldier.meritRating = Mathf.Min(100f, currentSoldier.meritRating + Random.Range(5f, 10f));
-
-                        if (currentSoldier.specialForcesMissionsSurvived == 3)
-                        {
-                            currentSoldier.AddMedal("Distinguished Commando Ribbon");
-                        }
-                        else if (currentSoldier.specialForcesMissionsSurvived == 6)
-                        {
-                            currentSoldier.AddMedal("Silver Star with V Device (Valor)");
-                        }
-                        else if (currentSoldier.specialForcesMissionsSurvived == 10)
-                        {
-                            currentSoldier.AddMedal("Imperial Legion of Merit");
-                        }
-
-                        GameEvents.OnFeedEventLogged?.Invoke("SPEC-OPS SUCCESS",
-                            $"<color=#00FFAA><b>[SPECIAL OPERATIONS OBJECTIVE CONQUERED]</b></color> Target neutralized in {theater.theaterName}! " +
-                            $"Missions Survived: <b>{currentSoldier.specialForcesMissionsSurvived}</b>. Tactical Experience: <b>+{expGain:F1} Combat Skill</b>, +Merit.");
-                    }
-                }
-                else
-                {
-                    // Standard Frontline Operational Tour
-                    GameEvents.OnFeedEventLogged?.Invoke("DEPLOYMENT",
-                        $"<color=#FF4444><b>[OPERATIONAL TOUR • {theater.theaterName.ToUpper()}]</b></color>{extensionBadge}{payBonusBadge} " +
-                        $"Your unit is holding the frontline (Continuous: <b>{currentSoldier.consecutiveCombatSemesters * 0.5f:F1} yrs</b> | Theater Tours: {currentSoldier.toursInCurrentTheater}). Earned <b>+$450 Hazard Combat Pay</b>.");
-
-                    float survivalRoll = Random.value * 100f;
-                    float casualtyThreshold = Mathf.Clamp((35f * theater.baseHazardModifier) - (currentSoldier.combatSkill * 0.25f) - gearProtection, 6f, 38f);
-
-                    if (survivalRoll < casualtyThreshold)
-                    {
-                        float woundDmg = Random.Range(15f, 35f);
-                        currentSoldier.health = Mathf.Max(0f, currentSoldier.health - woundDmg);
-
-                        if (currentSoldier.health <= 0f)
-                        {
-                            var medic = currentSoldier.squadMates.Find(m => m.role == SquadRole.CombatMedic && !m.isDead);
-                            if (medic != null && medic.relationship >= 40f && Random.value < 0.65f)
-                            {
-                                currentSoldier.health = 20f;
-                                medic.relationship = Mathf.Min(100f, medic.relationship + 15f);
-                                medic.battlesSurvived++;
-                                currentSoldier.AddMedal("Imperial Wound Star");
-                                GameEvents.OnFeedEventLogged?.Invoke("MEDIC RESCUE",
-                                    $"<color=#00FFAA><b>[HEROIC MEDIC RESCUE • BROTHERS IN ARMS]</b></color> A high-explosive burst shattered your position! " +
-                                    $"{medic.GetDisplayName()} charged through the smoke, dragged you behind sandbags, and stabilized your pulse! " +
-                                    "Your life was saved! (Health restored to 20%).");
-                            }
-                            else if (currentSoldier.fieldMedkitsCount > 0)
-                            {
-                                currentSoldier.fieldMedkitsCount--;
-                                currentSoldier.health = 18f;
-                                currentSoldier.AddMedal("Imperial Wound Star");
-                                GameEvents.OnFeedEventLogged?.Invoke("FIELD TRAUMA",
-                                    "<color=#00FFAA><b>[EMERGENCY MEDKIT CONSUMED]</b></color> You slammed your emergency trauma syrette into your wound (-1 Medkit). You survived with 18% Health!");
-                            }
-                            else
-                            {
-                                currentSoldier.isDead = true;
-                                currentSoldier.deathReason = $"Killed in Action (KIA) during heavy fighting in {theater.theaterName}";
-                                currentSoldier.AddMedal("Imperial Wound Star (Posthumous)");
-                                GameEvents.OnFeedEventLogged?.Invoke("KIA",
-                                    $"<color=#FF0000><b>[KILLED IN ACTION]</b></color> You gave your life for the nation in {theater.theaterName}. Awarded the <b>Imperial Wound Star</b> posthumously.");
-                                LifePersistenceManager.SaveSoldierLife(currentSoldier);
-                                GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
-                                return;
-                            }
-                        }
-                        else
-                        {
-                            currentSoldier.AddMedal("Imperial Wound Star");
-                            GameEvents.OnFeedEventLogged?.Invoke("CASUALTY",
-                                $"<color=#FF6644>[COMBAT CASUALTY]</color> Shrapnel struck your torso in {theater.theaterName}! (-{woundDmg:F0} Health). Field medics extracted you safely. Awarded <b>Imperial Wound Star</b>.");
-                        }
-                    }
-                    else
-                    {
-                        currentSoldier.combatSkill = Mathf.Min(100f, currentSoldier.combatSkill + Random.Range(3f, 7f));
-                        if (!currentSoldier.HasMedal("Combat Infantry Badge"))
-                        {
-                            currentSoldier.AddMedal("Combat Infantry Badge");
-                        }
-                    }
-                }
-
-                // Squadmates battle experience and bonding
-                foreach (var mate in currentSoldier.squadMates)
-                {
-                    if (!mate.isDead)
-                    {
-                        mate.battlesSurvived++;
-                        mate.relationship = Mathf.Min(100f, mate.relationship + Random.Range(2f, 5f));
-                    }
-                }
+                TriggerCombatTourBriefing();
+                return;
             }
             else
             {
@@ -487,11 +300,166 @@ namespace ArmyLife.Core
                 currentSoldier.fitness = Mathf.Min(100f, currentSoldier.fitness + Random.Range(3f, 6f));
                 currentSoldier.health = Mathf.Min(100f, currentSoldier.health + 12f);
                 GameEvents.OnFeedEventLogged?.Invoke("GARRISON",
-                    $"<color=#00FFAA><b>[GARRISON DUTY & RECOVERY]</b></color> Stationed at Fort Valerius for refit, physical conditioning, and marksmanship drills. (+Health, +Fitness).");
+                    $"<color=#00FFAA><b>[GARRISON DUTY & REFIT]</b></color> Stationed at Fort Valerius for refit, physical conditioning, and marksmanship drills. (+Health, +Fitness).");
+
+                // Roll High-Stakes Tactical / Barracks Dilemma
+                MilitaryDilemmaEngine.EvaluateAdultSemesterDilemma(currentSoldier, this);
+
+                // Natural Deployment Mobilization:
+                // After 1 semester of garrison refit (or immediately if volunteer extended tour is set), mobilize to the frontline!
+                currentSoldier.garrisonSemestersInRow++;
+                if (currentSoldier.garrisonSemestersInRow >= 1 || currentSoldier.isVoluntaryExtendedTour)
+                {
+                    currentSoldier.isInCombatDeployment = true;
+                    currentSoldier.garrisonSemestersInRow = 0;
+                    currentSoldier.currentTheater = RollNextWarTheater();
+                    var nextTheater = WarTheaterInfo.GetInfo(currentSoldier.currentTheater);
+                    GameEvents.OnFeedEventLogged?.Invoke("DEPLOYMENT ORDERS",
+                        $"<color=#FFD700><b>[MOBILIZATION ORDER • HIGH COMMAND]</b></color> Your garrison refit has concluded. " +
+                        $"High Command has ordered your regiment to deploy to the frontlines of <b>{nextTheater.theaterName}</b> next tour! " +
+                        $"(Danger: {nextTheater.dangerLevel}/5 | Hazard Pay: +${nextTheater.hazardPayRate}/mo). Prepare your gear and inspect your squad!");
+                }
+
+                FinishTurnPostActions();
+                return;
             }
 
-            // 3. Roll High-Stakes Tactical / Barracks Dilemma
-            MilitaryDilemmaEngine.EvaluateAdultSemesterDilemma(currentSoldier, this);
+            FinishTurnPostActions();
+        }
+
+        public WarTheaterType RollNextWarTheater()
+        {
+            WarTheaterType[] frontlines = new WarTheaterType[]
+            {
+                WarTheaterType.ArdenRidgeTrenchLines,
+                WarTheaterType.PortIronAmphibiousFront,
+                WarTheaterType.KaelenValleyUrbanZone,
+                WarTheaterType.BadlandsSteppeRecon,
+                WarTheaterType.NorthernTaigaOutpost,
+                WarTheaterType.PacificJungleIslands
+            };
+            int idx = Random.Range(0, frontlines.Length);
+            return frontlines[idx];
+        }
+
+        /// <summary>
+        /// Displays the interactive Tactical Combat Mission Briefing for active combat tours.
+        /// Unlocks the full Tactical Combat Operations Engine, doctrine selection, and fireteam synergies.
+        /// </summary>
+        public void TriggerCombatTourBriefing()
+        {
+            if (currentSoldier == null || currentSoldier.isDead) return;
+
+            currentSoldier.consecutiveCombatSemesters++;
+            currentSoldier.toursInCurrentTheater++;
+            var theater = WarTheaterInfo.GetInfo(currentSoldier.currentTheater);
+            var mission = CombatOperationsEngine.GenerateMission(theater, currentSoldier);
+
+            currentSoldier.InitializeSquadMatesIfEmpty();
+            var scout = currentSoldier.squadMates.Find(m => m.role == SquadRole.LeadScout && !m.isDead);
+            var gunner = currentSoldier.squadMates.Find(m => m.role == SquadRole.HeavyGunner && !m.isDead);
+            var medic = currentSoldier.squadMates.Find(m => m.role == SquadRole.CombatMedic && !m.isDead);
+
+            bool scoutAlert = (scout != null && scout.relationship >= 40f && scout.fatigue < 80f);
+            bool gunnerReady = (gunner != null && gunner.relationship >= 40f && gunner.fatigue < 80f);
+            bool medicReady = (medic != null && medic.relationship >= 40f && medic.fatigue < 80f);
+
+            bool isCommander = SquadmateCommandEngine.IsNCOOrOfficer(currentSoldier);
+            string extBadge = currentSoldier.isVoluntaryExtendedTour ? " <color=#FF8800>[VOLUNTARY EXTENSION]</color>" : "";
+            string bonusBadge = currentSoldier.hasExtendedTourPayBonus ? " <color=#FFD700>[+10% VETERAN COMBAT PAY]</color>" : "";
+
+            string category = $"TACTICAL COMBAT OPERATION • {theater.theaterName.ToUpper()}";
+            string title = $"{mission.missionName.ToUpper()}";
+
+            string scoutStatus = scout == null ? "KIA / Absent" : (scoutAlert ? "<color=#00FFAA>Vigilant & Alert</color>" : "<color=#FFAA00>Exhausted / Strained</color>");
+            string gunnerStatus = gunner == null ? "KIA / Absent" : (gunnerReady ? "<color=#00FFAA>Heavy Gun Ready</color>" : "<color=#FFAA00>Fatigued / Low Ammo</color>");
+            string medicStatus = medic == null ? "KIA / Absent" : (medicReady ? "<color=#00FFAA>Trauma Webbing Ready</color>" : "<color=#FFAA00>Medkits Low</color>");
+
+            string description =
+                $"<b>MISSION OBJECTIVE:</b> {mission.objectiveDescription}\n\n" +
+                $"<b>THEATER:</b> {theater.theaterName} (Danger: {theater.dangerLevel}/5, Weather: <i>{theater.weatherAndEnvironment}</i>){extBadge}{bonusBadge}\n" +
+                $"<b>COMPENSATION:</b> Hazard Bounty +${mission.baseHazardBounty:N0} | Monthly Hazard +${theater.hazardPayRate:N0}/mo\n\n" +
+                $"<b>FIRETEAM COMBAT READINESS:</b>\n" +
+                $"• Lead Scout: <b>{scout?.nickname ?? "Point"}</b> ({scoutStatus}) [Tripwire Detection & Flank]\n" +
+                $"• Heavy Gunner: <b>{gunner?.nickname ?? "Anvil"}</b> ({gunnerStatus}) [Cyclic Suppression]\n" +
+                $"• Combat Medic: <b>{medic?.nickname ?? "Doc"}</b> ({medicStatus}) [Field Trauma Triage]\n\n" +
+                $"<i>{(isCommander ? "Commander: Issue your tactical combat orders to the squad!" : "Soldier: Select your tactical execution order!")}</i>";
+
+            string choiceA, choiceB, choiceC;
+            TacticalChoiceOrder orderA, orderB, orderC;
+
+            if (isCommander)
+            {
+                choiceA = "⚔️ AGGRESSIVE BREACH ASSAULT\n<size=75%>Direct Gunner suppression & storm redoubt</size>";
+                orderA = TacticalChoiceOrder.AggressiveBreach;
+
+                choiceB = "🎯 RECON FLANKING MANEUVER\n<size=75%>Infiltrate wire led by Lead Scout</size>";
+                orderB = TacticalChoiceOrder.ReconnaissanceFlank;
+
+                choiceC = "💥 DANGER-CLOSE ARTILLERY STRIKE\n<size=75%>Coordinate high-explosive battery barrage</size>";
+                orderC = TacticalChoiceOrder.ArtilleryStrikeCall;
+            }
+            else
+            {
+                choiceA = "🪖 LEAD POINT BREACH ASSAULT\n<size=75%>Aggressive breach through wire (High Risk / High Merit)</size>";
+                orderA = TacticalChoiceOrder.AggressiveBreach;
+
+                choiceB = "👁️ COVER FLANK WITH SCOUT\n<size=75%>Stealth flanking security under enemy fire</size>";
+                orderB = TacticalChoiceOrder.ReconnaissanceFlank;
+
+                choiceC = "🛡️ PROVIDE DEFENSIVE SUPPRESSION\n<size=75%>Heavy crossfire overwatch & discipline</size>";
+                orderC = TacticalChoiceOrder.HeavySuppression;
+            }
+
+            var dilemma = DilemmaModal.Instance ?? Object.FindAnyObjectByType<DilemmaModal>(FindObjectsInactive.Include);
+            if (dilemma != null)
+            {
+                dilemma.DisplayDilemma(
+                    category,
+                    title,
+                    description,
+                    choiceA,
+                    choiceB,
+                    choiceC,
+                    () => ResolveCombatOperation(mission, orderA, theater),
+                    () => ResolveCombatOperation(mission, orderB, theater),
+                    () => ResolveCombatOperation(mission, orderC, theater)
+                );
+            }
+            else
+            {
+                ResolveCombatOperation(mission, TacticalChoiceOrder.DefaultOrder, theater);
+            }
+        }
+
+        public void ResolveCombatOperation(TacticalMission mission, TacticalChoiceOrder order, WarTheaterInfo theater)
+        {
+            if (currentSoldier == null) return;
+
+            var outcome = CombatOperationsEngine.ExecuteMission(currentSoldier, mission, order, theater);
+
+            // Tour rotation handling
+            if (!currentSoldier.isVoluntaryExtendedTour)
+            {
+                currentSoldier.isInCombatDeployment = false;
+                currentSoldier.consecutiveCombatSemesters = 0;
+                GameEvents.OnFeedEventLogged?.Invoke("ROTATION",
+                    $"<color=#00FFAA><b>[TOUR COMPLETED • ROTATING TO GARRISON]</b></color> Operational objectives completed in {theater.theaterName}! " +
+                    "Your unit was relieved by incoming fresh reserves. Rotated back to Fort Valerius for garrison rest, refit, and marksmanship drills.");
+            }
+            else
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("ROTATION",
+                    $"<color=#FF8800><b>[CONTINUOUS FRONT CONTINUED]</b></color> You remained at the frontline per your voluntary tour extension!");
+            }
+
+            FinishTurnPostActions();
+        }
+
+        public void FinishTurnPostActions()
+        {
+            if (currentSoldier == null) return;
+
             if (currentSoldier.isDead)
             {
                 LifePersistenceManager.SaveSoldierLife(currentSoldier);
@@ -499,27 +467,25 @@ namespace ArmyLife.Core
                 return;
             }
 
-            // 4. Payday, US-Style Living Costs, Investments & Crime Heat Cycle
+            // Payday, US-Style Living Costs, Investments & Crime Heat Cycle
             EconomyEngine.ProcessSemesterEconomy(currentSoldier);
             CrimeEngine.ProcessSemesterHeatAndRaids(currentSoldier);
 
-            // 5. Military Promotion Board Evaluation (Active Enlisted and Officers)
+            // Military Promotion Board Evaluation (Active Enlisted and Officers)
             if (currentSoldier.careerTrack != CareerTrack.MilitaryWarAcademy && !currentSoldier.isSpecialForcesCandidate)
             {
                 PromotionBoardEngine.EvaluatePromotionBoard(currentSoldier, militaryRankDatabase);
             }
 
-            // 5b. Annual Longevity Pay Step (Awarded each full year of service, unless promoted that year)
+            // Annual Longevity Pay Step (Awarded each full year of service, unless promoted that year)
             if (currentSoldier.totalSemestersLived > 0 && currentSoldier.totalSemestersLived % 2 == 0)
             {
                 if (currentSoldier.wasPromotedThisYear)
                 {
-                    // Soldier was promoted during this service year: promotion already provided rank pay jump
                     currentSoldier.wasPromotedThisYear = false;
                 }
                 else if (!currentSoldier.isRetired && !currentSoldier.isCivilian && currentSoldier.careerTrack != CareerTrack.MilitaryWarAcademy && !currentSoldier.isYouthPhase)
                 {
-                    // Soldier served a full year without promotion: award annual military longevity step raise!
                     long baseSalary = (currentSoldier.currentRank != null) ? currentSoldier.currentRank.baseMonthlySalary : 600L;
                     long annualRaise = System.Math.Max(150L, (long)(baseSalary * 0.05f));
                     currentSoldier.longevityMonthlyPayBonus += annualRaise;
@@ -532,7 +498,7 @@ namespace ArmyLife.Core
                 }
             }
 
-            // 6. Check Victory Condition: 4-Star General (O-10)
+            // Check Victory Condition: 4-Star General (O-10)
             if (currentSoldier.currentRank != null && (currentSoldier.currentRank.paygrade == "O-10" || currentSoldier.currentRank.rankName.Contains("General")))
             {
                 if (!currentSoldier.HasTrait("Supreme Allied Commander"))
@@ -545,7 +511,7 @@ namespace ArmyLife.Core
                 }
             }
 
-            // 7. Check 20-Year Career Milestone (Honorable Retirement Eligibility)
+            // Check 20-Year Career Milestone (Honorable Retirement Eligibility)
             if (currentSoldier.totalSemestersLived >= 40 && !currentSoldier.HasTrait("20-Year Veteran"))
             {
                 currentSoldier.AddTrait("20-Year Veteran");
@@ -555,7 +521,7 @@ namespace ArmyLife.Core
                     "You are now eligible to take <b>Honorable Retirement</b> with a full lifetime military pension ($1,500/mo)!");
             }
 
-            // 8. Post-Service Veteran Career Turn
+            // Post-Service Veteran Career Turn
             if (currentSoldier.isRetired && currentSoldier.veteranCareer != VeteranCareer.None)
             {
                 switch (currentSoldier.veteranCareer)
@@ -592,7 +558,7 @@ namespace ArmyLife.Core
                 }
             }
 
-            // 9. Generational Child Aging
+            // Generational Child Aging
             if (currentSoldier.childHeir != null)
             {
                 currentSoldier.childHeir.age += 0.5f;
@@ -617,6 +583,125 @@ namespace ArmyLife.Core
             GameEvents.OnFeedEventLogged?.Invoke("RETIREMENT",
                 $"<color=#00FFAA><b>[HONORABLE RETIREMENT CEREMONY]</b></color> After {currentSoldier.totalSemestersLived * 0.5f:F1} years of faithful military service, " +
                 $"you were honorably discharged with full military honors! Awarded lifetime military pension of <b>${currentSoldier.calculatedPensionPerMonth:N0}/mo</b>.");
+            LifePersistenceManager.SaveSoldierLife(currentSoldier);
+            GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+        }
+
+        /// <summary>
+        /// Displays the Wartime Mobilization: National Call to Arms proclamation popup.
+        /// Announces that the country is at war, calls upon the recruit for help to serve their country,
+        /// covers 100% of all training expenses, and offers the choice to join the Army or Air Force.
+        /// </summary>
+        public void TriggerWartimeMobilizationPopup()
+        {
+            if (currentSoldier == null) return;
+
+            AudioManager.PlayAlertPing();
+            AudioManager.PlayRadioSquelch();
+
+            string country = !string.IsNullOrWhiteSpace(currentSoldier.birthCountry) 
+                ? currentSoldier.birthCountry 
+                : "the Valerian Empire";
+
+            string category = "WARTIME MOBILIZATION • NATIONAL CALL TO ARMS";
+            string title = "YOUR COUNTRY IS AT WAR!";
+            string description = 
+                $"<color=#FF4444><b>EMERGENCY MOBILIZATION ORDER FROM HIGH COMMAND:</b></color>\n\n" +
+                $"War has officially erupted across the frontiers of <b>{country}</b>! " +
+                $"Hostile forces are invading, and the Supreme Defense Council has issued an emergency <b>National Call to Arms</b>. " +
+                $"Your homeland is under direct threat and is calling upon you for help—it is your solemn duty to step forward and serve your nation!\n\n" +
+                $"<color=#00FFAA><b>100% STATE-COVERED TRAINING EXPENSES:</b></color>\n" +
+                $"Because your nation requires every capable citizen during total war, <b>100% of all basic training expenses, armory gear, uniforms, ammunition drills, rations, and barracks quarters are covered by the government</b> ($0 expense to you).\n\n" +
+                $"You will report immediately for military Basic Training. From recruit drills, you will forge your military career—with an open pipeline to rise through the ranks, even reaching commissioned officer rank as an <b>Ensign (O-1) / 2nd Lieutenant</b> and leading your forces to victory!\n\n" +
+                $"<b>Which branch will you answer the call to join?</b>";
+
+            string choiceArmy = "🪖 JOIN THE ARMY\n<size=75%>Ground Forces & Infantry • Basic Combat Training (100% State Funded • Path to 2nd Lt)</size>";
+            string choiceAirForce = "✈️ JOIN THE AIR FORCE\n<size=75%>Aviation & Flight Wing • Basic Flight Training (100% State Funded • Path to Ensign)</size>";
+
+            var dilemma = DilemmaModal.Instance;
+            if (dilemma == null)
+            {
+                dilemma = Object.FindAnyObjectByType<DilemmaModal>(FindObjectsInactive.Include);
+            }
+
+            if (dilemma != null)
+            {
+                dilemma.DisplayDilemma(
+                    category,
+                    title,
+                    description,
+                    choiceArmy,
+                    choiceAirForce,
+                    null,
+                    () => EnlistInWartimeBranch(MilitaryBranch.Army),
+                    () => EnlistInWartimeBranch(MilitaryBranch.AirForce),
+                    null
+                );
+            }
+            else
+            {
+                GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
+                    category,
+                    title,
+                    description,
+                    choiceArmy,
+                    choiceAirForce,
+                    null,
+                    () => EnlistInWartimeBranch(MilitaryBranch.Army),
+                    () => EnlistInWartimeBranch(MilitaryBranch.AirForce),
+                    null
+                );
+            }
+        }
+
+        /// <summary>
+        /// Handles wartime branch enlistment into Army or Air Force with 100% covered basic training.
+        /// </summary>
+        public void EnlistInWartimeBranch(MilitaryBranch branch)
+        {
+            if (currentSoldier == null) return;
+
+            AudioManager.PlayTurnAdvance();
+            AudioManager.PlayDrillWhistle();
+
+            currentSoldier.hasAnsweredWartimeCall = true;
+            currentSoldier.militaryBranch = branch;
+            currentSoldier.careerTrack = CareerTrack.MilitaryRecruitBasic;
+            currentSoldier.militarySchoolSemestersCompleted = 0;
+            currentSoldier.currentRank = null; // Unranked recruit in Basic Training
+            currentSoldier.isInCombatDeployment = false;
+            currentSoldier.academyTuitionDebt = 0;
+            currentSoldier.collegeTuitionDebt = 0; // 100% government covered
+
+            if (branch == MilitaryBranch.Army)
+            {
+                currentSoldier.airForceRole = AirForceRole.None;
+                currentSoldier.assignedDepartment = "Infantry Recruit Depot (Fort Ironclad)";
+                currentSoldier.fitness = Mathf.Max(currentSoldier.fitness, 70f);
+                currentSoldier.combatSkill = Mathf.Max(currentSoldier.combatSkill, 35f);
+
+                GameEvents.OnFeedEventLogged?.Invoke("CALL TO ARMS",
+                    $"<color=#FF8844><b>[WARTIME MOBILIZATION • ENLISTED IN THE ARMY]</b></color> " +
+                    $"You answered your country's emergency call to arms and enlisted in the <b>Imperial Army Ground Forces</b>! " +
+                    $"<b>All training expenses, tactical equipment, and barracks rations are 100% paid by the government ($0 expense)</b>. " +
+                    $"You reported to Fort Ironclad for 6 months of grueling Basic Combat Training drills. " +
+                    $"Endure recruit drills to earn your Private (E-1) stripes, with pathways open to Officer Commissioning (2nd Lieutenant O-1) and General Command!");
+            }
+            else
+            {
+                currentSoldier.airForceRole = AirForceRole.FlightDuty;
+                currentSoldier.assignedDepartment = "Imperial Air Force Recruit Depot (Aviation Wing)";
+                currentSoldier.intellect = Mathf.Max(currentSoldier.intellect, 65f);
+                currentSoldier.fitness = Mathf.Max(currentSoldier.fitness, 60f);
+
+                GameEvents.OnFeedEventLogged?.Invoke("CALL TO ARMS",
+                    $"<color=#00D4FF><b>[WARTIME MOBILIZATION • ENLISTED IN THE AIR FORCE]</b></color> " +
+                    $"You answered your country's emergency call to arms and enlisted in the <b>Imperial Air Force Aviation Corps</b>! " +
+                    $"<b>All flight simulators, aviation ground instruction, and flight suits are 100% paid by the government ($0 expense)</b>. " +
+                    $"You reported to the Air Recruit Depot for 1 year of aviation and survival conditioning. " +
+                    $"Graduate to earn your Airman (E-1) wings with flight pay (+15% Aviation Bonus), with pathways open to Officer Commissioning (Ensign / Flight Lieutenant O-1)!");
+            }
+
             LifePersistenceManager.SaveSoldierLife(currentSoldier);
             GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
         }
@@ -695,6 +780,13 @@ namespace ArmyLife.Core
             {
                 GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
                     "<color=#00AAFF>[ALREADY COMMISSIONED]</color> You already hold an active officer commission!");
+                return;
+            }
+            if (currentSoldier.age > 35.0f)
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
+                    $"<color=#FF8800><b>[AGE LIMIT EXCEEDED • MAX AGE 35]</b></color> Imperial War Academy regulations strictly cap candidate admission at <b>Age 35</b>. You are {currentSoldier.age:F1} years old and ineligible for cadet commissioning.");
+                GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
                 return;
             }
             if (currentSoldier.careerTrack == CareerTrack.MilitaryWarAcademy)
@@ -790,6 +882,13 @@ namespace ArmyLife.Core
                     "<color=#00FFAA>[ALREADY SPECIAL FORCES]</color> You are already a qualified Special Forces Operator!");
                 return;
             }
+            if (currentSoldier.age > 30.0f)
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES",
+                    $"<color=#FF8800><b>[AGE LIMIT EXCEEDED • MAX AGE 30]</b></color> Special Forces Selection regulations mandate candidates must be <b>Age 30 or younger</b>. You are {currentSoldier.age:F1} years old and ineligible for Special Forces selection.");
+                GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+                return;
+            }
             if (currentSoldier.isSpecialForcesCandidate)
             {
                 GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES",
@@ -811,10 +910,10 @@ namespace ArmyLife.Core
                 currentSoldier.isInCombatDeployment = false;
 
                 GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES",
-                    "<color=#FFD700><b>[CO RECOMMENDATION APPROVED • SPECIAL FORCES RECRUITMENT]</b></color> " +
+                    "<color=#FFD700><b>[CO RECOMMENDATION APPROVED • SELECTION ORDERS ISSUED]</b></color> " +
                     "Your Commanding Officer signed your Special Forces candidate packet: " +
                     "<i>'This soldier has the exceptional combat lethality and discipline required for covert operations.'</i> " +
-                    "You have been transferred directly to the <b>1-Year Special Forces Qualification Course</b>!");
+                    "You have been issued official orders to attend **Special Forces Assessment & Selection (SFAS)**! You must now face Phase 1: The Crucible and 70% attrition Hell Week.");
             }
             else
             {
@@ -837,14 +936,25 @@ namespace ArmyLife.Core
         {
             if (currentSoldier == null || currentSoldier.isDead || currentSoldier.isRetired) return;
 
-            if (currentSoldier.careerTrack != CareerTrack.MilitaryWarAcademy || currentSoldier.academySemestersCompleted < 2)
+            bool isEligibleCadet = (currentSoldier.careerTrack == CareerTrack.MilitaryWarAcademy && currentSoldier.academySemestersCompleted >= 2);
+            bool isEligibleGraduate = currentSoldier.graduatedWarAcademy;
+
+            if (currentSoldier.age > 30.0f)
             {
                 GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES",
-                    "<color=#FF8800>[NOT ELIGIBLE]</color> Special Forces recruitment from the Academy is only available to Year 2 cadets.");
+                    $"<color=#FF8800><b>[AGE LIMIT EXCEEDED • MAX AGE 30]</b></color> Special Forces Selection regulations mandate candidates must be <b>Age 30 or younger</b>. You are {currentSoldier.age:F1} years old and ineligible for Special Forces selection.");
+                GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
                 return;
             }
 
-            if (!currentSoldier.isAcademyTop10Percent)
+            if (!isEligibleCadet && !isEligibleGraduate)
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES",
+                    "<color=#FF8800>[NOT ELIGIBLE]</color> Special Forces recruitment from the Academy requires Year 2 cadet standing or Academy graduation in the Top 10%.");
+                return;
+            }
+
+            if (!currentSoldier.isAcademyTop10Percent && currentSoldier.academyPerformanceScore < 90f)
             {
                 GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES",
                     $"<color=#FF8800>[NOT QUALIFIED]</color> Requires Top 10% class standing (Score >= 90%). Current: {currentSoldier.academyPerformanceScore:F1}%.");
@@ -853,11 +963,198 @@ namespace ArmyLife.Core
 
             currentSoldier.isSpecialForcesCandidate = true;
             currentSoldier.specialForcesTrainingSemesters = 0;
+            currentSoldier.isInCombatDeployment = false;
 
+            string branchSfName = currentSoldier.specialForcesBranchName;
             GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES",
-                "<color=#FFD700><b>[SPECIAL FORCES SELECTION ENTERED • TOP 10% CADET]</b></color> " +
-                "You accepted the invitation from the Special Operations Group! " +
-                "You entered the grueling 1-Year Special Forces Qualification Course alongside your officer tactical development.");
+                $"<color=#FFD700><b>[SPECIAL FORCES SELECTION ORDERS ISSUED • {branchSfName.ToUpper()}]</b></color> " +
+                $"You accepted the invitation to attend Selection for {branchSfName}! " +
+                "You reported to the Hoffman Special Warfare Training Center as a candidate. You must now face Phase 1: The Crucible and 70% attrition Hell Week!");
+
+            LifePersistenceManager.SaveSoldierLife(currentSoldier);
+            GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+        }
+
+        /// <summary>
+        /// Manages the grueling 2-phase Special Forces Selection and Qualification pipeline.
+        /// Phase 1: SFAS Assessment & The Crucible (Hell Week & Attrition Test)
+        /// Phase 2: Q-Course Tactical Final & SERE Survival (Earning the Beret & Wings)
+        /// </summary>
+        public void ProcessSpecialForcesCandidateProgression()
+        {
+            if (currentSoldier == null || !currentSoldier.isSpecialForcesCandidate) return;
+
+            currentSoldier.consecutiveCombatSemesters = 0;
+            currentSoldier.isInCombatDeployment = false;
+
+            if (currentSoldier.specialForcesTrainingSemesters == 0)
+            {
+                TriggerCrucibleSelectionDilemma();
+            }
+            else
+            {
+                CompleteSpecialForcesQCourse();
+            }
+        }
+
+        /// <summary>
+        /// Triggers the interactive Crucible Dilemma testing candidate physical grit and determination.
+        /// </summary>
+        public void TriggerCrucibleSelectionDilemma()
+        {
+            if (currentSoldier == null) return;
+
+            string branchSfName = currentSoldier.specialForcesBranchName;
+            string cat = $"SPECIAL FORCES SELECTION • {branchSfName.ToUpper()}";
+            string title = "THE CRUCIBLE: 40-MILE RUCK & THE BRASS BELL";
+            string desc =
+                $"<color=#FF8844><b>DAY 19 • SPECIAL FORCES ASSESSMENT & SELECTION (SFAS):</b></color>\n\n" +
+                $"For three weeks, candidates have been marched with 75-lb rucks, navigated freezing mountain swamps, and slept under two hours a night. " +
+                $"Crucible attrition has already eliminated over <b>65% of your class</b>.\n\n" +
+                $"On the final 40-mile mountain march across Hoffman Ridge, your feet are bloody raw blisters and your body screams to collapse. " +
+                $"The Cadre Instructor stands beside the Brass Bell on the trailside:\n" +
+                $"<i>'Just ring the bell three times, candidate. Warm shower, hot chow, clean sheets, and no shame. Your conventional unit is waiting for you.'</i>\n\n" +
+                $"What is your decision?";
+
+            string choiceEndure = "⚔️ REFUSE TO QUIT: DRIVE INTO THE NIGHT!\n<size=75%>(Endure the agony • Requires Fitness ≥ 65 & Discipline ≥ 55)</size>";
+            string choiceDOR = "🔔 RING THE BRASS BELL (DROP ON REQUEST)\n<size=75%>(Withdraw with honor to regular conventional forces)</size>";
+
+            var dilemma = DilemmaModal.Instance ?? Object.FindAnyObjectByType<DilemmaModal>(FindObjectsInactive.Include);
+            if (dilemma != null)
+            {
+                AudioManager.PlayHeartbeat();
+                dilemma.DisplayDilemma(
+                    cat,
+                    title,
+                    desc,
+                    choiceEndure,
+                    choiceDOR,
+                    null,
+                    () => ResolveCrucibleTrial(true),
+                    () => ResolveCrucibleTrial(false),
+                    null
+                );
+            }
+            else
+            {
+                // Headless/batchmode fallback
+                ResolveCrucibleTrial(true);
+            }
+        }
+
+        /// <summary>
+        /// Resolves the candidate's Crucible trial: evaluates grit vs physical collapse.
+        /// </summary>
+        public void ResolveCrucibleTrial(bool refuseToQuit)
+        {
+            if (currentSoldier == null) return;
+
+            string branchSfName = currentSoldier.specialForcesBranchName;
+
+            if (!refuseToQuit)
+            {
+                // Voluntary Drop on Request (DOR)
+                AudioManager.PlayAlertPing();
+                currentSoldier.isSpecialForcesCandidate = false;
+                currentSoldier.isSpecialForces = false;
+                currentSoldier.specialForcesWashoutCount++;
+
+                GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES SELECTION",
+                    $"<color=#888888><b>[VOLUNTARY WITHDRAWAL • DROPPED ON REQUEST]</b></color> You stepped forward and rang the brass bell three times. The cadre took your candidate ruck. Reassigned with dignity to regular conventional military service.");
+                LifePersistenceManager.SaveSoldierLife(currentSoldier);
+                GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+                return;
+            }
+
+            // Evaluate grit based on Physical Fitness, Discipline, and Combat Skill
+            float gritScore = (currentSoldier.fitness * 0.40f) + (currentSoldier.discipline * 0.35f) + (currentSoldier.combatSkill * 0.25f) + Random.Range(-5f, 10f);
+
+            if (gritScore >= 56f && currentSoldier.health > 25f)
+            {
+                // SURVIVED THE CRUCIBLE!
+                AudioManager.PlayBugleFanfare();
+                currentSoldier.specialForcesTrainingSemesters = 1;
+                currentSoldier.fitness = Mathf.Min(100f, currentSoldier.fitness + 10f);
+                currentSoldier.combatSkill = Mathf.Min(100f, currentSoldier.combatSkill + 12f);
+                currentSoldier.discipline = Mathf.Min(100f, currentSoldier.discipline + 12f);
+                currentSoldier.squadRespect = Mathf.Min(100f, currentSoldier.squadRespect + 20f);
+
+                GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES SELECTION",
+                    $"<color=#00FFAA><b>[CRUCIBLE CONQUERED • 70% ATTRITION SURVIVED]</b></color> " +
+                    $"You gritted your teeth through the freezing darkness, refusing to ring the bell! Out of 130 hopefuls, only 34 made it past the Crucible. " +
+                    $"You have been officially selected to advance to Phase 2: Advanced Weapons, Foreign Tactics & SERE Survival!");
+            }
+            else
+            {
+                // WASHOUT DUE TO PHYSICAL COLLAPSE
+                AudioManager.PlayAlertPing();
+                currentSoldier.isSpecialForcesCandidate = false;
+                currentSoldier.isSpecialForces = false;
+                currentSoldier.specialForcesWashoutCount++;
+                currentSoldier.fitness = Mathf.Max(30f, currentSoldier.fitness - 5f);
+
+                GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES SELECTION",
+                    $"<color=#FF8800><b>[SELECTION ATTRITION • MEDICALLY DROPPED]</b></color> " +
+                    $"On Mile 34, severe hypothermia and torn ligaments collapsed your legs. The cadre medical team pulled you from the course for your own safety. " +
+                    $"Like 70% of candidates who attempt Selection, you washed out of the Crucible. Reassigned with honor to conventional forces. You may rebuild your conditioning and re-apply later!");
+            }
+
+            LifePersistenceManager.SaveSoldierLife(currentSoldier);
+            GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+        }
+
+        /// <summary>
+        /// Evaluates Phase 2 of the Special Forces Qualification Course.
+        /// </summary>
+        public void CompleteSpecialForcesQCourse()
+        {
+            if (currentSoldier == null) return;
+
+            float qScore = (currentSoldier.intellect * 0.35f) + (currentSoldier.combatSkill * 0.35f) + (currentSoldier.fitness * 0.30f) + Random.Range(0f, 10f);
+
+            if (qScore >= 50f)
+            {
+                // GRADUATED AS SPECIAL FORCES OPERATOR!
+                AudioManager.PlayBugleFanfare();
+                currentSoldier.isSpecialForcesCandidate = false;
+                currentSoldier.isSpecialForces = true;
+
+                string sfName = currentSoldier.specialForcesBranchName;
+                string sfRole = currentSoldier.specialForcesRoleTitle;
+                string sfMedal = (currentSoldier.militaryBranch == MilitaryBranch.AirForce) 
+                    ? "Celestial Valkyrie Wings" 
+                    : "Iron Vanguard Black Beret";
+
+                currentSoldier.AddTrait(sfRole);
+                currentSoldier.AddTrait("Special Forces Operator");
+                currentSoldier.AddMedal(sfMedal);
+
+                // Immense Respect & Social Standing surge
+                currentSoldier.squadRespect = Mathf.Min(100f, currentSoldier.squadRespect + 35f);
+                currentSoldier.meritRating = Mathf.Min(100f, currentSoldier.meritRating + 25f);
+                currentSoldier.politicalInfluence = Mathf.Min(100f, currentSoldier.politicalInfluence + 20f);
+                currentSoldier.coFavor = Mathf.Min(100f, currentSoldier.coFavor + 20f);
+
+                GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES GRADUATION",
+                    $"<color=#FFD700><b>[SPECIAL FORCES GRADUATION • EARNED THE BERET & WINGS]</b></color> " +
+                    $"Against crushing 75% selection attrition, you survived the Crucible and completed the entire Qualification Course! " +
+                    $"Inducted into <b>{sfName}</b> as an elite <b>{sfRole}</b> and pinned with the <i>{sfMedal}</i>!\n" +
+                    $"<b>Special Forces Prestige Aura Activated:</b> Regular soldiers, squadmates, and officers look up to you with legendary respect (+35 Squad Respect, +25 Merit Rating, +20 CO Favor)! " +
+                    $"You now draw an exclusive <b>+$800/mo Elite Combat Stipend</b>.");
+            }
+            else
+            {
+                // FAILED FINAL TACTICAL PHASE
+                AudioManager.PlayAlertPing();
+                currentSoldier.isSpecialForcesCandidate = false;
+                currentSoldier.isSpecialForces = false;
+                currentSoldier.specialForcesWashoutCount++;
+
+                GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES SELECTION",
+                    $"<color=#FF8800><b>[Q-COURSE ATTRITION • FAILED FINAL TACTICAL PHASE]</b></color> " +
+                    $"You were compromised during the final unconventional warfare exercise and failed to meet tactical qualification benchmarks. " +
+                    $"Reassigned with honor to conventional military service.");
+            }
 
             LifePersistenceManager.SaveSoldierLife(currentSoldier);
             GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
@@ -910,6 +1207,8 @@ namespace ArmyLife.Core
         public void PromoteSoldier(MilitaryRankSO nextRank)
         {
             if (currentSoldier == null || nextRank == null || currentSoldier.isRetired || currentSoldier.isDead) return;
+
+            AudioManager.PlayBugleFanfare();
 
             currentSoldier.currentRank = nextRank;
             currentSoldier.totalPromotionsEarned++;
@@ -1010,26 +1309,63 @@ namespace ArmyLife.Core
                         return;
                     }
                     currentSoldier.cigarettesCount--;
-                    mate.relationship = Mathf.Min(100f, mate.relationship + 15f);
-                    currentSoldier.happiness = Mathf.Min(100f, currentSoldier.happiness + 10f);
-                    GameEvents.OnFeedEventLogged?.Invoke("CAMARADERIE",
-                        $"<color=#00FFAA><b>[SMOKE BREAK • BROTHERS IN ARMS]</b></color> You shared a smoke with {mate.GetDisplayName()} ({mate.roleTitle}). " +
-                        $"He spoke of his home and praised your loyalty. (+15 Relationship, +10 Happiness).");
+
+                    if (currentSoldier.isSpecialForces)
+                    {
+                        mate.relationship = Mathf.Min(100f, mate.relationship + 20f);
+                        currentSoldier.happiness = Mathf.Min(100f, currentSoldier.happiness + 12f);
+                        currentSoldier.squadRespect = Mathf.Min(100f, currentSoldier.squadRespect + 5f);
+                        GameEvents.OnFeedEventLogged?.Invoke("CAMARADERIE",
+                            $"<color=#FFD700><b>[SMOKE BREAK • OPERATOR REVERENCE]</b></color> You shared a smoke with {mate.GetDisplayName()} ({mate.roleTitle}). " +
+                            $"He took the cigarette with visible awe: <i>'Always an honor to stand watch with an Operator. Every regular in the platoon sleeps easier knowing the Beret has our back.'</i> (+20 Relationship, +12 Morale, +5 Squad Respect).");
+                    }
+                    else
+                    {
+                        mate.relationship = Mathf.Min(100f, mate.relationship + 15f);
+                        currentSoldier.happiness = Mathf.Min(100f, currentSoldier.happiness + 10f);
+                        GameEvents.OnFeedEventLogged?.Invoke("CAMARADERIE",
+                            $"<color=#00FFAA><b>[SMOKE BREAK • BROTHERS IN ARMS]</b></color> You shared a smoke with {mate.GetDisplayName()} ({mate.roleTitle}). " +
+                            $"He spoke of home and the legend of Special Forces: <i>'Half the boys in the company want to try out for SF selection, but only men of pure iron survive the Crucible.'</i> (+15 Relationship, +10 Morale).");
+                    }
                     break;
 
                 case "BunkBanter":
-                    mate.relationship = Mathf.Min(100f, mate.relationship + 8f);
-                    currentSoldier.happiness = Mathf.Min(100f, currentSoldier.happiness + 8f);
-                    GameEvents.OnFeedEventLogged?.Invoke("CAMARADERIE",
-                        $"<color=#00FFAA>[BARRACKS CARDS]</color> You played cards and joked with {mate.GetDisplayName()}. (+8 Relationship).");
+                    if (currentSoldier.isSpecialForces)
+                    {
+                        mate.relationship = Mathf.Min(100f, mate.relationship + 12f);
+                        currentSoldier.happiness = Mathf.Min(100f, currentSoldier.happiness + 10f);
+                        GameEvents.OnFeedEventLogged?.Invoke("CAMARADERIE",
+                            $"<color=#FFD700>[BARRACKS CARDS • SPECIAL FORCES LORE]</color> You played cards with {mate.GetDisplayName()}. " +
+                            "Squadmates from neighboring bunks gathered around to hear stories about covert night raids and surviving the Hoffman Selection Ridge. (+12 Relationship, +10 Morale).");
+                    }
+                    else
+                    {
+                        mate.relationship = Mathf.Min(100f, mate.relationship + 8f);
+                        currentSoldier.happiness = Mathf.Min(100f, currentSoldier.happiness + 8f);
+                        GameEvents.OnFeedEventLogged?.Invoke("CAMARADERIE",
+                            $"<color=#00FFAA>[BARRACKS CARDS]</color> You played cards and joked with {mate.GetDisplayName()} in the mess area. (+8 Relationship, +8 Morale).");
+                    }
                     break;
 
                 case "TacticalDrill":
-                    mate.relationship = Mathf.Min(100f, mate.relationship + 5f);
-                    currentSoldier.combatSkill = Mathf.Min(100f, currentSoldier.combatSkill + 2f);
-                    currentSoldier.fitness = Mathf.Min(100f, currentSoldier.fitness + 2f);
-                    GameEvents.OnFeedEventLogged?.Invoke("TRAINING",
-                        $"<color=#00D4FF>[DRILL PARTNERS]</color> You ran room-clearing and weapon malfunction drills with {mate.GetDisplayName()}. (+2 Combat, +2 Fitness).");
+                    if (currentSoldier.isSpecialForces)
+                    {
+                        mate.relationship = Mathf.Min(100f, mate.relationship + 8f);
+                        currentSoldier.combatSkill = Mathf.Min(100f, currentSoldier.combatSkill + 4f);
+                        currentSoldier.fitness = Mathf.Min(100f, currentSoldier.fitness + 3f);
+                        currentSoldier.squadRespect = Mathf.Min(100f, currentSoldier.squadRespect + 5f);
+                        GameEvents.OnFeedEventLogged?.Invoke("TRAINING",
+                            $"<color=#00FFAA>[OPERATOR COMBAT MASTERCLASS]</color> You drilled {mate.GetDisplayName()} on high-speed CQB room breaches and transition drills. " +
+                            $"He wiped sweat from his face with admiration: <i>'I've learned more from you in one afternoon than six months of garrison!'</i> (+4 Combat, +3 Fitness, +5 Respect).");
+                    }
+                    else
+                    {
+                        mate.relationship = Mathf.Min(100f, mate.relationship + 5f);
+                        currentSoldier.combatSkill = Mathf.Min(100f, currentSoldier.combatSkill + 2f);
+                        currentSoldier.fitness = Mathf.Min(100f, currentSoldier.fitness + 2f);
+                        GameEvents.OnFeedEventLogged?.Invoke("TRAINING",
+                            $"<color=#00D4FF>[DRILL PARTNERS]</color> You ran room-clearing and weapon malfunction drills with {mate.GetDisplayName()}. (+2 Combat, +2 Fitness).");
+                    }
                     break;
             }
 

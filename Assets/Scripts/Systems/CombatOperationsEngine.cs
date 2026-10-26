@@ -308,6 +308,13 @@ namespace ArmyLife.Systems
             float synergyBonus = 0f;
             List<string> synergyNotes = new List<string>();
 
+            // Special Forces Operator Elite Tactical Bonus & Morale Inspiration
+            if (soldier.isSpecialForces)
+            {
+                leaderPower += 20f; // Elite commando lethality
+                synergyNotes.Add("<color=#FFD700><b>Special Forces Operator Aura:</b> Your lethal precision and elite training inspire unwavering courage in the ranks! (+20 Tactical Power)</color>");
+            }
+
             // Scout Synergy
             if (scoutAlert)
             {
@@ -580,6 +587,20 @@ namespace ArmyLife.Systems
                     soldier.AddMedal("Imperial Wound Star");
                     outcome.combatHonors.Add("Imperial Wound Star");
                     break;
+            }
+
+            // Special Forces Operator Battlefield Aura:
+            // Elite presence inspires squad courage, boosts merit, and protects squadmates from fatal casualties
+            if (soldier.isSpecialForces)
+            {
+                outcome.squadMoraleDelta += 10f;
+                outcome.combatSkillDelta += 1.5f;
+                outcome.meritDelta += 5f;
+                if (outcome.casualties > 0)
+                {
+                    outcome.casualties = Mathf.Max(0, outcome.casualties - 1);
+                    outcome.squadmateReports.Add("<color=#FFD700><b>Special Forces Overwatch:</b> Your precision rifle overwatch suppressed an enemy heavy machine gun bunker, saving squadmates from fatal crossfire.</color>");
+                }
             }
 
             // Apply player damage and health updates
