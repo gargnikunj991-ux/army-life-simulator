@@ -236,17 +236,18 @@ namespace ArmyLife.UI
             if (passportDetailsText != null)
             {
                 var p = currentCase.transitPassport;
-                string sealColor = p.officialSealValid ? "#00FF66" : "#FF4444";
-                string expiryColor = p.isExpired ? "#FF4444" : "#FFFFFF";
+                int currentYear = TimeCycleManager.Instance != null ? TimeCycleManager.Instance.currentYear : 2026;
+                string sealDescription = p.officialSealValid ? "Embossed Imperial Eagle (7 Stars, Crisp)" : "Wax Stamp (5 Stars, Smudged Rim)";
 
                 passportDetailsText.text =
                     $"<b>--- TRANSIT PASSPORT ---</b>\n" +
                     $"<b>Name:</b> {p.civilianName}\n" +
                     $"<b>ID:</b> {p.photoId}\n" +
-                    $"<b>Issued:</b> {p.issuedDistrict}\n" +
-                    $"<b>Validity:</b> <color={expiryColor}>{p.expirationDate}</color>\n" +
-                    $"<b>Imperial Seal:</b> <color={sealColor}>{(p.officialSealValid ? "AUTHENTIC IMPERIAL EAGLE" : "SUSPICIOUS / FORGED SMUDGE")}</color>\n" +
-                    $"<b>Purpose:</b> {p.travelPurpose}";
+                    $"<b>Issued District:</b> {p.issuedDistrict}\n" +
+                    $"<b>Valid Until:</b> {p.expirationDate}\n" +
+                    $"<b>Seal Imprint:</b> {sealDescription}\n" +
+                    $"<b>Purpose:</b> {p.travelPurpose}\n\n" +
+                    $"<size=80%><i>[REGIMENTAL ORDER] Current Year: {currentYear}. Authentic visas require 7-Star Crown Eagle and valid calendar date. Compare against Wanted Bulletin.</i></size>";
             }
 
             if (manifestDetailsText != null)

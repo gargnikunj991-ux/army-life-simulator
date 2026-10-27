@@ -102,6 +102,49 @@ namespace ArmyLife.Systems
         }
 
         /// <summary>
+        /// Sits down with a squadmate for personal conversation, sharing stories of home, dreams after the war, and coping with combat strain.
+        /// </summary>
+        public static void TalkWithSquadmate(SoldierProfile soldier, SquadMate targetMate)
+        {
+            if (soldier == null || targetMate == null) return;
+
+            if (targetMate.isDead)
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("BARRACKS",
+                    $"<color=#FF8800>[IN MEMORIAM]</color> You stood in silent vigil before the bunk of {targetMate.GetDisplayName()}, remembering his sacrifice.");
+                return;
+            }
+
+            targetMate.relationship = Mathf.Min(100f, targetMate.relationship + 12f);
+            targetMate.morale = Mathf.Min(100f, targetMate.morale + 10f);
+            soldier.happiness = Mathf.Min(100f, soldier.happiness + 8f);
+
+            string conversationTopic;
+            switch (targetMate.role)
+            {
+                case SquadRole.CombatMedic:
+                    conversationTopic = $"Doc Harris spoke softly about his medical residency back in {targetMate.hometown} and his promise to keep every boy in this fireteam alive.";
+                    break;
+                case SquadRole.LeadScout:
+                    conversationTopic = $"Miller 'Deadeye' carved a cedar whistle, sharing memories of tracking game in {targetMate.hometown} and teaching you how to spot undisturbed sniper foliage.";
+                    break;
+                case SquadRole.HeavyGunner:
+                    conversationTopic = $"Boran 'Anvil' laughed heartily about his blacksmith shop in {targetMate.hometown}, describing the cold beers waiting for all of you when the fighting stops.";
+                    break;
+                case SquadRole.RiflemanRookie:
+                default:
+                    conversationTopic = $"Tommy Higgins showed you a worn photograph of his mother and childhood dog from {targetMate.hometown}. Your reassurance eased the young recruit's trembling hands.";
+                    break;
+            }
+
+            GameEvents.OnFeedEventLogged?.Invoke("BROTHERHOOD",
+                $"<color=#00FFAA><b>[HEART-TO-HEART • BROTHERS IN ARMS]</b></color> You sat down with {targetMate.GetDisplayName()} ({targetMate.roleTitle}). " +
+                $"{conversationTopic} (+12 Relationship, +10 Squadmate Morale).");
+
+            GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
+        }
+
+        /// <summary>
         /// Uses 1 field medkit, saves wounded comrade, grants major loyalty boost (+30f) and adds "Life Saver" trait or medal consideration.
         /// </summary>
         public static void BandageSquadmate(SoldierProfile soldier, SquadMate woundedMate)
@@ -226,10 +269,21 @@ namespace ArmyLife.Systems
             soldier.squadMatesKIA++;
             soldier.happiness = Mathf.Max(0f, soldier.happiness - 15f); // Player morale decreased
             soldier.squadRespect = Mathf.Max(0f, soldier.squadRespect - 5f);
+            soldier.AddTrait($"Remembers {target.nickname}");
+
+            // Grief impacts surviving squadmates
+            foreach (var mate in soldier.squadMates)
+            {
+                if (mate != null && !mate.isDead)
+                {
+                    mate.morale = Mathf.Max(15f, mate.morale - 20f);
+                }
+            }
 
             GameEvents.OnFeedEventLogged?.Invoke("FALLEN COMRADE",
-                $"<color=#FF3333><b>[OBITUARY • BROTHER IN ARMS FALLEN]</b></color> <b>{target.GetDisplayName()}</b> ({target.roleTitle}) " +
-                $"was Killed in Action in {theaterName}. You held your dying brother in the crater until his breath ceased. (-15 Morale).");
+                $"<color=#FF3333><b>[OBITUARY • BROTHER IN ARMS FALLEN]</b></color> <b>{target.GetDisplayName()}</b> ({target.roleTitle}, from {target.hometown}) " +
+                $"was Killed in Action in {theaterName}. You held your dying brother in the crater until his breath ceased. " +
+                $"The fireteam gathered his dog tags and personal effects to send home to his family. (-15 Morale, surviving comrades shaken).");
 
             GameEvents.OnSoldierStatsUpdated?.Invoke(soldier);
         }

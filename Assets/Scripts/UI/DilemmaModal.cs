@@ -219,6 +219,11 @@ namespace ArmyLife.UI
             callback?.Invoke();
         }
 
+        public void CloseModal()
+        {
+            CloseAndRefresh();
+        }
+
         private void CloseAndRefresh()
         {
             if (modalRoot != null)

@@ -63,7 +63,7 @@ namespace ArmyLife.Systems
                     GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                         "FRONTLINE COMBAT",
                         "Sector 7 Mortar Barrage",
-                        "Enemy heavy mortar shells crash into your trench line! An enemy reinforced pillbox is pinning down your entire squad with heavy plasma fire.",
+                        "Enemy heavy mortar shells crash into your trench line! An enemy reinforced pillbox is pinning down your entire squad with heavy machine gun fire.",
                         "Charge the pillbox through crossfire! (Combat/Fitness check)",
                         "Drag wounded Sergeant Miller into a crater (+Comrade, +Respect)",
                         "Call danger-close friendly artillery (Intellect check)",
@@ -77,7 +77,7 @@ namespace ArmyLife.Systems
                                 s.AddMedal("Iron Vanguard Cross");
                                 s.AddTrait("Decorated Hero");
                                 GameEvents.OnFeedEventLogged?.Invoke("HEROISM",
-                                    "<color=#00FFAA><b>[PILLBOX BREACHED]</b></color> You sprinted through heavy plasma fire, threw two grenades into the firing slit, and silenced the enemy bunker single-handedly! Earned <b>Iron Vanguard Cross</b> (+450 CMP, +6 Combat Skill).");
+                                    "<color=#00FFAA><b>[PILLBOX BREACHED]</b></color> You sprinted through heavy machine gun crossfire, threw two grenades into the firing slit, and silenced the enemy bunker single-handedly! Earned <b>Iron Vanguard Cross</b> (+450 CMP, +6 Combat Skill).");
                             }
                             else
                             {
@@ -124,7 +124,7 @@ namespace ArmyLife.Systems
                     GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                         "FRONTLINE CRISIS",
                         "The Clocktower Sniper",
-                        "An enemy long-range kinetic sniper stationed in a ruined cathedral spire has already eliminated two platoon scouts. No one can move.",
+                        "An enemy high-caliber sniper stationed in a ruined cathedral spire has already eliminated two platoon scouts. No one can move.",
                         "Flank solo through the minefield (Fitness check)",
                         "Deploy smoke screen sprint (Safe squad advance)",
                         "Order fresh recruits to draw sniper fire (Ruthless officer move)",
@@ -168,11 +168,11 @@ namespace ArmyLife.Systems
                     break;
 
                 case 3:
-                    // Aether Gas Canister Strike
+                    // Mustard Gas Canister Strike
                     GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                         "CHEMICAL WARFARE",
-                        "Aether Gas Influx",
-                        "Corrosive green Aether gas shells rupture across your trench! Your squadmate's gas mask filter cracked during the explosion.",
+                        "Mustard Gas Influx",
+                        "Corrosive green mustard gas shells rupture across your trench! Your squadmate's gas mask filter cracked during the explosion.",
                         "Hand your own mask to the squadmate (Heroic sacrifice)",
                         "Seal yourself in the deep bunker airtight",
                         "Fashion emergency charcoal filter (Intellect check)",
@@ -431,7 +431,7 @@ namespace ArmyLife.Systems
                     GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                         "SPECIAL OPERATION",
                         "Night Infiltration Sapper Raid",
-                        "Battalion command seeks volunteers for a midnight trench-knife raid to silence an enemy heavy plasma howitzer.",
+                        "Battalion command seeks volunteers for a midnight trench-knife raid to silence an enemy heavy 155mm howitzer battery.",
                         "Lead the infiltration strike team (High risk, massive glory)",
                         "Serve as the rearguard sniper covering the retreat",
                         "Decline hazardous duty and remain on standard guard",
@@ -536,7 +536,7 @@ namespace ArmyLife.Systems
                         "ARMORED TERROR",
                         "Enemy Armored Breakthrough",
                         "Two heavy enemy crawling tanks rupture through the concrete tank-traps, crushing bunkers and rolling toward your battalion command post!",
-                        "Charge the lead tank with magnetic aether-mines (Valor)",
+                        "Charge the lead tank with magnetic anti-tank mines (Valor)",
                         "Organize defensive retreat to fallback trenches",
                         "Man the stationary anti-tank cannon under direct fire",
                         () =>
@@ -654,9 +654,9 @@ namespace ArmyLife.Systems
                     GameEvents.OnChildhoodDilemmaTriggered?.Invoke(
                         "GARRISON DRAMA",
                         "The Black Market Supply Ring",
-                        "You discover your squadmate has been diverting military-grade super-soldier nanite serums and selling them to civilians for massive profit.",
+                        "You discover your squadmate has been diverting military-grade medical morphine and stimulants and selling them on the black market for cash.",
                         "Report the smuggling ring to the Provost Marshal (+CO Favor, Squad Snitch)",
-                        "Buy black market super-soldier serums at half price ($150)",
+                        "Buy black market combat stimulants at half price ($150)",
                         "Demand a 25% cut of the profits to keep quiet (+$400 Cash)",
                         () =>
                         {
@@ -672,14 +672,14 @@ namespace ArmyLife.Systems
                             if (s.cashBalance >= 150)
                             {
                                 s.cashBalance -= 150;
-                                s.tierProgressPercent = Mathf.Min(100f, s.tierProgressPercent + 20f);
+                                s.combatReadiness = Mathf.Min(100f, s.combatReadiness + 20f);
                                 s.fitness = Mathf.Min(100f, s.fitness + 5f);
                                 GameEvents.OnFeedEventLogged?.Invoke("BOUGHT",
-                                    "<color=#FFD700>[BLACK MARKET SERUM]</color> You injected the high-potency nanite serum (-$150). Your cyberware integration surged (+20% Saturation, +5 Fitness)!");
+                                    "<color=#FFD700>[COMBAT STIMULANTS]</color> You consumed the high-potency combat stimulants (-$150). Fatigue vanished and reflexes heightened (+20% Readiness, +5 Fitness)!");
                             }
                             else
                             {
-                                GameEvents.OnFeedEventLogged?.Invoke("POVERTY", "You lacked $150 to buy the serum.");
+                                GameEvents.OnFeedEventLogged?.Invoke("POVERTY", "You lacked $150 to buy the stimulants.");
                             }
                             GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                         },

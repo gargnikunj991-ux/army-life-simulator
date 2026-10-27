@@ -296,13 +296,13 @@ namespace ArmyLife.UI
                 case ActivityCategory.CareerAndDuty:
                     return $"Rank: <b>{(s.currentRank != null ? s.currentRank.rankName : "Recruit")}</b>   |   Merit: <b>{s.meritRating:F0}%</b>   |   Board Points: <b>{s.promotionPoints}</b>";
                 case ActivityCategory.TrainingAndDrills:
-                    return $"Fitness: <b>{s.fitness:F0}%</b>   |   Combat Skill: <b>{s.combatSkill:F0}%</b>   |   Readiness: <b>{s.combatReadiness:F0}%</b>";
+                    return $"Action Points: <b>{s.actionPointsRemaining} / {(s.isInCombatDeployment ? 1 : 3)}</b>   |   Fitness: <b>{s.fitness:F0}%</b>   |   Combat: <b>{s.combatSkill:F0}%</b>";
                 case ActivityCategory.QuartermasterPX:
                     return $"Liquid Cash: <b>${s.cashBalance:N0}</b>   |   Medkits: <b>{s.fieldMedkitsCount}</b>   |   Cigarettes: <b>{s.cigarettesCount}</b>";
                 case ActivityCategory.BarracksAndSquad:
                     return $"Morale: <b>{s.happiness:F0}%</b>   |   Squad Size: <b>{s.squadMates.Count} Brothers</b>";
                 case ActivityCategory.MedicalBay:
-                    return $"Health: <b>{s.health:F0}%</b>   |   Readiness: <b>{s.combatReadiness:F0}%</b>   |   Cybernetics: <b>{(s.hasBionicProsthetics ? "Active" : "None")}</b>";
+                    return $"Health: <b>{s.health:F0}%</b>   |   Readiness: <b>{s.combatReadiness:F0}%</b>   |   Prosthetics: <b>{(s.hasBionicProsthetics ? "Fitted" : "None")}</b>";
                 case ActivityCategory.RealEstateAndCommerce:
                     return $"Personal Quarters: <b>{s.housingTier}</b>   |   Family Estate: <b>{s.familyHouseTier}</b>   |   Business: <b>{s.ownedBusiness}</b>";
                 case ActivityCategory.DynastyAndLegacy:
@@ -339,7 +339,7 @@ namespace ArmyLife.UI
                 () => SetCategory(ActivityCategory.BarracksAndSquad));
 
             CreateCategoryTile("🏥", "MEDICAL BAY & CLINIC",
-                "Trauma bay recovery, specialist surgeries, bionic cybernetic prosthetics, and family care.",
+                "Trauma bay recovery, specialist surgeries, combat prosthetics, and family care.",
                 4,
                 () => SetCategory(ActivityCategory.MedicalBay));
 
@@ -387,7 +387,7 @@ namespace ArmyLife.UI
                 () => SetCategory(ActivityCategory.RealEstateAndCommerce));
 
             CreateCategoryTile("🏥", "HOSPITAL & SPECIALIST MEDICAL",
-                "Civilian clinic visits, specialist surgery, titanium cybernetics, and family care.",
+                "Civilian clinic visits, specialist surgery, orthopedic prosthetics, and family care.",
                 4,
                 () => SetCategory(ActivityCategory.MedicalBay));
 
@@ -501,7 +501,7 @@ namespace ArmyLife.UI
 
             if (s.militaryBranch != MilitaryBranch.AirForce && !s.isRetired && !s.isCivilian) count += 2; // Air force transfer options
 
-            if (!s.isCivilian) count++; // Service Dress Uniform & Medal Ribbon Rack inspection
+            if (!s.isCivilian) count += 2; // Service Dress Uniform & Medal Ribbon Rack inspection + Strategic Campaign War Map
 
             if (s.isRetired)
             {
@@ -717,15 +717,21 @@ namespace ArmyLife.UI
         private void BuildCivilianWorkActivities(SoldierProfile s)
         {
             long shiftEarnings = (s.careerTrack == CareerTrack.CivilianProfessional) ? 120L : 60L;
-            CreateActivityCard("Work Overtime Shift",
-                $"Put in additional hours at your civilian workplace to earn immediate income (+${shiftEarnings}).",
+            CreateActivityCard("Work Overtime Shift (1 AP)",
+                $"Put in additional hours at your civilian workplace to earn immediate income (+${shiftEarnings}, consumes 1 AP).",
                 new Color(0.20f, 0.55f, 0.35f), () =>
                 {
+                    if (!s.TryConsumeActionPoint("Overtime Shift"))
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("FATIGUE",
+                            "<color=#FFAA00>[EXHAUSTED FOR SEMESTER]</color> You have no Action Points remaining this semester. Advance the semester to recover your stamina!");
+                        return;
+                    }
                     s.cashBalance += shiftEarnings;
                     s.health = Mathf.Max(15f, s.health - 4f);
                     s.happiness = Mathf.Max(10f, s.happiness - 3f);
                     GameEvents.OnFeedEventLogged?.Invoke("WORK",
-                        $"<color=#00FFAA>[OVERTIME WORKED]</color> You completed an extra evening shift and received <b>+${shiftEarnings}</b>.");
+                        $"<color=#00FFAA>[OVERTIME WORKED]</color> You completed an extra evening shift and received <b>+${shiftEarnings}</b> ({s.actionPointsRemaining} AP remaining).");
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
@@ -877,6 +883,65 @@ namespace ArmyLife.UI
 
         private void BuildCareerAndDutyActivities(SoldierProfile s)
         {
+            // Strategic Campaign War Map Room
+            if (!s.isCivilian)
+            {
+                var curTh = WarTheaterInfo.GetInfo(s.currentTheater);
+                int prog = DynamicWarFrontEngine.GetFrontlineProgress(s.currentTheater);
+                string sitrep = DynamicWarFrontEngine.GetTheaterStatusText(s.currentTheater);
+                CreateActivityCard("Strategic Campaign War Map Room",
+                    $"Inspect frontline territory control across all 5 combat theaters. Current: <b>{curTh.theaterName}</b> ({prog:+0;-0;0}%). {sitrep}",
+                    new Color(0.18f, 0.45f, 0.65f), () =>
+                    {
+                        CloseModal();
+                        if (StrategicWarMapModal.Instance != null)
+                        {
+                            StrategicWarMapModal.Instance.OpenModal();
+                        }
+                        else
+                        {
+                            var found = FindAnyObjectByType<StrategicWarMapModal>(FindObjectsInactive.Include);
+                            if (found != null) found.OpenModal();
+                        }
+                    });
+
+                // Tactical Firefight Engagement (Interactive Combat Decision Cards)
+                if (!s.isRetired && s.health >= 35f)
+                {
+                    CreateActivityCard("Deploy: Tactical Firefight Engagement",
+                        $"Lead your 4-man fireteam into an immediate tactical contact mission in <b>{curTh.theaterName}</b>. Command suppression, airstrikes, or CASEVAC under fire!",
+                        new Color(0.75f, 0.20f, 0.20f), () =>
+                        {
+                            CloseModal();
+                            if (TacticalFirefightModal.Instance != null)
+                            {
+                                TacticalFirefightModal.Instance.LaunchFirefight(s, curTh, RefreshUI);
+                            }
+                            else
+                            {
+                                var found = FindAnyObjectByType<TacticalFirefightModal>(FindObjectsInactive.Include);
+                                if (found != null) found.LaunchFirefight(s, curTh, RefreshUI);
+                            }
+                        });
+                }
+
+                // MOS Specialization Qualification
+                if (!s.isRetired)
+                {
+                    string mosDesc = s.militaryBranch == MilitaryBranch.AirForce
+                        ? $"Current Air Force Role: <b>{s.militaryMOS}</b>. Specialize as Fighter Pilot Ace or Pararescue PJ."
+                        : $"Current Army MOS: <b>{s.militaryMOS}</b>. Specialize as 11B Infantry, 68W Combat Medic, 19D Sniper, or 12B Sapper.";
+
+                    CreateActivityCard($"Military Specialty (MOS): {s.militaryMOS}",
+                        $"{mosDesc}\nClick to cross-train or certify into a specialized battlefield qualification.",
+                        new Color(0.25f, 0.55f, 0.40f), () =>
+                        {
+                            CycleMOSQualification(s);
+                            RefreshUI();
+                        });
+                }
+            }
+
             // 1. Promotion Board Review
             CreateActivityCard("Promotion Board Submission",
                 "Review service jacket and submit official petition for next military paygrade promotion.",
@@ -886,6 +951,42 @@ namespace ArmyLife.UI
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
+
+            // Military Justice & UCMJ Status
+            if (s.isFortLeavenworthInmate)
+            {
+                CreateActivityCard($"Fort Leavenworth Penal Detail ({s.leavenworthSemestersRemaining} Semesters Remaining)",
+                    "Serving hard labor sentence at Fort Leavenworth Military Disciplinary Barracks. Complete your sentence to return to civilian society.",
+                    new Color(0.6f, 0.15f, 0.15f), () =>
+                    {
+                        MilitaryJusticeEngine.ProcessLeavenworthPenalSemester(s, GameManager.Instance);
+                        GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                        RefreshUI();
+                    });
+            }
+            else if (s.isBarracksRestricted)
+            {
+                CreateActivityCard($"Article 15 Barracks Restriction ({s.barracksRestrictionDaysRemaining} Days Remaining)",
+                    "Restricted to company quarters under commanding officer's Article 15 order. Forfeiture of 1/2 pay in effect.",
+                    new Color(0.7f, 0.35f, 0.15f), () =>
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("RESTRICTION",
+                            $"<color=#FF8866>[BARRACKS RESTRICTION]</color> You remain confined to quarters. {s.barracksRestrictionDaysRemaining} days remaining.");
+                        RefreshUI();
+                    });
+            }
+            else if (!s.isRetired && !s.isCivilian)
+            {
+                int offenses = s.disciplinaryRecords != null ? s.disciplinaryRecords.Count : 0;
+                CreateActivityCard("JAG Legal Office: UCMJ Disciplinary Review",
+                    $"Review military justice jacket. Infractions on record: <b>{offenses}</b> | Article 15 Penalties: <b>{s.article15PunishmentsCount}</b> | Court-Martial Convictions: <b>{s.courtMartialConvictionsCount}</b>.",
+                    new Color(0.35f, 0.40f, 0.55f), () =>
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("JAG REVIEW",
+                            $"<color=#00D4FF>[MILITARY LEGAL JACKET]</color> Record: {offenses} infractions, {s.article15PunishmentsCount} Article 15s. Discharge Standing: {s.dischargeCharacterization}.");
+                        RefreshUI();
+                    });
+            }
 
             // 2. Extended Frontline Deployment
             if (!s.isRetired && s.careerTrack != CareerTrack.MilitaryWarAcademy)
@@ -1308,36 +1409,108 @@ namespace ArmyLife.UI
         {
             if (s.militaryBranch == MilitaryBranch.AirForce && !s.isRetired)
             {
-                if (s.isFlightDuty)
+                // 1. UPT Enrolment & Graduation Pipeline
+                if (s.flightSchoolStatus == FlightSchoolStatus.None || s.flightSchoolStatus == FlightSchoolStatus.WashedOut)
                 {
-                    CreateActivityCard("Combat Flight Simulator Drills",
-                        $"Perform high-G supersonic dogfight simulations. Current Flight Hours Logged: <b>{s.flightHoursLogged} hrs</b>. (+10 Flight Hours, +3 Combat Skill, +3 Promotion Points).",
-                        new Color(0.15f, 0.50f, 0.85f), () =>
+                    CreateActivityCard("Apply for Flight School: Undergraduate Pilot Training (UPT)",
+                        "Apply to attend the Imperial Air Force Undergraduate Pilot Training. Requires physical fitness and mental agility. Graduates earn Wings of Gold and +25% Flight Duty Pay.",
+                        new Color(0.20f, 0.55f, 0.85f), () =>
                         {
-                            s.flightHoursLogged += 10;
-                            s.combatSkill = Mathf.Min(100f, s.combatSkill + 3f);
-                            s.promotionPoints += 3;
-                            GameEvents.OnFeedEventLogged?.Invoke("FLIGHT TRAINING",
-                                $"<color=#00D4FF>[AVIATION DRILL]</color> You mastered extreme high-G maneuvers in the cockpit simulator! Logged <b>+10 Flight Hours</b> (Total: {s.flightHoursLogged} hrs).");
-                            GameEvents.OnSoldierStatsUpdated?.Invoke(s);
-                            RefreshUI();
-                        });
-
-                    CreateActivityCard("Air Combat Air-Superiority Sortie",
-                        "Fly a high-altitude combat patrol in your interceptor. Earns immediate hazardous flight stipends (+$500) and combat skill.",
-                        new Color(0.25f, 0.40f, 0.80f), () =>
-                        {
-                            s.cashBalance += 500;
-                            s.flightHoursLogged += 15;
-                            s.combatSkill = Mathf.Min(100f, s.combatSkill + 4f);
-                            s.health = Mathf.Max(20f, s.health - 5f);
-                            GameEvents.OnFeedEventLogged?.Invoke("SORTIE",
-                                $"<color=#00D4FF>[COMBAT SORTIE FLOWN]</color> You patrolled the imperial airspace and intercepted hostile reconnaissance drones! (+15 Flight Hours, +$500 Hazardous Sortie Pay).");
+                            AirForceFlightSchoolEngine.ApplyForFlightSchool(s, GameManager.Instance);
                             GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                             RefreshUI();
                         });
                 }
-                else
+                else if (s.flightSchoolStatus == FlightSchoolStatus.EnrolledUPT)
+                {
+                    if (s.flightSchoolSemestersEnrolled < 2)
+                    {
+                        CreateActivityCard($"UPT Flight Training (Term {s.flightSchoolSemestersEnrolled + 1}/2)",
+                            "Conduct high-G centrifuge spin training, flight simulators, and solo cross-country navigation. (+40 Flight Hours, +Fitness, +Intellect, consumes 1 AP).",
+                            new Color(0.25f, 0.60f, 0.90f), () =>
+                            {
+                                if (s.hasTrainedFlightThisSemester)
+                                {
+                                    GameEvents.OnFeedEventLogged?.Invoke("FLIGHT SCHOOL",
+                                        "<color=#FFAA00>[SEMESTER FLIGHT CAP]</color> You already logged flight curriculum hours for this semester. Advance the tour to continue to next term's flight syllabus!");
+                                    return;
+                                }
+                                if (!s.TryConsumeActionPoint("Flight Training"))
+                                {
+                                    GameEvents.OnFeedEventLogged?.Invoke("FATIGUE",
+                                        "<color=#FFAA00>[EXHAUSTED FOR SEMESTER]</color> You have no Action Points remaining this semester.");
+                                    return;
+                                }
+                                s.hasTrainedFlightThisSemester = true;
+                                AirForceFlightSchoolEngine.ProcessUPTSemester(s, GameManager.Instance);
+                                GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                                RefreshUI();
+                            });
+                    }
+                    else
+                    {
+                        CreateActivityCard("Graduate UPT: Commission as Fighter Pilot",
+                            "Earn your Gold Wings and select Fighter Pilot stream: Air Superiority, high-G dogfights, and AIM interceptors.",
+                            new Color(0.95f, 0.75f, 0.20f), () =>
+                            {
+                                AirForceFlightSchoolEngine.GraduateFlightSchool(s, PilotSpecialization.FighterPilot, GameManager.Instance);
+                                GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                                RefreshUI();
+                            });
+
+                        CreateActivityCard("Graduate UPT: Commission as CAS Strike Pilot",
+                            "Earn your Gold Wings and select CAS Strike stream: A-10 Warthog, 30mm GAU-8 Gatling cannon, and anti-armor tank-busting.",
+                            new Color(0.85f, 0.45f, 0.15f), () =>
+                            {
+                                AirForceFlightSchoolEngine.GraduateFlightSchool(s, PilotSpecialization.CasStrikePilot, GameManager.Instance);
+                                GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                                RefreshUI();
+                            });
+
+                        CreateActivityCard("Graduate UPT: Commission as Heavy Transport Pilot",
+                            "Earn your Gold Wings and select Heavy Transport stream: C-130 / C-17 tactical airdrops and rough dirt strip landings.",
+                            new Color(0.30f, 0.65f, 0.40f), () =>
+                            {
+                                AirForceFlightSchoolEngine.GraduateFlightSchool(s, PilotSpecialization.HeavyTransportPilot, GameManager.Instance);
+                                GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                                RefreshUI();
+                            });
+                    }
+                }
+
+                // 2. Active Pilot Sorties & Weapons School
+                if (s.isFlightDuty || s.flightSchoolStatus == FlightSchoolStatus.Graduated)
+                {
+                    string specName = s.pilotSpecialization switch
+                    {
+                        PilotSpecialization.FighterPilot => "Fighter Pilot (Air Superiority)",
+                        PilotSpecialization.CasStrikePilot => "CAS Strike Pilot (Tank Buster)",
+                        PilotSpecialization.HeavyTransportPilot => "Heavy Transport Pilot (Airlift)",
+                        _ => "Combat Aviator"
+                    };
+
+                    CreateActivityCard($"Fly Operational Combat Sortie [{specName}]",
+                        $"Scramble on frontline aviation sortie. Encounter dynamic aerial dilemmas: Dogfights, SAM launches, flameouts, and bailout SERE survival. Flight Hours: <b>{s.flightHoursLogged} hrs</b>.",
+                        new Color(0.15f, 0.50f, 0.85f), () =>
+                        {
+                            AirForceFlightSchoolEngine.ExecuteAviationSortie(s, null, 0, GameManager.Instance);
+                            GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                            RefreshUI();
+                        });
+
+                    if (AirForceFlightSchoolEngine.CheckTopGunEligibility(s))
+                    {
+                        CreateActivityCard("⭐ Apply for Top Gun Fighter Weapons School",
+                            "Your flight hours and aerial prowess qualify you for the prestigious Top Gun Weapons School! Become an elite combat flight instructor (+Respect, +Merit, Top Gun honor).",
+                            new Color(1f, 0.84f, 0f), () =>
+                            {
+                                AirForceFlightSchoolEngine.EnrollInTopGunSchool(s, GameManager.Instance);
+                                GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+                                RefreshUI();
+                            });
+                    }
+                }
+                else if (s.flightSchoolStatus != FlightSchoolStatus.EnrolledUPT)
                 {
                     CreateActivityCard("Turbine & Radar Avionics Calibration",
                         "Conduct pre-flight diagnostic overhauls on fighter jet turbines and tactical targeting radar arrays (+5 Discipline, +4 Board Points).",
@@ -1355,44 +1528,68 @@ namespace ArmyLife.UI
             }
 
             // Standard Army Training
-            CreateActivityCard("PT & Tactical Obstacle Course",
+            CreateActivityCard("PT & Tactical Obstacle Course (1 AP)",
                 "Complete the grueling military physical fitness test and confidence course.",
                 new Color(0.18f, 0.65f, 0.35f), () =>
                 {
+                    if (!s.TryConsumeActionPoint("PT Obstacle Course"))
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("FATIGUE",
+                            "<color=#FFAA00>[EXHAUSTED FOR SEMESTER]</color> You have no Action Points remaining this semester. Advance the semester to recover your physical stamina!");
+                        return;
+                    }
                     s.fitness = Mathf.Min(100f, s.fitness + 4f);
                     s.promotionPoints += 5;
                     s.health = Mathf.Max(20f, s.health - 3f);
                     GameEvents.OnFeedEventLogged?.Invoke("TRAINING",
-                        "<color=#00FFAA>[FITNESS DRILL]</color> You aced the physical fitness course. (+4 Fitness, +5 Promotion Points).");
+                        $"<color=#00FFAA>[FITNESS DRILL]</color> You aced the physical fitness course. (+4 Fitness, +5 Board Points, {s.actionPointsRemaining} AP remaining).");
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
 
-            CreateActivityCard("Live-Fire Firing Range",
-                "Qualify on long-range heavy rifles, plasma suppressors, and CQB marksmanship.",
+            CreateActivityCard("Live-Fire Firing Range (1 AP)",
+                "Qualify on military service rifles, light machine guns, and CQB marksmanship.",
                 new Color(0.20f, 0.50f, 0.80f), () =>
                 {
+                    if (!s.TryConsumeActionPoint("Live-Fire Range"))
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("FATIGUE",
+                            "<color=#FFAA00>[EXHAUSTED FOR SEMESTER]</color> You have no Action Points remaining this semester. Advance the semester to recover your physical stamina!");
+                        return;
+                    }
                     s.combatSkill = Mathf.Min(100f, s.combatSkill + 3.5f);
                     s.promotionPoints += 4;
                     GameEvents.OnFeedEventLogged?.Invoke("MARKSMANSHIP",
-                        "<color=#00D4FF>[EXPERT QUALIFICATION]</color> You earned Expert Marksman badge points! (+3.5 Combat Skill, +4 Board Points).");
+                        $"<color=#00D4FF>[EXPERT QUALIFICATION]</color> You earned Expert Marksman badge points! (+3.5 Combat Skill, +4 Board Points, {s.actionPointsRemaining} AP remaining).");
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
 
-            CreateActivityCard("Combat Readiness & Qualification Drills",
+            CreateActivityCard("Combat Readiness & Qualification Drills (1 AP)",
                 "Participate in advanced tactical field maneuvers, squad coordination, and obstacle course qualifications.",
                 new Color(0.55f, 0.25f, 0.75f), () =>
                 {
+                    if (!s.TryConsumeActionPoint("Combat Drills"))
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("FATIGUE",
+                            "<color=#FFAA00>[EXHAUSTED FOR SEMESTER]</color> You have no Action Points remaining this semester. Advance the semester to recover your physical stamina!");
+                        return;
+                    }
                     MilitaryPhysicalConditioningEngine.ConductFitnessQualificationTest(s);
                     GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                     RefreshUI();
                 });
 
-            CreateActivityCard("🎯 Tactical Firing Range (Interactive Target Minigame)",
+            CreateActivityCard("🎯 Tactical Firing Range (Interactive Target Minigame, 1 AP)",
                 "Step onto the live-fire lanes! Test your trigger discipline, windage, and target accuracy to earn expert marksmanship scores.",
                 new Color(0.20f, 0.65f, 0.90f), () =>
                 {
+                    if (!s.TryConsumeActionPoint("Firing Range Minigame"))
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("FATIGUE",
+                            "<color=#FFAA00>[EXHAUSTED FOR SEMESTER]</color> You have no Action Points remaining this semester. Advance the semester to recover your physical stamina!");
+                        return;
+                    }
                     var mg = TacticalMinigamesModal.Instance ?? Object.FindAnyObjectByType<TacticalMinigamesModal>(FindObjectsInactive.Include);
                     if (mg != null)
                     {
@@ -1408,10 +1605,16 @@ namespace ArmyLife.UI
                     }
                 });
 
-            CreateActivityCard("🛑 Forward Border Checkpoint (Papers, Please Minigame)",
+            CreateActivityCard("🛑 Forward Border Checkpoint (Papers, Please Minigame, 1 AP)",
                 "Take command of the forward security checkpoint. Inspect civilian passports, transit visas, forged documents, and confiscate contraband!",
                 new Color(0.85f, 0.55f, 0.15f), () =>
                 {
+                    if (!s.TryConsumeActionPoint("Checkpoint Duty"))
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("FATIGUE",
+                            "<color=#FFAA00>[EXHAUSTED FOR SEMESTER]</color> You have no Action Points remaining this semester. Advance the semester to recover your physical stamina!");
+                        return;
+                    }
                     var mg = TacticalMinigamesModal.Instance ?? Object.FindAnyObjectByType<TacticalMinigamesModal>(FindObjectsInactive.Include);
                     if (mg != null)
                     {
@@ -1613,9 +1816,18 @@ namespace ArmyLife.UI
                 }
                 else
                 {
-                    string mateDesc = $"{mate.roleTitle} | Rel: <b>{mate.relationship:F0}%</b> | Battles: <b>{mate.battlesSurvived}</b> | <i>{mate.personalityTrait}</i>.";
+                    string mateDesc = $"{mate.roleTitle} | Hometown: <b>{mate.hometown}</b> | Rel: <b>{mate.relationship:F0}%</b> | Morale: <b>{mate.morale:F0}%</b>\n<i>\"{mate.backstoryAndQuirk}\"</i>";
+                    
+                    CreateActivityCard($"Heart-to-Heart with {mate.GetDisplayName()}",
+                        $"{mateDesc}\nSit down and speak of home, easing combat fatigue and building brotherhood (+12 Rel, +10 Morale).",
+                        new Color(0.20f, 0.50f, 0.55f), () =>
+                        {
+                            SquadmateCommandEngine.TalkWithSquadmate(s, mate);
+                            RefreshUI();
+                        });
+
                     CreateActivityCard($"Fireteam: {mate.GetDisplayName()} (Share Smoke & Bond)",
-                        $"{mateDesc}\nSpend 1 Cigarette pack to share stories and raise fireteam loyalty (+15 Rel).",
+                        $"Spend 1 Cigarette pack to share smokes beneath the revetment and strengthen fireteam loyalty (+15 Rel, +10 Happiness).",
                         new Color(0.20f, 0.40f, 0.60f), () =>
                         {
                             if (GameManager.Instance != null)
@@ -1626,7 +1838,7 @@ namespace ArmyLife.UI
                         });
 
                     CreateActivityCard($"Fireteam: {mate.GetDisplayName()} (Barracks Cards & Banter)",
-                        $"{mateDesc}\nPlay cards in the barracks mess hall to blow off steam (+8 Rel, +8 Happiness).",
+                        $"Play cards in the barracks mess hall to blow off steam (+8 Rel, +8 Happiness).",
                         new Color(0.25f, 0.35f, 0.50f), () =>
                         {
                             if (GameManager.Instance != null)
@@ -1696,8 +1908,8 @@ namespace ArmyLife.UI
                     });
             }
 
-            CreateActivityCard("Imperial Specialist Hospital Surgery ($500)",
-                "Undergo specialized surgical care and trauma rehabilitation. Restores +50 Health and repairs -40% Meridian & Nerve Damage.",
+            CreateActivityCard("Military Specialist Hospital Surgery ($500)",
+                "Undergo specialized surgical care and trauma rehabilitation. Restores +50 Health and rehabilitates severe combat shrapnel and nerve trauma.",
                 new Color(0.80f, 0.25f, 0.25f), () =>
                 {
                     EconomyEngine.TreatAtImperialHospital(s);
@@ -1706,23 +1918,23 @@ namespace ArmyLife.UI
 
             if (!s.hasBionicProsthetics)
             {
-                CreateActivityCard("Install Advanced Bionic Cyber-Prosthetics ($2,500)",
-                    "Replace scarred or amputated limbs with state-of-the-art military cybernetics. Permanently grants <b>+15 Combat Skill</b>, <b>+10 Fitness</b>, and full health restoration!",
+                CreateActivityCard("Fit Advanced Carbon-Titanium Prosthetics ($2,500)",
+                    "Fitted with lightweight carbon-composite running blades and orthopedic prosthetics, followed by intensive military rehab. Permanently grants <b>+12 Combat Skill</b>, <b>+8 Fitness</b>, and full health restoration!",
                     new Color(0.55f, 0.25f, 0.75f), () =>
                     {
                         if (s.cashBalance < 2500)
                         {
-                            GameEvents.OnFeedEventLogged?.Invoke("MEDICAL", "<color=#FF4444>[INSUFFICIENT FUNDS]</color> Cybernetic prosthetics cost $2,500.");
+                            GameEvents.OnFeedEventLogged?.Invoke("MEDICAL", "<color=#FF4444>[INSUFFICIENT FUNDS]</color> Advanced military prosthetics cost $2,500.");
                             return;
                         }
                         s.cashBalance -= 2500;
                         s.hasBionicProsthetics = true;
-                        s.combatSkill = Mathf.Min(100f, s.combatSkill + 15f);
-                        s.fitness = Mathf.Min(100f, s.fitness + 10f);
+                        s.combatSkill = Mathf.Min(100f, s.combatSkill + 12f);
+                        s.fitness = Mathf.Min(100f, s.fitness + 8f);
                         s.health = 100f;
-                        s.AddTrait("Bionic Operator");
+                        s.AddTrait("Rehabilitated Veteran");
                         GameEvents.OnFeedEventLogged?.Invoke("MEDICAL",
-                            "<color=#FFD700><b>[BIONIC PROSTHETICS INSTALLED]</b></color> Military surgeons integrated titanium-composite bionic cybernetics into your body! (+15 Combat Skill, +10 Fitness, Healed to 100% Health).");
+                            "<color=#FFD700><b>[ADVANCED PROSTHETICS FITTED]</b></color> Military orthopedic surgeons fitted high-performance carbon-titanium prosthetics and completed physical rehab! (+12 Combat Skill, +8 Fitness, Healed to 100% Health).");
                         GameEvents.OnSoldierStatsUpdated?.Invoke(s);
                         RefreshUI();
                     });
@@ -1733,6 +1945,52 @@ namespace ArmyLife.UI
                 new Color(0.75f, 0.35f, 0.30f), () =>
                 {
                     EconomyEngine.TreatFamilyMedicalEmergency(s);
+                    RefreshUI();
+                });
+
+            // Convalescence Surgery if admitted
+            if (s.inMedicalConvalescence)
+            {
+                CreateActivityCard("Specialist Trauma Surgery & Rehab ($400)",
+                    "Undergo intensive orthopedic surgery and nerve grafting in the forward field hospital ($400) to maximize your chances of clearing the Medical Board.",
+                    new Color(0.85f, 0.20f, 0.20f), () =>
+                    {
+                        if (s.cashBalance < FieldHospitalEngine.SPECIALIST_SURGERY_COST)
+                        {
+                            GameEvents.OnFeedEventLogged?.Invoke("SURGERY", "<color=#FF4444>[INSUFFICIENT FUNDS]</color> Specialist surgery costs $400.");
+                            return;
+                        }
+                        FieldHospitalEngine.ProcessConvalescenceTurn(s, GameManager.Instance, optedForSpecialistSurgery: true);
+                        RefreshUI();
+                    });
+            }
+
+            // Veteran / Military Mental Health & Trauma Healing
+            CreateActivityCard("Visit National War Memorial",
+                "Pay quiet tribute before the black granite wall etched with the names of fallen brothers. Eases survivor's guilt (-25 Combat Stress, +15 Morale).",
+                new Color(0.20f, 0.60f, 0.55f), () =>
+                {
+                    if (!s.TryConsumeActionPoint("War Memorial Vigil"))
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("FATIGUE",
+                            "<color=#FFAA00>[EXHAUSTED FOR SEMESTER]</color> You have no Action Points remaining this semester.");
+                        return;
+                    }
+                    CombatTraumaEngine.VisitWarMemorial(s);
+                    RefreshUI();
+                });
+
+            CreateActivityCard("VA Peer Support & Trauma Therapy",
+                "Attend group therapy with fellow combat veterans to process artillery nightmares and shell shock (-35 Combat Stress).",
+                new Color(0.30f, 0.50f, 0.70f), () =>
+                {
+                    if (!s.TryConsumeActionPoint("VA Therapy"))
+                    {
+                        GameEvents.OnFeedEventLogged?.Invoke("FATIGUE",
+                            "<color=#FFAA00>[EXHAUSTED FOR SEMESTER]</color> You have no Action Points remaining this semester.");
+                        return;
+                    }
+                    CombatTraumaEngine.AttendVASupportGroup(s);
                     RefreshUI();
                 });
         }
@@ -1949,19 +2207,165 @@ namespace ArmyLife.UI
                 });
         }
 
-        private void BuildDynastyAndLegacyActivities(SoldierProfile s)
+        private void CycleMOSQualification(SoldierProfile s)
         {
-            if (s.childHeir == null)
+            if (s.militaryBranch == MilitaryBranch.AirForce)
             {
-                CreateActivityCard("Family Legacy: Start a Family & Raise a Child",
-                    "Take leave to marry your sweetheart and raise a child. You can bequeath your war medals and savings to them!",
-                    new Color(0.75f, 0.40f, 0.60f), () =>
-                    {
-                        s.HaveChild();
-                        RefreshUI();
-                    });
+                s.militaryMOS = (s.militaryMOS == MilitaryMOS.FighterPilotAce) 
+                    ? MilitaryMOS.PararescuePJ 
+                    : MilitaryMOS.FighterPilotAce;
             }
             else
+            {
+                switch (s.militaryMOS)
+                {
+                    case MilitaryMOS.InfantryRifleman11B:
+                        s.militaryMOS = MilitaryMOS.CombatMedic68W;
+                        break;
+                    case MilitaryMOS.CombatMedic68W:
+                        s.militaryMOS = MilitaryMOS.ScoutSniper19D;
+                        break;
+                    case MilitaryMOS.ScoutSniper19D:
+                        s.militaryMOS = MilitaryMOS.CombatEngineer12B;
+                        break;
+                    case MilitaryMOS.CombatEngineer12B:
+                    default:
+                        s.militaryMOS = MilitaryMOS.InfantryRifleman11B;
+                        break;
+                }
+            }
+
+            GameEvents.OnFeedEventLogged?.Invoke("DUTY",
+                $"<color=#00FFAA><b>[MOS QUALIFICATION CERTIFIED]</b></color> You completed cross-training and certified as <b>{s.militaryMOS}</b>!");
+            GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+        }
+
+        private void BuildDynastyAndLegacyActivities(SoldierProfile s)
+        {
+            // ==================== ROMANCE & COURTSHIP ====================
+            if (!s.isMarried)
+            {
+                if (string.IsNullOrEmpty(s.romanticPartnerName))
+                {
+                    CreateActivityCard("Find a Romantic Partner (Blind Date / PX Gala)",
+                        "Seek out companionship at the regimental canteen or through family introductions. Find someone to share peacetime letters with!",
+                        new Color(0.85f, 0.40f, 0.65f), () =>
+                        {
+                            var partner = RomanceAndCourtshipEngine.GenerateProspectivePartner(s);
+                            if (partner != null)
+                            {
+                                s.romanticPartnerName = partner.name;
+                                s.courtshipStage = CourtshipStage.CasualSweetheart;
+                                GameEvents.OnFeedEventLogged?.Invoke("ROMANCE",
+                                    $"<color=#FF88FF><b>[MET SOMEONE SPECIAL]</b></color> You met <b>{partner.name}</b> ({partner.occupation})! " +
+                                    $"They are <i>{partner.personalityTrait}</i> and smiled warmly when talking with you.");
+                                RefreshUI();
+                            }
+                        });
+                }
+                else
+                {
+                    string partnerName = s.romanticPartnerName;
+                    CreateActivityCard($"Take {partnerName} on a Date (Diner $30)",
+                        $"Enjoy warm pie and milkshakes at the town diner with {partnerName} (+14% Affection, +10 Morale).",
+                        new Color(0.75f, 0.35f, 0.60f), () =>
+                        {
+                            var tempPartner = new RomanticPartner(partnerName, "Sweetheart", Mathf.Max(18, (int)s.age), 60f, "Devoted");
+                            RomanceAndCourtshipEngine.TakeOnDate(s, tempPartner, "Diner");
+                            RefreshUI();
+                        });
+
+                    CreateActivityCard($"Escort {partnerName} to Regimental Officers' Gala ($200)",
+                        $"Dress up in your military finest and dance with {partnerName} at the annual military ball (+32% Affection, +22 Morale).",
+                        new Color(0.85f, 0.45f, 0.70f), () =>
+                        {
+                            var tempPartner = new RomanticPartner(partnerName, "Sweetheart", Mathf.Max(18, (int)s.age), 60f, "Devoted");
+                            RomanceAndCourtshipEngine.TakeOnDate(s, tempPartner, "MilitaryBall");
+                            RefreshUI();
+                        });
+
+                    if (s.courtshipStage != CourtshipStage.Engaged)
+                    {
+                        CreateActivityCard($"Pop the Question: Propose to {partnerName} (Diamond Ring $2,000)",
+                            $"Purchase an engagement ring and ask {partnerName} to be your lifetime military spouse!",
+                            new Color(0.90f, 0.75f, 0.20f), () =>
+                            {
+                                var tempPartner = new RomanticPartner(partnerName, "Sweetheart", Mathf.Max(18, (int)s.age), 75f, "Devoted");
+                                if (RomanceAndCourtshipEngine.ProposeMarriage(s, tempPartner, "Imperial Diamond Solitaire", 2000L))
+                                {
+                                    s.courtshipStage = CourtshipStage.Engaged;
+                                    s.engagementRing = "Imperial Diamond Solitaire";
+                                }
+                                RefreshUI();
+                            });
+
+                        CreateActivityCard($"Pop the Question: Propose to {partnerName} (Silver Band $300)",
+                            $"Propose with a simple, honest sterling silver band.",
+                            new Color(0.70f, 0.65f, 0.50f), () =>
+                            {
+                                var tempPartner = new RomanticPartner(partnerName, "Sweetheart", Mathf.Max(18, (int)s.age), 60f, "Devoted");
+                                if (RomanceAndCourtshipEngine.ProposeMarriage(s, tempPartner, "Engraved Silver Band", 300L))
+                                {
+                                    s.courtshipStage = CourtshipStage.Engaged;
+                                    s.engagementRing = "Engraved Silver Band";
+                                }
+                                RefreshUI();
+                            });
+                    }
+                    else
+                    {
+                        CreateActivityCard($"Arch-of-Sabers Military Cathedral Wedding ($1,000)",
+                            $"Hold a glorious formal wedding! Comrades raise crossed ceremonial sabers overhead as you marry {partnerName}!",
+                            new Color(0.20f, 0.75f, 0.50f), () =>
+                            {
+                                var tempPartner = new RomanticPartner(partnerName, "Sweetheart", Mathf.Max(18, (int)s.age), 100f, "Devoted");
+                                RomanceAndCourtshipEngine.HoldWeddingCeremony(s, tempPartner, "CathedralMilitary");
+                                RefreshUI();
+                            });
+
+                        CreateActivityCard($"Courthouse Registry Marriage ($150)",
+                            $"A quiet, intimate ceremony at the municipal registry office.",
+                            new Color(0.40f, 0.60f, 0.50f), () =>
+                            {
+                                var tempPartner = new RomanticPartner(partnerName, "Sweetheart", Mathf.Max(18, (int)s.age), 100f, "Devoted");
+                                RomanceAndCourtshipEngine.HoldWeddingCeremony(s, tempPartner, "Courthouse");
+                                RefreshUI();
+                            });
+                    }
+                }
+            }
+            else
+            {
+                // Married Life
+                CreateActivityCard($"Spouse Date Night: An Evening with {s.spouseName} ($100)",
+                    $"Celebrate your loving marriage away from military duties (+15 Morale, -10 Stress).",
+                    new Color(0.85f, 0.40f, 0.65f), () =>
+                    {
+                        if (s.cashBalance >= 100)
+                        {
+                            s.cashBalance -= 100;
+                            s.happiness = Mathf.Min(100f, s.happiness + 15f);
+                            s.combatStress = Mathf.Max(0f, s.combatStress - 10f);
+                            GameEvents.OnFeedEventLogged?.Invoke("ROMANCE",
+                                $"<color=#FF88FF>[MARRIED BLISS]</color> You and {s.spouseName} enjoyed a quiet, romantic dinner at home (+15 Morale, -10 Stress).");
+                        }
+                        RefreshUI();
+                    });
+
+                if (s.childHeir == null)
+                {
+                    CreateActivityCard("Family Planning: Try for a Baby",
+                        $"Start your family and welcome a child heir into the world to carry on your legacy and medals!",
+                        new Color(0.30f, 0.70f, 0.60f), () =>
+                        {
+                            RomanceAndCourtshipEngine.TryForBaby(s);
+                            RefreshUI();
+                        });
+                }
+            }
+
+            // ==================== CHILDREN & DYNASTY ====================
+            if (s.childHeir != null)
             {
                 string childDesc = $"Child: <b>{s.childHeir.childName} {s.lastName}</b> ({s.childHeir.gender}, Age {s.childHeir.age:F1}). " +
                                    $"Status: {(s.childHeir.isEligibleForEnlistment ? "<color=#00FFAA>Eligible for Enlistment (Age 18+)</color>" : "<color=#FF8800>Growing Up</color>")}.";
@@ -2002,6 +2406,56 @@ namespace ArmyLife.UI
                             RefreshUI();
                         });
                 }
+            }
+
+            // ==================== VETERAN MEMOIRS & PUBLIC OFFICE ====================
+            if (s.isRetired || s.totalSemestersLived >= 10)
+            {
+                if (s.publishedMemoirsCount == 0)
+                {
+                    CreateActivityCard("Write Wartime Memoir: 'Blood in the Arden' ($200)",
+                        "Publish your frontline combat experiences in a military autobiography. Earn semester book royalties based on your medals and tours!",
+                        new Color(0.85f, 0.60f, 0.20f), () =>
+                        {
+                            if (s.cashBalance >= 200)
+                            {
+                                s.cashBalance -= 200;
+                                s.publishedMemoirsCount = 1;
+                                s.publishedMemoirTitle = "Blood in the Arden: A Soldier's Truth";
+                                s.warMemoirRoyaltiesPerSemester = 800L + (s.GetWoundStarsCount() * 300L) + (s.totalSemestersLived * 40L);
+                                s.AddTrait("Published War Author");
+                                GameEvents.OnFeedEventLogged?.Invoke("MEMOIR",
+                                    $"<color=#FFD700><b>[MEMOIR PUBLISHED • BESTSELLER]</b></color> Your book, <b>'{s.publishedMemoirTitle}'</b>, hit the military bestseller lists! " +
+                                    $"Awarded <b>${s.warMemoirRoyaltiesPerSemester:N0}/semester</b> in lifetime publication royalties!");
+                                RefreshUI();
+                            }
+                        });
+                }
+                else
+                {
+                    CreateActivityCard($"Published Memoir: '{s.publishedMemoirTitle}'",
+                        $"Your autobiography continues to sell nationwide. Generates <b>${s.warMemoirRoyaltiesPerSemester:N0}/semester</b> in royalties.",
+                        new Color(0.60f, 0.50f, 0.25f), () =>
+                        {
+                            RefreshUI();
+                        });
+                }
+
+                CreateActivityCard("Campaign for Civic Office: Run for City Council",
+                    "Leverage your military honors, medals, and veteran respect to campaign for municipal government office ($300 campaign fee).",
+                    new Color(0.25f, 0.55f, 0.75f), () =>
+                    {
+                        if (s.cashBalance >= 300)
+                        {
+                            s.cashBalance -= 300;
+                            s.politicalInfluencePoints += 20;
+                            s.civicOfficeHeld = "City Council Member";
+                            s.AddTrait("Elected Official");
+                            GameEvents.OnFeedEventLogged?.Invoke("POLITICS",
+                                $"<color=#00FFAA><b>[ELECTION VICTORY]</b></color> Voters overwhelmingly elected you to the <b>City Council</b> on a platform of veteran honor and civic duty (+20 Influence)!");
+                            RefreshUI();
+                        }
+                    });
             }
         }
 

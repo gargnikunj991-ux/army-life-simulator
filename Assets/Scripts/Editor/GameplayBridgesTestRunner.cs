@@ -214,6 +214,63 @@ namespace ArmyLife.Editor
                 WartimeMarketEngine.ResetToNormal();
                 Debug.Log("<color=#00FF66>✓ Test 10 Passed: Macroeconomic shocks dynamically modulate financial yields.</color>");
 
+                // TEST 11: ROMANCE, DATING, PROPOSING & ARCH-OF-SABERS WEDDING
+                Debug.Log("[Test 11] Testing BitLife Romance, Dating, Engagement & Wedding loop...");
+                var romantic = new SoldierProfile("Sergeant Lover", null, 100);
+                romantic.cashBalance = 5000L;
+                var partner = RomanceAndCourtshipEngine.GenerateProspectivePartner(romantic);
+                AssertCondition(partner != null && !string.IsNullOrEmpty(partner.name), "Prospective partner must be generated with valid name.");
+                
+                // Dating
+                float preDateAffection = partner.affection;
+                bool dateSuccess = RomanceAndCourtshipEngine.TakeOnDate(romantic, partner, "MilitaryBall");
+                AssertCondition(dateSuccess && partner.affection > preDateAffection, "Gala date must increase partner affection.");
+                
+                // Ring Purchase & Proposal
+                partner.affection = 80f;
+                bool proposalSuccess = RomanceAndCourtshipEngine.ProposeMarriage(romantic, partner, "Imperial Diamond Solitaire", 2000L);
+                AssertCondition(proposalSuccess && partner.stage == CourtshipStage.Engaged, "Diamond ring proposal must be accepted into Engagement.");
+                
+                // Arch-of-Sabers Wedding Ceremony
+                bool weddingSuccess = RomanceAndCourtshipEngine.HoldWeddingCeremony(romantic, partner, "CathedralMilitary");
+                AssertCondition(weddingSuccess && romantic.isMarried && romantic.spouseName == partner.name, "Arch-of-Sabers wedding must register spouse and isMarried.");
+                AssertCondition(romantic.clanMembers.Exists(m => m.relationType == ClanRelationType.Spouse), "Spouse must be present in clan members roster.");
+                Debug.Log("<color=#00FF66>✓ Test 11 Passed: Romance, dating, ring proposal, and military wedding verified.</color>");
+
+                // TEST 12: MILITARY OCCUPATIONAL SPECIALTY (MOS) COMBAT PERKS
+                Debug.Log("[Test 12] Testing MOS specializations and battlefield tactical perks...");
+                var medicSoldier = new SoldierProfile("Doc Taylor", null, 100);
+                medicSoldier.militaryMOS = MilitaryMOS.CombatMedic68W;
+                var testTheater = WarTheaterInfo.GetInfo(WarTheaterType.ArdenRidgeTrenchLines);
+                var opOutcome = CombatOperationsEngine.ProcessSemesterCombatTour(medicSoldier, testTheater, TacticalMissionType.TrenchBreachAssault, TacticalChoiceOrder.HeavySuppression);
+                AssertCondition(opOutcome != null, "Combat operation with specialized MOS must successfully resolve.");
+                AssertCondition(opOutcome.roleSynergySummary.Contains("68W Combat Medic"), "Combat outcome must acknowledge 68W Combat Medic operational perks.");
+                Debug.Log("<color=#00FF66>✓ Test 12 Passed: MOS specializations inject unique operational battlefield advantages.</color>");
+
+                // TEST 13: THE DEAR JOHN LETTER & IRON HEART TRAIT
+                Debug.Log("[Test 13] Testing Dear John breakup letter and player response choices...");
+                var deployedSoldier = new SoldierProfile("Heartbroken Soldier", null, 100);
+                deployedSoldier.isMarried = true;
+                deployedSoldier.spouseName = "Faithless Spouse";
+                RomanceAndCourtshipEngine.ResolveDearJohnChoice(deployedSoldier, DearJohnChoice.TearItUpMoveForward);
+                AssertCondition(!deployedSoldier.isMarried, "Dear John breakup must divorce/separate soldier.");
+                AssertCondition(deployedSoldier.HasTrait("Iron Heart"), "Tearing up Dear John letter must award 'Iron Heart' resilience trait.");
+                Debug.Log("<color=#00FF66>✓ Test 13 Passed: Dear John letter resolution and emotional hardening verified.</color>");
+
+                // TEST 14: PUBLISHED WAR MEMOIR ROYALTIES & CIVIC OFFICE
+                Debug.Log("[Test 14] Testing War Memoir publishing and semester royalty payouts...");
+                var veteranAuthor = new SoldierProfile("Veteran Author", null, 100);
+                veteranAuthor.totalSemestersLived = 20; // 10 years served
+                veteranAuthor.AddMedal("Imperial Wound Star (Purple Heart)");
+                veteranAuthor.publishedMemoirsCount = 1;
+                veteranAuthor.publishedMemoirTitle = "Blood in the Arden";
+                veteranAuthor.warMemoirRoyaltiesPerSemester = 1500L;
+                veteranAuthor.cashBalance = 2000L;
+                
+                EconomyEngine.ProcessSemesterEconomy(veteranAuthor);
+                AssertCondition(veteranAuthor.cashBalance >= 3500L, "Semester economy must disburse war memoir royalties.");
+                Debug.Log("<color=#00FF66>✓ Test 14 Passed: War memoir royalties and veteran legacy financial yield verified.</color>");
+
                 Debug.Log("<color=#00FF66>========================================================================</color>");
                 Debug.Log("<color=#00FF66>====== ALL GAMEPLAY BRIDGES & AGE RESTRICTION TESTS PASSED (100%) ======</color>");
                 Debug.Log("<color=#00FF66>========================================================================</color>");

@@ -219,13 +219,13 @@ namespace ArmyLife.UI
                     {
                         // Spar
                         soldier.combatSkill = Mathf.Min(100f, soldier.combatSkill + 4f);
-                        if (member.relationType == ClanRelationType.OlderBrother)
+                        if (member.relationType == ClanRelationType.OlderBrother || member.relationType == ClanRelationType.Brother)
                         {
                             soldier.clanSuccessionScore += 8;
                             member.relationship = Mathf.Max(0f, member.relationship - 4f);
                             GameEvents.OnFeedEventLogged?.Invoke("CLAN",
-                                $"<b>[SPARRED WITH LUCIAN]</b> You crossed practice wooden blades in the courtyard! Your decisive thrust pushed him back! " +
-                                $"Clan Standing: <b>+{soldier.clanSuccessionScore}</b> (+4 Combat Skill, Lucian's jealousy deepened).");
+                                $"<b>[SPARRED WITH {member.name.ToUpper()}]</b> You crossed practice wooden blades in the courtyard! Your decisive thrust pushed them back! " +
+                                $"Family Standing: <b>+{soldier.clanSuccessionScore}</b> (+4 Combat Skill).");
                         }
                         else
                         {

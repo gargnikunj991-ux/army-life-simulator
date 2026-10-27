@@ -162,12 +162,18 @@ namespace ArmyLife.Editor
             Debug.Assert(child.combatSkill > 15f, "Combat skill should grow over childhood!");
             Debug.Assert(loggedEvents >= 36, "Every semester should log milestone feed events!");
 
-            // Clan & School Assertions (Fulfilling user specifications)
-            Debug.Assert(child.clanMembers.Count >= 4, "Child should have clan members populated!");
-            var lucian = child.clanMembers.Find(m => m.relationType == ClanRelationType.OlderBrother);
-            Debug.Assert(lucian != null && lucian.relationship <= 45f, "Rival brother Lucian should have low/competitive relationship (<45%)!");
-            var mother = child.clanMembers.Find(m => m.relationType == ClanRelationType.Mother);
-            Debug.Assert(mother != null && mother.relationship >= 80f, "Mother should have loving relationship (>=80%)!");
+            // BitLife Family & School Assertions (Fulfilling BitLife Family System specifications)
+            Debug.Assert(child.clanMembers.Count >= 1, "Child should have BitLife family populated!");
+            // Verify distant clan elders and branch cousins are completely eliminated
+            Debug.Assert(!child.clanMembers.Exists(m => m.relationType == ClanRelationType.ClanElder), "Distant clan elders must not exist!");
+            Debug.Assert(!child.clanMembers.Exists(m => m.relationType == ClanRelationType.BranchCousin), "Distant branch cousins must not exist!");
+
+            // Verify BitLife dynamic Sibling Birth: a new sibling is born during the life!
+            int initialCount = child.clanMembers.Count;
+            var baby = child.TriggerSiblingBirthForTest(isBrother: true, customName: "Leo");
+            Debug.Assert(baby != null && baby.age == 0, "New baby brother must be born at Age 0!");
+            Debug.Assert(child.clanMembers.Count == initialCount + 1, "Family count must increase when a new sibling is born!");
+            Debug.Assert(baby.IsSibling, "Baby member must be recognized as a sibling!");
             Debug.Assert(child.schoolPeers.Count >= 3, "Child should have school peers populated after age 6!");
 
             // Primary School Score & Graduation Assertions (User Specification)
@@ -564,13 +570,14 @@ namespace ArmyLife.Editor
             Debug.Assert(testSoldier.clanSuccessionScore == 12, "Clan succession favor should increase by +2");
             Debug.Log($"[Finance Test 2 - Remittance] Successfully sent ${sendAmount}. New Cash: ${testSoldier.cashBalance:N0}, Parent Rel: {testSoldier.parentRelationship}%, Clan Favor: {testSoldier.clanFavor}%");
 
-            // 4. Test Relationships Modal: Clan & Friends
-            testSoldier.InitializeDefaultClanMembers();
-            Debug.Assert(testSoldier.clanMembers.Count >= 4, "Soldier should have at least 4 clan members initialized!");
+            // 4. Test Relationships Modal: BitLife Family & Friends
+            testSoldier.clanMembers.Clear();
+            testSoldier.InitializeDefaultClanMembers(forceLegacyFixture: true);
+            Debug.Assert(testSoldier.clanMembers.Count >= 4, "Soldier should have family members initialized!");
             
-            // Test clan member interactions
-            var brother = testSoldier.clanMembers.Find(m => m.relationType == ClanRelationType.OlderBrother);
-            Debug.Assert(brother != null, "Lucian the older brother rival must exist in clan!");
+            // Test sibling interaction
+            var brother = testSoldier.clanMembers.Find(m => m.relationType == ClanRelationType.OlderBrother || m.relationType == ClanRelationType.Brother);
+            Debug.Assert(brother != null, "A brother must exist in the family!");
             
             // Sibling Spar Bout
             testSoldier.combatSkill = 65f;

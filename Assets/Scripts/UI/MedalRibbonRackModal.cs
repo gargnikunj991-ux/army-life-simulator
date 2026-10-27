@@ -45,6 +45,8 @@ namespace ArmyLife.UI
 
         [Header("Tab 1: Ribbon Rack & Uniform Details")]
         public Transform ribbonRackContainer;
+        public Image rankInsigniaImage;
+        public Image branchCrestImage;
         public TextMeshProUGUI rankBadgeText;
         public TextMeshProUGUI woundStarsBadgeText;
         public TextMeshProUGUI longevityHashesBadgeText;
@@ -259,6 +261,19 @@ namespace ArmyLife.UI
                 rankBadgeText.text = $"<b>Rank:</b> <color=#FFD700>{rank}</color> ({pay})";
             }
 
+            if (rankInsigniaImage != null)
+            {
+                var rSprite = InsigniaSpriteManager.GetRankInsignia(_currentSoldier.currentRank != null ? _currentSoldier.currentRank.paygrade : "E-1");
+                rankInsigniaImage.sprite = rSprite;
+                rankInsigniaImage.gameObject.SetActive(rSprite != null);
+            }
+            if (branchCrestImage != null)
+            {
+                var cSprite = InsigniaSpriteManager.GetBranchCrest(_currentSoldier.militaryBranch, _currentSoldier.isSpecialForces);
+                branchCrestImage.sprite = cSprite;
+                branchCrestImage.gameObject.SetActive(cSprite != null);
+            }
+
             if (woundStarsBadgeText != null)
             {
                 woundStarsBadgeText.text = woundStars > 0 
@@ -360,46 +375,56 @@ namespace ArmyLife.UI
             outline.effectColor = new Color(0.85f, 0.70f, 0.25f, 0.8f); // Gold mounting rail
             outline.effectDistance = new Vector2(1.5f, -1.5f);
 
-            // Container for vertical stripes
-            var stripesContainer = new GameObject("Stripes");
-            stripesContainer.transform.SetParent(itemObj.transform, false);
-            var stripesRt = stripesContainer.AddComponent<RectTransform>();
-            stripesRt.anchorMin = Vector2.zero;
-            stripesRt.anchorMax = Vector2.one;
-            stripesRt.offsetMin = Vector2.zero;
-            stripesRt.offsetMax = Vector2.zero;
-
-            var hlg = stripesContainer.AddComponent<HorizontalLayoutGroup>();
-            hlg.childForceExpandWidth = true;
-            hlg.childForceExpandHeight = true;
-            hlg.spacing = 0;
-
-            Color[] colors = def.GetColors();
-            for (int i = 0; i < colors.Length; i++)
+            // Attempt to load authentic crisp synthesized ribbon sprite
+            Sprite ribbonSprite = InsigniaSpriteManager.GetMedalRibbon(def.medalId);
+            if (ribbonSprite != null)
             {
-                var stripeObj = new GameObject($"Stripe_{i}");
-                stripeObj.transform.SetParent(stripesContainer.transform, false);
-                var stripeImg = stripeObj.AddComponent<Image>();
-                stripeImg.color = colors[i];
+                bgImg.sprite = ribbonSprite;
+                bgImg.color = Color.white;
             }
-
-            // Center device icon (e.g. ★, V, ⚔, ✚)
-            if (!string.IsNullOrEmpty(def.deviceIcon))
+            else
             {
-                var deviceObj = new GameObject("DeviceIcon");
-                deviceObj.transform.SetParent(itemObj.transform, false);
-                var devRt = deviceObj.AddComponent<RectTransform>();
-                devRt.anchorMin = Vector2.zero;
-                devRt.anchorMax = Vector2.one;
-                devRt.offsetMin = Vector2.zero;
-                devRt.offsetMax = Vector2.zero;
+                // Fallback: Container for vertical stripes
+                var stripesContainer = new GameObject("Stripes");
+                stripesContainer.transform.SetParent(itemObj.transform, false);
+                var stripesRt = stripesContainer.AddComponent<RectTransform>();
+                stripesRt.anchorMin = Vector2.zero;
+                stripesRt.anchorMax = Vector2.one;
+                stripesRt.offsetMin = Vector2.zero;
+                stripesRt.offsetMax = Vector2.zero;
 
-                var devText = deviceObj.AddComponent<TextMeshProUGUI>();
-                devText.text = def.deviceIcon;
-                devText.fontSize = 16f;
-                devText.fontStyle = FontStyles.Bold;
-                devText.alignment = TextAlignmentOptions.Center;
-                devText.color = new Color(1f, 0.84f, 0f, 0.95f); // Rich gold
+                var hlg = stripesContainer.AddComponent<HorizontalLayoutGroup>();
+                hlg.childForceExpandWidth = true;
+                hlg.childForceExpandHeight = true;
+                hlg.spacing = 0;
+
+                Color[] colors = def.GetColors();
+                for (int i = 0; i < colors.Length; i++)
+                {
+                    var stripeObj = new GameObject($"Stripe_{i}");
+                    stripeObj.transform.SetParent(stripesContainer.transform, false);
+                    var stripeImg = stripeObj.AddComponent<Image>();
+                    stripeImg.color = colors[i];
+                }
+
+                // Center device icon (e.g. ★, V, ⚔, ✚)
+                if (!string.IsNullOrEmpty(def.deviceIcon))
+                {
+                    var deviceObj = new GameObject("DeviceIcon");
+                    deviceObj.transform.SetParent(itemObj.transform, false);
+                    var devRt = deviceObj.AddComponent<RectTransform>();
+                    devRt.anchorMin = Vector2.zero;
+                    devRt.anchorMax = Vector2.one;
+                    devRt.offsetMin = Vector2.zero;
+                    devRt.offsetMax = Vector2.zero;
+
+                    var devText = deviceObj.AddComponent<TextMeshProUGUI>();
+                    devText.text = def.deviceIcon;
+                    devText.fontSize = 16f;
+                    devText.fontStyle = FontStyles.Bold;
+                    devText.alignment = TextAlignmentOptions.Center;
+                    devText.color = new Color(1f, 0.84f, 0f, 0.95f); // Rich gold
+                }
             }
 
             // Button trigger for selection

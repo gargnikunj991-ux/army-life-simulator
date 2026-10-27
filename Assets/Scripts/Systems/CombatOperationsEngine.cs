@@ -315,6 +315,35 @@ namespace ArmyLife.Systems
                 synergyNotes.Add("<color=#FFD700><b>Special Forces Operator Aura:</b> Your lethal precision and elite training inspire unwavering courage in the ranks! (+20 Tactical Power)</color>");
             }
 
+            // Military Occupational Specialty (MOS) Perks
+            switch (soldier.militaryMOS)
+            {
+                case MilitaryMOS.InfantryRifleman11B:
+                    leaderPower += 12f;
+                    synergyNotes.Add("<color=#00FFAA><b>11B Infantry Rifleman:</b> Direct aggressive shock-assault tactics and trench combat mastery (+12 Power).</color>");
+                    break;
+                case MilitaryMOS.CombatMedic68W:
+                    leaderPower += 8f;
+                    synergyNotes.Add("<color=#00FFAA><b>68W Combat Medic:</b> Rapid field hemorrhage control and squad survival trauma protocol (+8 Power).</color>");
+                    break;
+                case MilitaryMOS.ScoutSniper19D:
+                    leaderPower += 15f;
+                    synergyNotes.Add("<color=#00FFAA><b>19D Scout Sniper:</b> Long-range optic overwatch neutralizing enemy machine-gun nests (+15 Power).</color>");
+                    break;
+                case MilitaryMOS.CombatEngineer12B:
+                    leaderPower += 14f;
+                    synergyNotes.Add("<color=#00FFAA><b>12B Combat Engineer:</b> Explosive obstacle clearing and anti-IED route clearance (+14 Power).</color>");
+                    break;
+                case MilitaryMOS.FighterPilotAce:
+                    leaderPower += 22f;
+                    synergyNotes.Add("<color=#00FFAA><b>Fighter Ace:</b> Precision close air support (CAS) strikes decimating enemy fortified lines (+22 Power).</color>");
+                    break;
+                case MilitaryMOS.PararescuePJ:
+                    leaderPower += 18f;
+                    synergyNotes.Add("<color=#00FFAA><b>Pararescue PJ:</b> Elite combat search and rescue (CSAR) extracting wounded under heavy fire (+18 Power).</color>");
+                    break;
+            }
+
             // Scout Synergy
             if (scoutAlert)
             {
@@ -489,18 +518,6 @@ namespace ArmyLife.Systems
                     outcome.squadFatigueDelta = scoutAlert ? 10f : 15f;
                     outcome.casualties = 0;
                     outcome.playerDamageTaken = 0f;
-
-                    // Award Silver Cross for decisive victory
-                    if (!soldier.HasMedal("Silver Cross"))
-                    {
-                        soldier.AddMedal("Silver Cross");
-                        outcome.combatHonors.Add("Silver Cross");
-                    }
-                    else if (!soldier.HasMedal("Bronze Star"))
-                    {
-                        soldier.AddMedal("Bronze Star");
-                        outcome.combatHonors.Add("Bronze Star");
-                    }
                     break;
 
                 case TacticalOutcomeType.TacticalSuccess:
@@ -515,18 +532,6 @@ namespace ArmyLife.Systems
                     outcome.squadFatigueDelta = scoutAlert ? 14f : 20f;
                     outcome.casualties = gunnerReady ? 0 : 1;
                     outcome.playerDamageTaken = 5f;
-
-                    // Award Bronze Star or Valor Citation
-                    if (!soldier.HasMedal("Bronze Star"))
-                    {
-                        soldier.AddMedal("Bronze Star");
-                        outcome.combatHonors.Add("Bronze Star");
-                    }
-                    else if (!soldier.HasMedal("Valor Citation"))
-                    {
-                        soldier.AddMedal("Valor Citation");
-                        outcome.combatHonors.Add("Valor Citation");
-                    }
                     break;
 
                 case TacticalOutcomeType.PyrrhicVictory:
@@ -542,16 +547,6 @@ namespace ArmyLife.Systems
                     outcome.casualties = medicReady ? 1 : 2;
                     outcome.playerDamageTaken = soldier.hasBallisticVest ? 18f : 28f;
                     outcome.playerWounded = true;
-
-                    // Award Imperial Wound Star for severe wounds
-                    soldier.AddMedal("Imperial Wound Star");
-                    outcome.combatHonors.Add("Imperial Wound Star");
-
-                    if (!soldier.HasMedal("Valor Citation"))
-                    {
-                        soldier.AddMedal("Valor Citation");
-                        outcome.combatHonors.Add("Valor Citation");
-                    }
                     break;
 
                 case TacticalOutcomeType.TacticalWithdrawal:
@@ -582,11 +577,17 @@ namespace ArmyLife.Systems
                     outcome.casualties = medicReady ? 2 : 4;
                     outcome.playerDamageTaken = soldier.hasBallisticVest ? 28f : 42f;
                     outcome.playerWounded = true;
-
-                    // Award Imperial Wound Star
-                    soldier.AddMedal("Imperial Wound Star");
-                    outcome.combatHonors.Add("Imperial Wound Star");
                     break;
+            }
+
+            // Evaluate authentic Military Medal Hierarchy & strict valor criteria
+            var evaluatedHonors = MedalRackEngine.EvaluateBattlefieldMedalAwards(soldier, outcome, mission, theater);
+            foreach (var h in evaluatedHonors)
+            {
+                if (!outcome.combatHonors.Contains(h))
+                {
+                    outcome.combatHonors.Add(h);
+                }
             }
 
             // Special Forces Operator Battlefield Aura:
@@ -631,20 +632,21 @@ namespace ArmyLife.Systems
                         outcome.combatHonors.Add("Imperial Wound Star (Posthumous)");
                     }
                 }
+                else if (!soldier.isDead && soldier.health < FieldHospitalEngine.CRITICAL_CASUALTY_THRESHOLD && !soldier.inMedicalConvalescence)
+                {
+                    FieldHospitalEngine.AdmitToHospital(soldier, $"Critical Combat Trauma during {mission.missionName}", isIEDAmputation: false);
+                    outcome.squadmateReports.Add("<color=#FF5555><b>Forward Field Hospital Triage:</b> Severe combat trauma! Stretcher-bearers evacuated you to surgical care.</color>");
+                }
             }
+
+            // Record Territorial Frontline Momentum on the Campaign War Map
+            DynamicWarFrontEngine.RecordBattleOutcome(theater.theaterType, outcome.outcomeType, soldier);
 
             // Apply financial rewards, merit, combat skill, and promotion points
             soldier.cashBalance += outcome.totalCashAwarded;
             soldier.accumulatedPromotionPoints += outcome.promotionPoints;
             soldier.meritRating = Mathf.Clamp(soldier.meritRating + outcome.meritDelta, 0f, 100f);
             soldier.combatSkill = Mathf.Min(100f, soldier.combatSkill + outcome.combatSkillDelta);
-
-            // Award standard Combat Infantry Badge if active
-            if (!soldier.HasMedal("Combat Infantry Badge"))
-            {
-                soldier.AddMedal("Combat Infantry Badge");
-                outcome.combatHonors.Add("Combat Infantry Badge");
-            }
         }
 
         private static void UpdateSquadReadiness(
@@ -756,7 +758,12 @@ namespace ArmyLife.Systems
             var mission = GenerateMission(theater, soldier, forcedMission);
             var choice = forcedChoice.HasValue ? forcedChoice.Value : TacticalChoiceOrder.DefaultOrder;
 
-            return ExecuteMission(soldier, mission, choice, theater, forceOutcome);
+            var outcome = ExecuteMission(soldier, mission, choice, theater, forceOutcome);
+
+            // Check for high-danger overseas deployment "Dear John" letter event
+            RomanceAndCourtshipEngine.CheckForDearJohnLetter(soldier, theater);
+
+            return outcome;
         }
 
         #endregion

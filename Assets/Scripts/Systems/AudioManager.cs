@@ -116,6 +116,7 @@ namespace ArmyLife.Systems
             GetOrCreateClip("BugleFanfare", GenerateBugleFanfareClip);
             GetOrCreateClip("Taps", GenerateTapsClip);
             GetOrCreateClip("Heartbeat", GenerateHeartbeatClip);
+            GetOrCreateClip("ArtilleryExplosion", GenerateArtilleryExplosionClip);
             GetOrCreateClip("AlertPing", GenerateAlertPingClip);
             GetOrCreateClip("Payday", GeneratePaydayClip);
             GetOrCreateClip("CadenceBgm", GenerateCadenceBgmClip);
@@ -184,6 +185,11 @@ namespace ArmyLife.Systems
         public static void PlayHeartbeat()
         {
             EnsureInstance()?.PlaySoundInternal("Heartbeat", 0.90f, 0.03f);
+        }
+
+        public static void PlayArtilleryExplosion()
+        {
+            EnsureInstance()?.PlaySoundInternal("ArtilleryExplosion", 1.0f, 0.08f);
         }
 
         public static void PlayAlertPing()
@@ -555,6 +561,38 @@ namespace ArmyLife.Systems
             }
 
             AudioClip clip = AudioClip.Create("Procedural_Heartbeat", totalSamples, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
+        private AudioClip GenerateArtilleryExplosionClip()
+        {
+            int sampleRate = 44100;
+            float duration = 1.4f;
+            int totalSamples = (int)(sampleRate * duration);
+            float[] samples = new float[totalSamples];
+
+            for (int i = 0; i < totalSamples; i++)
+            {
+                float t = (float)i / sampleRate;
+
+                // 1. Initial supersonic pressure shockwave
+                float blastEnv = Mathf.Exp(-80f * t);
+                float blastNoise = (UnityEngine.Random.value * 2f - 1f) * blastEnv * 0.95f;
+
+                // 2. Sub-bass seismic rumble (45Hz down to 25Hz)
+                float rumbleEnv = Mathf.Exp(-5f * t);
+                float freq = Mathf.Lerp(55f, 22f, t / duration);
+                float subBass = Mathf.Sin(2f * Mathf.PI * freq * t) * rumbleEnv * 0.85f;
+
+                // 3. Shrapnel and debris scatter
+                float debrisEnv = Mathf.Exp(-3.5f * t) * (t > 0.1f ? 1f : t / 0.1f);
+                float debris = (UnityEngine.Random.value * 2f - 1f) * debrisEnv * 0.35f;
+
+                samples[i] = Mathf.Clamp(blastNoise + subBass + debris, -1f, 1f);
+            }
+
+            AudioClip clip = AudioClip.Create("Procedural_ArtilleryExplosion", totalSamples, 1, sampleRate, false);
             clip.SetData(samples, 0);
             return clip;
         }

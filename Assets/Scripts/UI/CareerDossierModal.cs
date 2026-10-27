@@ -21,6 +21,8 @@ namespace ArmyLife.UI
         public TextMeshProUGUI headerTitleText;
         public TextMeshProUGUI soldierNameRankText;
         public TextMeshProUGUI unitAndOriginText;
+        public Image rankInsigniaImage;
+        public Image branchCrestImage;
 
         [Header("Service Record Summary")]
         public TextMeshProUGUI serviceStatusText;
@@ -180,6 +182,19 @@ namespace ArmyLife.UI
                 soldierNameRankText.text = $"<color=#{goldHex}><b>{rankTitle.ToUpper()} • {soldier.characterName.ToUpper()}</b></color>";
             }
 
+            if (rankInsigniaImage != null)
+            {
+                var rSprite = InsigniaSpriteManager.GetRankInsignia(soldier.currentRank != null ? soldier.currentRank.paygrade : "E-1");
+                rankInsigniaImage.sprite = rSprite;
+                rankInsigniaImage.gameObject.SetActive(rSprite != null);
+            }
+            if (branchCrestImage != null)
+            {
+                var cSprite = InsigniaSpriteManager.GetBranchCrest(soldier.militaryBranch, soldier.isSpecialForces);
+                branchCrestImage.sprite = cSprite;
+                branchCrestImage.gameObject.SetActive(cSprite != null);
+            }
+
             if (unitAndOriginText != null)
             {
                 var theater = WarTheaterInfo.GetInfo(soldier.currentTheater);
@@ -192,6 +207,12 @@ namespace ArmyLife.UI
                 if (soldier.isDead)
                 {
                     serviceStatusText.text = $"<color=#{redHex}><b>[STATUS: KILLED IN ACTION]</b></color>\n<i>{soldier.deathReason}</i>";
+                }
+                else if (soldier.isMedicallyRetired)
+                {
+                    string limbStr = soldier.hasLostLimb ? $" • Amputee ({soldier.amputatedLimbDescription})" : "";
+                    serviceStatusText.text = $"<color=#{goldHex}><b>[STATUS: PERMANENT COMBAT DISABILITY RETIREMENT]</b></color>\n" +
+                                             $"<i>100% Medical Disability Rating{limbStr} | Lifetime VA Pension: ${soldier.medicalDisabilityPension:N0}/mo</i>";
                 }
                 else if (soldier.isRetired)
                 {
@@ -211,15 +232,15 @@ namespace ArmyLife.UI
             // Service Statistics
             float years = soldier.totalSemestersLived * 0.5f;
             int tours = soldier.totalSemestersLived;
-            string wealthTitle = "Modest Commoner";
-            if (soldier.cashBalance >= 10000000L || soldier.familyHouseTier == FamilyHouseTier.ImperialDynasticSeat)
-                wealthTitle = $"<color=#{goldHex}><b>The Gilded Sovereign Myth (Apex Dynasty)</b></color>";
-            else if (soldier.cashBalance >= 2500000L || soldier.familyHouseTier == FamilyHouseTier.SovereignImperialChateau)
-                wealthTitle = $"<color=#{goldHex}><b>Sovereign Royal Powerbroker</b></color>";
+            string wealthTitle = "Humble Soldier";
+            if (soldier.cashBalance >= 5000000L || soldier.familyHouseTier == FamilyHouseTier.ImperialDynasticSeat)
+                wealthTitle = $"<color=#{goldHex}><b>Living Military Legend & Dynastic Patriarch</b></color>";
+            else if (soldier.cashBalance >= 1500000L || soldier.familyHouseTier == FamilyHouseTier.SovereignImperialChateau)
+                wealthTitle = $"<color=#{goldHex}><b>Distinguished High Commander</b></color>";
             else if (soldier.cashBalance >= 500000L || soldier.familyHouseTier == FamilyHouseTier.DucalPalaceCitadel)
-                wealthTitle = $"<color=#{greenHex}><b>Grand Provincial Oligarch</b></color>";
+                wealthTitle = $"<color=#{greenHex}><b>Honored Veteran Statesman</b></color>";
             else if (soldier.cashBalance >= 100000L || soldier.familyHouseTier == FamilyHouseTier.AncestralEstate)
-                wealthTitle = $"<color=#{coyoteHex}><b>Prominent Patrician Nobility</b></color>";
+                wealthTitle = $"<color=#{coyoteHex}><b>Respected Military Lineage</b></color>";
             else if (soldier.cashBalance >= 25000L)
                 wealthTitle = "Comfortable Veteran";
 

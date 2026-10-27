@@ -14,6 +14,8 @@ namespace ArmyLife.UI
         public TextMeshProUGUI ageAndCalendarLabel;
         public TextMeshProUGUI rankLabel;
         public TextMeshProUGUI nobleTitleLabel;
+        public Image rankInsigniaImage;
+        public Image branchCrestImage;
 
         [Header("Finances & Military Compensation")]
         public TextMeshProUGUI cashBalanceLabel;
@@ -51,6 +53,9 @@ namespace ArmyLife.UI
         public MailCallModal mailCallModal;
         public MedalRibbonRackModal medalRibbonRackModal;
         public TacticalMinigamesModal tacticalMinigamesModal;
+        public StrategicWarMapModal strategicWarMapModal;
+        public SemesterDispatchModal semesterDispatchModal;
+        public TacticalFirefightModal tacticalFirefightModal;
 
         [Header("5 Core Bottom Action Buttons")]
         public Button lifeButton;
@@ -148,6 +153,9 @@ namespace ArmyLife.UI
             if (mailCallModal == null) mailCallModal = MailCallModal.Instance ?? FindAnyObjectByType<MailCallModal>(FindObjectsInactive.Include);
             if (medalRibbonRackModal == null) medalRibbonRackModal = MedalRibbonRackModal.Instance ?? FindAnyObjectByType<MedalRibbonRackModal>(FindObjectsInactive.Include);
             if (tacticalMinigamesModal == null) tacticalMinigamesModal = TacticalMinigamesModal.Instance ?? FindAnyObjectByType<TacticalMinigamesModal>(FindObjectsInactive.Include);
+            if (strategicWarMapModal == null) strategicWarMapModal = StrategicWarMapModal.Instance ?? FindAnyObjectByType<StrategicWarMapModal>(FindObjectsInactive.Include);
+            if (semesterDispatchModal == null) semesterDispatchModal = SemesterDispatchModal.Instance ?? FindAnyObjectByType<SemesterDispatchModal>(FindObjectsInactive.Include);
+            if (tacticalFirefightModal == null) tacticalFirefightModal = TacticalFirefightModal.Instance ?? FindAnyObjectByType<TacticalFirefightModal>(FindObjectsInactive.Include);
 
             // 2. Bottom buttons auto-link
             var buttons = GetComponentsInChildren<Button>(true);
@@ -163,7 +171,7 @@ namespace ArmyLife.UI
                 else if (returnToMenuButton == null && (bName.Contains("menu") || bName.Contains("title"))) returnToMenuButton = b;
             }
 
-            // 3. Attach listeners cleanly
+            // 3. Attach listeners cleanly without duplicate / conflicting event triggers
             RemoveButtonListeners();
 
             if (lifeButton != null) lifeButton.onClick.AddListener(OnLifeButtonClicked);
@@ -176,8 +184,11 @@ namespace ArmyLife.UI
             if (returnToMenuButton != null) returnToMenuButton.onClick.AddListener(OnReturnToMenuClicked);
 
             if (testTalentButton != null) testTalentButton.onClick.AddListener(OnTestTalentClicked);
-            if (sendMoneyHomeButton != null) sendMoneyHomeButton.onClick.AddListener(OnSendMoneyHomeClicked);
-            if (clanButton != null) clanButton.onClick.AddListener(OnClanButtonClicked);
+            // Guard against legacy inspector references sharing GameObjects with the 5 bottom buttons
+            if (sendMoneyHomeButton != null && sendMoneyHomeButton != activitiesButton && sendMoneyHomeButton != financeButton)
+                sendMoneyHomeButton.onClick.AddListener(OnSendMoneyHomeClicked);
+            if (clanButton != null && clanButton != relationshipsButton)
+                clanButton.onClick.AddListener(OnClanButtonClicked);
             if (schoolButton != null) schoolButton.onClick.AddListener(OnSchoolButtonClicked);
 
             // 4. Sanitize button labels to clean ASCII
@@ -265,6 +276,20 @@ namespace ArmyLife.UI
                 rankLabel.text = soldier.GetRankDisplayName();
             }
 
+            // Visual Rank Insignia & Branch Crest
+            if (rankInsigniaImage != null)
+            {
+                var rSprite = InsigniaSpriteManager.GetRankInsignia(soldier.currentRank != null ? soldier.currentRank.paygrade : "E-1");
+                rankInsigniaImage.sprite = rSprite;
+                rankInsigniaImage.gameObject.SetActive(rSprite != null);
+            }
+            if (branchCrestImage != null)
+            {
+                var cSprite = InsigniaSpriteManager.GetBranchCrest(soldier.militaryBranch, soldier.isSpecialForces);
+                branchCrestImage.sprite = cSprite;
+                branchCrestImage.gameObject.SetActive(cSprite != null);
+            }
+
             if (nobleTitleLabel != null)
             {
                 nobleTitleLabel.text = $"Origin: {soldier.origin} ({soldier.originTrait})";
@@ -339,13 +364,23 @@ namespace ArmyLife.UI
                 {
                     btnText.text = soldier.isDead 
                         ? "VIEW DOSSIER" 
-                        : (soldier.isRetired ? "VETERAN TOUR (+)" : "ADVANCE TOUR (+)");
+                        : (soldier.inMedicalConvalescence
+                            ? "HOSPITAL REHAB (+)"
+                            : (soldier.isRetired ? "VETERAN TOUR (+)" : "ADVANCE TOUR (+)"));
                 }
             }
 
             // Stat Sliders & Clean Percentage Texts
             if (healthSlider != null) healthSlider.value = soldier.health / 100f;
-            if (healthBarText != null) healthBarText.text = $"Health: {soldier.health:F0}%";
+            if (healthBarText != null)
+            {
+                if (soldier.inMedicalConvalescence)
+                    healthBarText.text = $"<color=#FF3333>Hospital: {soldier.health:F0}%</color>";
+                else if (soldier.health < 35f)
+                    healthBarText.text = $"<color=#FF5555>Critical: {soldier.health:F0}%</color>";
+                else
+                    healthBarText.text = $"Health: {soldier.health:F0}%";
+            }
 
             if (fitnessSlider != null) fitnessSlider.value = soldier.fitness / 100f;
             if (fitnessBarText != null) fitnessBarText.text = $"Readiness: {soldier.fitness:F0}%";
@@ -361,12 +396,33 @@ namespace ArmyLife.UI
         }
 
         // ==========================================
-        // 5 Core Button Click Handlers
+        // 5 Core Button Click Handlers & Modal Mutual Exclusivity
         // ==========================================
+
+        public void CloseAllModals()
+        {
+            if (lifeModal != null && lifeModal.gameObject.activeSelf) lifeModal.CloseModal();
+            if (financeModal != null && financeModal.gameObject.activeSelf) financeModal.CloseModal();
+            if (relationshipsModal != null && relationshipsModal.gameObject.activeSelf) relationshipsModal.CloseModal();
+            if (activitiesModal != null && activitiesModal.gameObject.activeSelf) activitiesModal.CloseModal();
+            if (settingsModal != null && settingsModal.gameObject.activeSelf) settingsModal.CloseModal();
+            if (dilemmaModal != null && dilemmaModal.gameObject.activeSelf) dilemmaModal.CloseModal();
+            if (clanModal != null && clanModal.gameObject.activeSelf) clanModal.CloseModal();
+            if (schoolModal != null && schoolModal.gameObject.activeSelf) schoolModal.CloseModal();
+            if (youthActivitiesModal != null && youthActivitiesModal.gameObject.activeSelf) youthActivitiesModal.CloseModal();
+            if (careerDossierModal != null && careerDossierModal.gameObject.activeSelf) careerDossierModal.CloseModal();
+            if (mailCallModal != null && mailCallModal.gameObject.activeSelf) mailCallModal.CloseModal();
+            if (medalRibbonRackModal != null && medalRibbonRackModal.gameObject.activeSelf) medalRibbonRackModal.CloseModal();
+            if (tacticalMinigamesModal != null && tacticalMinigamesModal.gameObject.activeSelf) tacticalMinigamesModal.CloseModal();
+            if (strategicWarMapModal != null && strategicWarMapModal.gameObject.activeSelf) strategicWarMapModal.CloseModal();
+            if (semesterDispatchModal != null && semesterDispatchModal.gameObject.activeSelf) semesterDispatchModal.CloseModal();
+            if (tacticalFirefightModal != null && tacticalFirefightModal.gameObject.activeSelf) tacticalFirefightModal.CloseModal();
+        }
 
         public void OnLifeButtonClicked()
         {
             AudioManager.PlayUiClick();
+            CloseAllModals();
             if (lifeModal != null)
             {
                 lifeModal.OpenModal();
@@ -385,6 +441,7 @@ namespace ArmyLife.UI
         public void OnFinanceButtonClicked()
         {
             AudioManager.PlayUiClick();
+            CloseAllModals();
             if (financeModal != null)
             {
                 financeModal.OpenModal();
@@ -407,6 +464,7 @@ namespace ArmyLife.UI
             {
                 if (GameManager.Instance.currentSoldier.isDead)
                 {
+                    CloseAllModals();
                     if (careerDossierModal != null)
                     {
                         careerDossierModal.OpenDossier(GameManager.Instance.currentSoldier);
@@ -428,6 +486,7 @@ namespace ArmyLife.UI
         public void OnRelationshipsButtonClicked()
         {
             AudioManager.PlayUiClick();
+            CloseAllModals();
             if (relationshipsModal != null)
             {
                 relationshipsModal.OpenModal();
@@ -446,6 +505,7 @@ namespace ArmyLife.UI
         public void OnActivitiesButtonClicked()
         {
             AudioManager.PlayUiClick();
+            CloseAllModals();
             if (activitiesModal != null)
             {
                 activitiesModal.OpenModal();
@@ -468,6 +528,7 @@ namespace ArmyLife.UI
         public void OnSettingsButtonClicked()
         {
             AudioManager.PlayUiClick();
+            CloseAllModals();
             if (settingsModal != null)
             {
                 settingsModal.OpenModal();

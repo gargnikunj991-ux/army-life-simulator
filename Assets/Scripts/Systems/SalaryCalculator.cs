@@ -17,11 +17,18 @@ namespace ArmyLife.Systems
             if (soldier.isYouthPhase) return 0; // Dependent students receive no monthly salary
 
             // Imprisoned convicts receive no civilian or military payroll
-            if (soldier.isImprisoned || soldier.militaryBrigSemestersRemaining > 0) return 0L;
+            if (soldier.isImprisoned || soldier.militaryBrigSemestersRemaining > 0 || soldier.isFortLeavenworthInmate) return 0L;
 
             // 1. Post-Military Honorable Retirement & Veteran Careers
             if (soldier.isRetired)
             {
+                // Dishonorable Discharge or Bad Conduct Discharge forfeits all VA benefits and military pension
+                if (soldier.dischargeCharacterization == DischargeCharacterization.DishonorableDischarge ||
+                    soldier.dischargeCharacterization == DischargeCharacterization.BadConductDischarge)
+                {
+                    return 0L;
+                }
+
                 long pension = soldier.calculatedPensionPerMonth > 0 
                     ? soldier.calculatedPensionPerMonth 
                     : (soldier.veteranPensionPerMonth > 0 ? soldier.veteranPensionPerMonth : 1500L);
@@ -54,25 +61,27 @@ namespace ArmyLife.Systems
                 return 0L; // Full-time college student
             }
 
-            // 3. Military Training Schools
+            // 3. Military Training Schools & Pipelines (Paid Active Duty per US Military Standards)
             if (soldier.careerTrack == CareerTrack.MilitaryRecruitBasic)
             {
-                return 0L; // Basic training (6 months): no pay, no salary
+                // In real military (e.g. US Armed Forces E-1 Private), basic training recruits are paid active duty base pay
+                long recruitPay = (soldier.currentRank != null) ? soldier.currentRank.baseMonthlySalary : 1800L;
+                return recruitPay;
             }
             if (soldier.careerTrack == CareerTrack.MilitaryTechSchool)
             {
-                // Technical school (2 years): starts to pay after 1 year (2 semesters)
-                return (soldier.militarySchoolSemestersCompleted >= 2) ? 200L : 0L;
+                long techPay = (soldier.currentRank != null) ? soldier.currentRank.baseMonthlySalary : 1800L;
+                return techPay;
             }
             if (soldier.careerTrack == CareerTrack.MilitaryMedicalSchool)
             {
-                // Medical school (3 years): starts to pay after 1 year (2 semesters)
-                return (soldier.militarySchoolSemestersCompleted >= 2) ? 250L : 0L;
+                long medPay = (soldier.currentRank != null) ? soldier.currentRank.baseMonthlySalary : 2050L;
+                return medPay;
             }
             if (soldier.careerTrack == CareerTrack.MilitaryWarAcademy)
             {
-                // War academy: pays from the start
-                return 300L;
+                // War academy cadet monthly stipend
+                return 1200L;
             }
 
             // 4. Active Military Duty
@@ -128,6 +137,12 @@ namespace ArmyLife.Systems
             {
                 long extendedCombatBonus = (long)(total * 0.10f);
                 total += extendedCombatBonus;
+            }
+
+            // Article 15 (UCMJ) Non-Judicial Punishment: Forfeiture of 1/2 pay
+            if (soldier.hasForfeitedPayThisSemester)
+            {
+                total = total / 2;
             }
 
             return total;

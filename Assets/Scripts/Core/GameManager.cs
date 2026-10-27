@@ -226,6 +226,7 @@ namespace ArmyLife.Core
 
             // Initialize persistent fireteam squadmates
             currentSoldier.InitializeSquadMatesIfEmpty();
+            currentSoldier.ResetSemesterActionPoints();
 
             // Save new life into persistent storage
             LifePersistenceManager.SaveSoldierLife(currentSoldier);
@@ -272,6 +273,27 @@ namespace ArmyLife.Core
                 currentSoldier.totalSemestersLived++;
             }
             currentSoldier.timeInCurrentRankSemesters++;
+            currentSoldier.ResetSemesterActionPoints();
+
+            // 1.5. Medical Convalescence Ward Check: In hospital recovering from trauma / wounds
+            if (currentSoldier.inMedicalConvalescence)
+            {
+                currentSoldier.consecutiveCombatSemesters = 0;
+                currentSoldier.isInCombatDeployment = false;
+                FieldHospitalEngine.ProcessConvalescenceTurn(currentSoldier, this, false);
+                FinishTurnPostActions();
+                return;
+            }
+
+            // 1.6. Check if Retired or Medically Discharged
+            if (currentSoldier.isRetired)
+            {
+                currentSoldier.consecutiveCombatSemesters = 0;
+                currentSoldier.isInCombatDeployment = false;
+                CombatTraumaEngine.CheckPeacetimeFlashback(currentSoldier);
+                FinishTurnPostActions();
+                return;
+            }
 
             // 2. War Academy / Basic Training / Technical School vs Frontline Active Duty
             if (currentSoldier.careerTrack == CareerTrack.MilitaryWarAcademy ||
@@ -368,47 +390,152 @@ namespace ArmyLife.Core
             string extBadge = currentSoldier.isVoluntaryExtendedTour ? " <color=#FF8800>[VOLUNTARY EXTENSION]</color>" : "";
             string bonusBadge = currentSoldier.hasExtendedTourPayBonus ? " <color=#FFD700>[+10% VETERAN COMBAT PAY]</color>" : "";
 
-            string category = $"TACTICAL COMBAT OPERATION • {theater.theaterName.ToUpper()}";
-            string title = $"{mission.missionName.ToUpper()}";
+            string category = $"COMBAT PATROL • PHASE 1/3: MOVEMENT TO CONTACT";
+            string title = $"APPROACH TO {theater.theaterName.ToUpper()}";
 
             string scoutStatus = scout == null ? "KIA / Absent" : (scoutAlert ? "<color=#00FFAA>Vigilant & Alert</color>" : "<color=#FFAA00>Exhausted / Strained</color>");
             string gunnerStatus = gunner == null ? "KIA / Absent" : (gunnerReady ? "<color=#00FFAA>Heavy Gun Ready</color>" : "<color=#FFAA00>Fatigued / Low Ammo</color>");
             string medicStatus = medic == null ? "KIA / Absent" : (medicReady ? "<color=#00FFAA>Trauma Webbing Ready</color>" : "<color=#FFAA00>Medkits Low</color>");
 
             string description =
-                $"<b>MISSION OBJECTIVE:</b> {mission.objectiveDescription}\n\n" +
-                $"<b>THEATER:</b> {theater.theaterName} (Danger: {theater.dangerLevel}/5, Weather: <i>{theater.weatherAndEnvironment}</i>){extBadge}{bonusBadge}\n" +
-                $"<b>COMPENSATION:</b> Hazard Bounty +${mission.baseHazardBounty:N0} | Monthly Hazard +${theater.hazardPayRate:N0}/mo\n\n" +
+                $"<b>OPERATION:</b> {mission.missionName.ToUpper()}\n" +
+                $"<b>OBJECTIVE:</b> {mission.objectiveDescription}\n\n" +
+                $"<b>THEATER:</b> {theater.theaterName} (Danger: {theater.dangerLevel}/5, Weather: <i>{theater.weatherAndEnvironment}</i>){extBadge}{bonusBadge}\n\n" +
+                $"<b>HEADQUARTERS SITREP:</b> Regimental HQ advises target redoubt is lightly garrisoned. Direct orders: Advance immediately down the main approach road without delay.\n\n" +
+                $"<b>SCOUT'S FIELD WHISPER:</b> Lead Scout <b>{scout?.nickname ?? "Miller"}</b> ({scoutStatus}) urgently whispers:\n" +
+                $"<i>\"Sir! Binoculars spot fresh berms and electrical command wires along that road! That's a buried 155mm IED pressure-plate ambush! If we advance down that road we'll be blown apart. We have to divert through the marsh creek!\"</i>\n\n" +
                 $"<b>FIRETEAM COMBAT READINESS:</b>\n" +
-                $"• Lead Scout: <b>{scout?.nickname ?? "Point"}</b> ({scoutStatus}) [Tripwire Detection & Flank]\n" +
+                $"• Heavy Gunner: <b>{gunner?.nickname ?? "Anvil"}</b> ({gunnerStatus}) | Combat Medic: <b>{medic?.nickname ?? "Doc"}</b> ({medicStatus})\n\n" +
+                $"<i>Phase 1: Make your critical tactical approach choice:</i>";
+
+            string choiceA = "📻 OBEY HQ ORDERS: MAIN ROAD ADVANCE\n<size=75%>Follow battalion orders (+10 CO Standing, but high risk of catastrophic IED detonation!)</size>";
+            string choiceB = "🥾 TRUST SCOUT'S FIELD WHISPER\n<size=75%>Divert through the marsh creek defiles (+20 Tactical Advantage, bypasses IED, saves squad)</size>";
+            string choiceC = "💥 CALL ARTILLERY PRE-BOMBARDMENT\n<size=75%>Blanket road with high-explosive battery fire to detonate buried IEDs from a distance</size>";
+
+            var dilemma = DilemmaModal.Instance ?? Object.FindAnyObjectByType<DilemmaModal>(FindObjectsInactive.Include);
+            if (dilemma != null)
+            {
+                dilemma.DisplayDilemma(
+                    category,
+                    title,
+                    description,
+                    choiceA,
+                    choiceB,
+                    choiceC,
+                    () => ResolveCombatPhase1(mission, 0, theater),
+                    () => ResolveCombatPhase1(mission, 1, theater),
+                    () => ResolveCombatPhase1(mission, 2, theater)
+                );
+            }
+            else
+            {
+                ResolveCombatOperation(mission, TacticalChoiceOrder.DefaultOrder, theater);
+            }
+        }
+
+        private void ResolveCombatPhase1(TacticalMission mission, int approachChoice, WarTheaterInfo theater)
+        {
+            if (currentSoldier == null) return;
+
+            int phase1Bonus = 0;
+            var scout = currentSoldier.squadMates.Find(m => m.role == SquadRole.LeadScout && !m.isDead);
+            bool scoutAlert = (scout != null && scout.relationship >= 40f && scout.fatigue < 80f);
+
+            if (approachChoice == 0) // Obey HQ Orders
+            {
+                currentSoldier.coFavor = Mathf.Min(100f, currentSoldier.coFavor + 10f);
+                int iedRoll = UnityEngine.Random.Range(1, 101);
+                if (iedRoll <= 60) // Catastrophic IED Detonation!
+                {
+                    FieldHospitalEngine.TriggerIEDDetonation(currentSoldier, this);
+                    FinishTurnPostActions();
+                    return;
+                }
+                else
+                {
+                    phase1Bonus = 8;
+                    GameEvents.OnFeedEventLogged?.Invoke("APPROACH",
+                        "<color=#00D4FF>[ROAD ADVANCE]</color> Through pure fortune, the squad cleared the main road without triggering suspected pressure plates (+8 Tactical Advantage, +10 CO Standing).");
+                }
+            }
+            else if (approachChoice == 1) // Trust Scout
+            {
+                if (scoutAlert)
+                {
+                    phase1Bonus = 20;
+                    currentSoldier.meritRating = Mathf.Min(100f, currentSoldier.meritRating + 10f);
+                    GameEvents.OnFeedEventLogged?.Invoke("APPROACH",
+                        $"<color=#00FFAA><b>[SCOUT WHISPER TRUSTED]</b></color> Lead Scout {scout.nickname} guided the fireteam safely through the marsh defile, completely bypassing the buried IED kill zone! You caught the enemy outpost unawares (+20 Tactical Advantage, +10 Merit).");
+                }
+                else
+                {
+                    phase1Bonus = 12;
+                    GameEvents.OnFeedEventLogged?.Invoke("APPROACH",
+                        "<color=#00D4FF>[FLANK ADVANCE]</color> Fireteam successfully skirted the paved road and flanked the enemy perimeter (+12 Tactical Advantage).");
+                }
+            }
+            else // Artillery Pre-Bombardment
+            {
+                phase1Bonus = 15;
+                AudioManager.PlayArtilleryExplosion();
+                GameEvents.OnFeedEventLogged?.Invoke("APPROACH",
+                    "<color=#FFD700><b>[PRE-BOMBARDMENT BARRAGE]</b></color> 155mm battery shells pulverized the road berms, detonating buried IEDs in massive secondary eruptions! The route was blasted clear (+15 Tactical Advantage).");
+            }
+
+            // Transition to Phase 2: The Main Clash & Redoubt Breach
+            TriggerCombatPhase2(mission, phase1Bonus, theater);
+        }
+
+        private void TriggerCombatPhase2(TacticalMission mission, int phase1Bonus, WarTheaterInfo theater)
+        {
+            if (currentSoldier == null || currentSoldier.isDead) return;
+
+            bool isCommander = SquadmateCommandEngine.IsNCOOrOfficer(currentSoldier);
+            var gunner = currentSoldier.squadMates.Find(m => m.role == SquadRole.HeavyGunner && !m.isDead);
+            bool gunnerReady = (gunner != null && gunner.relationship >= 40f && gunner.fatigue < 80f);
+            string gunnerStatus = gunner == null ? "KIA / Absent" : (gunnerReady ? "<color=#00FFAA>Heavy Gun Ready</color>" : "<color=#FFAA00>Fatigued / Low Ammo</color>");
+
+            NemesisProfile nemesis = BattlefieldNemesisEngine.GetNemesis(theater.theaterType);
+            bool nemesisActive = BattlefieldNemesisEngine.RollNemesisAppearance(theater.theaterType, currentSoldier);
+
+            string nemesisAlert = nemesisActive
+                ? $"\n\n<color=#FF3333><b>⚠️ INFAMOUS THEATER RIVAL ENGAGED: {nemesis.name.ToUpper()} ({nemesis.title.ToUpper()})</b></color>\n" +
+                  $"<i>{nemesis.backstory} Confront them for a +${nemesis.bounty:N0} bounty and the Cross of the Nemesis Hunter!</i>"
+                : "";
+
+            string category = $"COMBAT PATROL • PHASE 2/3: THE CLASH & ASSAULT";
+            string title = nemesisActive ? $"SHOWDOWN WITH {nemesis.name.ToUpper()}" : "BREACHING THE REDOUBT";
+            string description =
+                $"<b>THEATER:</b> {theater.theaterName}\n" +
+                $"<b>SITUATION:</b> Hostile heavy machine guns open up from reinforced bunkers! Shrapnel lacerates the mud. Your squad is at the wire redoubt.\n\n" +
                 $"• Heavy Gunner: <b>{gunner?.nickname ?? "Anvil"}</b> ({gunnerStatus}) [Cyclic Suppression]\n" +
-                $"• Combat Medic: <b>{medic?.nickname ?? "Doc"}</b> ({medicStatus}) [Field Trauma Triage]\n\n" +
-                $"<i>{(isCommander ? "Commander: Issue your tactical combat orders to the squad!" : "Soldier: Select your tactical execution order!")}</i>";
+                $"• Tactical Approach Advantage: <b>+{phase1Bonus} Pts</b>{nemesisAlert}\n\n" +
+                $"<i>{(isCommander ? "Commander: Issue your assault command to the fireteam!" : "Soldier: Select your frontline assault action!")}</i>";
 
             string choiceA, choiceB, choiceC;
             TacticalChoiceOrder orderA, orderB, orderC;
 
             if (isCommander)
             {
-                choiceA = "⚔️ AGGRESSIVE BREACH ASSAULT\n<size=75%>Direct Gunner suppression & storm redoubt</size>";
+                choiceA = "⚔️ AGGRESSIVE BREACH ASSAULT\n<size=75%>Direct Gunner suppression & storm redoubt with grenades</size>";
                 orderA = TacticalChoiceOrder.AggressiveBreach;
 
-                choiceB = "🎯 RECON FLANKING MANEUVER\n<size=75%>Infiltrate wire led by Lead Scout</size>";
-                orderB = TacticalChoiceOrder.ReconnaissanceFlank;
+                choiceB = "💥 HEAVY CYCLIC SUPPRESSION PIN\n<size=75%>Lay continuous machine gun crossfire to silence bunker slits</size>";
+                orderB = TacticalChoiceOrder.HeavySuppression;
 
-                choiceC = "💥 DANGER-CLOSE ARTILLERY STRIKE\n<size=75%>Coordinate high-explosive battery barrage</size>";
+                choiceC = "📞 DANGER-CLOSE ARTILLERY STRIKE\n<size=75%>Coordinate 155mm battery barrage onto redoubt roof</size>";
                 orderC = TacticalChoiceOrder.ArtilleryStrikeCall;
             }
             else
             {
-                choiceA = "🪖 LEAD POINT BREACH ASSAULT\n<size=75%>Aggressive breach through wire (High Risk / High Merit)</size>";
+                choiceA = "🪖 LEAD POINT BREACH ASSAULT\n<size=75%>Aggressive breach through wire with grenades (High Risk / High Merit)</size>";
                 orderA = TacticalChoiceOrder.AggressiveBreach;
 
-                choiceB = "👁️ COVER FLANK WITH SCOUT\n<size=75%>Stealth flanking security under enemy fire</size>";
-                orderB = TacticalChoiceOrder.ReconnaissanceFlank;
+                choiceB = "💥 COVERING MACHINE GUN SUPPRESSION\n<size=75%>Coordinate with Heavy Gunner to maintain suppressing crossfire</size>";
+                orderB = TacticalChoiceOrder.HeavySuppression;
 
-                choiceC = "🛡️ PROVIDE DEFENSIVE SUPPRESSION\n<size=75%>Heavy crossfire overwatch & discipline</size>";
-                orderC = TacticalChoiceOrder.HeavySuppression;
+                choiceC = "🎯 ACCURATE RIFLE OVERWATCH\n<size=75%>Pick off enemy counter-snipers and bunker gunners</size>";
+                orderC = TacticalChoiceOrder.ReconnaissanceFlank;
             }
 
             var dilemma = DilemmaModal.Instance ?? Object.FindAnyObjectByType<DilemmaModal>(FindObjectsInactive.Include);
@@ -421,15 +548,113 @@ namespace ArmyLife.Core
                     choiceA,
                     choiceB,
                     choiceC,
-                    () => ResolveCombatOperation(mission, orderA, theater),
-                    () => ResolveCombatOperation(mission, orderB, theater),
-                    () => ResolveCombatOperation(mission, orderC, theater)
+                    () => ResolveCombatPhase2(mission, orderA, phase1Bonus, theater),
+                    () => ResolveCombatPhase2(mission, orderB, phase1Bonus, theater),
+                    () => ResolveCombatPhase2(mission, orderC, phase1Bonus, theater)
                 );
             }
             else
             {
                 ResolveCombatOperation(mission, TacticalChoiceOrder.DefaultOrder, theater);
             }
+        }
+
+        private void ResolveCombatPhase2(TacticalMission mission, TacticalChoiceOrder assaultOrder, int phase1Bonus, WarTheaterInfo theater)
+        {
+            if (currentSoldier == null) return;
+
+            var nemesis = BattlefieldNemesisEngine.GetNemesis(theater.theaterType);
+            if (nemesis != null && !nemesis.isDefeated && UnityEngine.Random.value < 0.35f)
+            {
+                int clashChoice = (assaultOrder == TacticalChoiceOrder.ArtilleryStrikeCall) ? 2 : (assaultOrder == TacticalChoiceOrder.HeavySuppression ? 1 : 0);
+                BattlefieldNemesisEngine.ResolveNemesisClash(currentSoldier, nemesis, clashChoice, out string _);
+            }
+
+            GameEvents.OnFeedEventLogged?.Invoke("ASSAULT",
+                $"<color=#FFD700><b>[BATTLEFIELD CLASH]</b></color> You committed the fireteam to <b>{assaultOrder}</b>! " +
+                "Machine guns roared, grenade detonations shattered the concrete revetment, and the hostile strongpoint was breached!");
+
+            // Transition to Phase 3: Extraction Corridor Crisis
+            TriggerCombatPhase3(mission, assaultOrder, phase1Bonus, theater);
+        }
+
+        private void TriggerCombatPhase3(TacticalMission mission, TacticalChoiceOrder assaultOrder, int phase1Bonus, WarTheaterInfo theater)
+        {
+            if (currentSoldier == null || currentSoldier.isDead) return;
+
+            var medic = currentSoldier.squadMates.Find(m => m.role == SquadRole.CombatMedic && !m.isDead);
+            bool medicReady = (medic != null && medic.relationship >= 40f && medic.fatigue < 80f);
+            string medicStatus = medic == null ? "KIA / Absent" : (medicReady ? "<color=#00FFAA>Trauma Webbing Ready</color>" : "<color=#FFAA00>Medkits Low</color>");
+
+            string category = $"COMBAT PATROL • PHASE 3/3: CRISIS & EXTRACTION";
+            string title = $"CRISIS AT THE EXTRACTION LINE";
+            string description =
+                $"<b>THEATER:</b> {theater.theaterName}\n" +
+                $"<b>SITUATION:</b> The bunker is burning, but an urgent crisis erupts! Enemy mortar barrages hammer the withdrawal corridor, and a squad brother is pinned beneath fallen timbers in no-man's land!\n\n" +
+                $"• Combat Medic: <b>{medic?.nickname ?? "Doc"}</b> ({medicStatus})\n" +
+                $"• Available Medkits: <b>{currentSoldier.fieldMedkitsCount}</b>\n\n" +
+                $"<i>Make your critical command decision under enemy fire:</i>";
+
+            string choiceA = "🩸 HEROIC CASUALTY RESCUE (CASEVAC)\n<size=75%>Drag your pinned brother to safety under mortar fire! (Heroic valor, saves comrade)</size>";
+            string choiceB = "🛡️ DEFENSIVE OVERWATCH WITHDRAWAL\n<size=75%>Establish leap-frog firing line preserving squad cohesion and minimal losses</size>";
+            string choiceC = "📦 RAID HOSTILE CIPHER VAULT\n<size=75%>Seize enemy operational maps & ciphers before detonating bunker (+Merit & Bounty)</size>";
+
+            var dilemma = DilemmaModal.Instance ?? Object.FindAnyObjectByType<DilemmaModal>(FindObjectsInactive.Include);
+            if (dilemma != null)
+            {
+                dilemma.DisplayDilemma(
+                    category,
+                    title,
+                    description,
+                    choiceA,
+                    choiceB,
+                    choiceC,
+                    () => ResolveCombatPhase3(mission, assaultOrder, 0, phase1Bonus, theater),
+                    () => ResolveCombatPhase3(mission, assaultOrder, 1, phase1Bonus, theater),
+                    () => ResolveCombatPhase3(mission, assaultOrder, 2, phase1Bonus, theater)
+                );
+            }
+            else
+            {
+                ResolveCombatOperation(mission, assaultOrder, theater);
+            }
+        }
+
+        private void ResolveCombatPhase3(TacticalMission mission, TacticalChoiceOrder assaultOrder, int extractionChoice, int totalBonus, WarTheaterInfo theater)
+        {
+            if (currentSoldier == null) return;
+
+            TacticalChoiceOrder finalOrder = assaultOrder;
+
+            if (extractionChoice == 0) // CASEVAC Heroic Rescue
+            {
+                finalOrder = TacticalChoiceOrder.EmergencyCASEVAC;
+                currentSoldier.squadRespect = Mathf.Min(100f, currentSoldier.squadRespect + 20f);
+                currentSoldier.AddTrait("Life Saver");
+                foreach (var m in currentSoldier.squadMates)
+                {
+                    if (m != null && !m.isDead) m.relationship = Mathf.Min(100f, m.relationship + 15f);
+                }
+                GameEvents.OnFeedEventLogged?.Invoke("HEROISM",
+                    "<color=#00FFAA><b>[HEROIC RESCUE UNDER FIRE]</b></color> You sprinted through erupting mortar geysers, lifted the timber, and dragged your brother to the casualty collection point! (+20 Squad Respect, 'Life Saver' trait awarded).");
+            }
+            else if (extractionChoice == 1) // Safe Defensive Withdrawal
+            {
+                finalOrder = assaultOrder;
+                GameEvents.OnFeedEventLogged?.Invoke("TACTICS",
+                    "<color=#00D4FF>[DISCIPLINED WITHDRAWAL]</color> Fireteam executed an orderly fighting retreat, preserving squad strength and weapons.");
+            }
+            else // Raid Cipher Vault
+            {
+                currentSoldier.meritRating = Mathf.Min(100f, currentSoldier.meritRating + 15f);
+                currentSoldier.combatMeritPoints += 300;
+                currentSoldier.cashBalance += 400L;
+                GameEvents.OnFeedEventLogged?.Invoke("INTELLIGENCE",
+                    "<color=#FFD700><b>[ENEMY CIPHERS SEIZED]</b></color> You breached the command safe and secured classified operational maps and codebooks! (+15 Merit, +300 CMP, +$400 Intel Bounty).");
+            }
+
+            // Resolve the operational outcome via the Combat Engine
+            ResolveCombatOperation(mission, finalOrder, theater);
         }
 
         public void ResolveCombatOperation(TacticalMission mission, TacticalChoiceOrder order, WarTheaterInfo theater)
@@ -558,6 +783,9 @@ namespace ArmyLife.Core
                 }
             }
 
+            // BitLife-Style Dynamic Family Turn: Sibling births, family aging, and life events
+            currentSoldier.ProcessFamilySemesterTurn();
+
             // Generational Child Aging
             if (currentSoldier.childHeir != null)
             {
@@ -567,6 +795,15 @@ namespace ArmyLife.Core
                     GameEvents.OnFeedEventLogged?.Invoke("FAMILY",
                         $"<color=#00FFAA><b>[CHILD TURNS 18 • MILITARY ELIGIBLE]</b></color> Your child, <b>{currentSoldier.childHeir.childName}</b>, has reached Age 18 and is now eligible to enlist as a <b>Military Legacy</b> recruit!");
                 }
+            }
+
+            // Trigger Dramatic Semester Dispatch Modal (BitLife-style cinematic turn milestone)
+            if (!currentSoldier.isDead && !currentSoldier.isYouthPhase && SemesterDispatchModal.Instance != null)
+            {
+                long basePay = SalaryCalculator.CalculateGrossMonthlyPay(currentSoldier) * 6L;
+                long hazard = currentSoldier.combatBountiesEarned;
+                long livingCosts = EconomyEngine.CalculateSemesterHousingCost(currentSoldier);
+                SemesterDispatchModal.Instance.DisplayDispatch(currentSoldier, basePay, hazard, livingCosts);
             }
 
             // Auto-save soldier profile to persistent storage
@@ -1441,5 +1678,70 @@ namespace ArmyLife.Core
             LifePersistenceManager.SaveSoldierLife(currentSoldier);
             GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
         }
+
+        #region Aviation & Flight School Engine
+        public bool ApplyForAirForceFlightSchool()
+        {
+            if (currentSoldier == null) return false;
+            bool result = AirForceFlightSchoolEngine.ApplyForFlightSchool(currentSoldier, this);
+            LifePersistenceManager.SaveSoldierLife(currentSoldier);
+            GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+            return result;
+        }
+
+        public void GraduateFlightSchool(PilotSpecialization specialization)
+        {
+            if (currentSoldier == null) return;
+            AirForceFlightSchoolEngine.GraduateFlightSchool(currentSoldier, specialization, this);
+            LifePersistenceManager.SaveSoldierLife(currentSoldier);
+            GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+        }
+
+        public AviationSortieOutcome FlyAviationSortie(AviationDilemmaType? forcedDilemma = null, int choice = 0)
+        {
+            if (currentSoldier == null) return new AviationSortieOutcome();
+            var outcome = AirForceFlightSchoolEngine.ExecuteAviationSortie(currentSoldier, forcedDilemma, choice, this);
+            LifePersistenceManager.SaveSoldierLife(currentSoldier);
+            GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+            return outcome;
+        }
+
+        public bool AttendTopGunWeaponsSchool()
+        {
+            if (currentSoldier == null) return false;
+            bool res = AirForceFlightSchoolEngine.EnrollInTopGunSchool(currentSoldier, this);
+            LifePersistenceManager.SaveSoldierLife(currentSoldier);
+            GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+            return res;
+        }
+        #endregion
+
+        #region Military Justice & Court-Martial (UCMJ)
+        public bool ImposeArticle15(MilitaryInfractionType infraction)
+        {
+            if (currentSoldier == null) return false;
+            bool res = MilitaryJusticeEngine.ImposeArticle15(currentSoldier, infraction, this);
+            LifePersistenceManager.SaveSoldierLife(currentSoldier);
+            GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+            return res;
+        }
+
+        public CourtMartialTrialResult ConductCourtMartial(MilitaryInfractionType charge, bool hireEliteJagCounsel = false)
+        {
+            if (currentSoldier == null) return new CourtMartialTrialResult();
+            var res = MilitaryJusticeEngine.ConductCourtMartial(currentSoldier, charge, hireEliteJagCounsel, this);
+            LifePersistenceManager.SaveSoldierLife(currentSoldier);
+            GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+            return res;
+        }
+
+        public void ExecuteDischarge(DischargeCharacterization characterization, string reason)
+        {
+            if (currentSoldier == null) return;
+            MilitaryJusticeEngine.ExecuteDischarge(currentSoldier, characterization, reason, this);
+            LifePersistenceManager.SaveSoldierLife(currentSoldier);
+            GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+        }
+        #endregion
     }
 }

@@ -78,7 +78,7 @@ namespace ArmyLife.Data
 
         // Civilian Crimes
         UndergroundFightClub = 10,      // Bare-knuckle back-alley prize brawls (+$1,200, +15% heat)
-        ContrabandCourier = 11,         // Smuggle unlicensed alchemical stims past checkpoints (+$3,500, +20% heat)
+        ContrabandCourier = 11,         // Smuggle unmarked military morphine & combat stims past checkpoints (+$3,500, +20% heat)
         SyndicateDebtEnforcer = 12,     // Shake down delinquent gambling debtors (+$2,000, +18% heat)
         WarehouseHeist = 13,            // Infiltrate and clean out an imperial customs depot (+$30,000, +40% heat)
         CorporateEmbezzlement = 14,     // Skim funds through double-entry accounting fraud (+$18,000, +35% heat)
@@ -95,7 +95,7 @@ namespace ArmyLife.Data
     public static class EconomyData
     {
         // ==================== AVIATION & AIR FORCE CONSTANTS ====================
-        public const float AVIATION_FLIGHT_PAY_BONUS = 0.15f; // +15% Aviation Flight Pay Bonus on base pay
+        public const float AVIATION_FLIGHT_PAY_BONUS = 0.25f; // +25% Aviation Flight Pay Bonus on base pay
         public const float AIR_FORCE_HOUSING_DISCOUNT = 0.20f; // 20% lower living expense penalties
         public const float AIR_FORCE_MORALE_BOOST = 15f;      // +15% Morale/Happiness
         public const float AIR_FORCE_HEALTH_BOOST = 10f;      // +10% Health recovery

@@ -8,10 +8,16 @@ namespace ArmyLife.Data
     {
         Father,
         Mother,
-        OlderBrother,   // Rival Heir (Lucian)
-        YoungerSister,  // Affectionate younger sibling (Seraphina)
-        ClanElder,      // Grandfather / Patriarch
-        BranchCousin    // Scheming branch house relative (Corvin)
+        OlderBrother,   // Rival Heir (Lucian) or older brother
+        YoungerSister,  // Affectionate younger sister (Seraphina)
+        Brother,        // Procedural BitLife brother (older or younger)
+        Sister,         // Procedural BitLife sister (older or younger)
+        Spouse,         // Devoted military spouse
+        Child,          // Son or daughter
+        [Obsolete("Distant clan elders removed in BitLife format; use Parents/Friends.")]
+        ClanElder,      
+        [Obsolete("Distant branch cousins removed in BitLife format; use Siblings/Friends.")]
+        BranchCousin    
     }
 
     [Serializable]
@@ -27,6 +33,14 @@ namespace ArmyLife.Data
         public int powerTier;
         public string personalityTrait; // "Strict", "Affectionate", "Competitive", "Arrogant", "Vindictive", "Wise"
         public float generosity; // 0 to 100 (affects pocket money / allowance)
+        public bool isAlive = true;
+        public string causeOfDeath = "";
+
+        public bool IsParent => relationType == ClanRelationType.Father || relationType == ClanRelationType.Mother;
+        public bool IsSibling => relationType == ClanRelationType.Brother || relationType == ClanRelationType.Sister ||
+                                 relationType == ClanRelationType.OlderBrother || relationType == ClanRelationType.YoungerSister;
+        public bool IsSpouse => relationType == ClanRelationType.Spouse;
+        public bool IsChild => relationType == ClanRelationType.Child;
 
         public ClanMember(string name, ClanRelationType relationType, string roleTitle, int age, float relationship, NobleRank nobleRank, int powerTier, string personalityTrait, float generosity)
         {
@@ -39,6 +53,23 @@ namespace ArmyLife.Data
             this.powerTier = powerTier;
             this.personalityTrait = personalityTrait;
             this.generosity = generosity;
+            this.isAlive = true;
+            this.causeOfDeath = "";
+        }
+
+        public ClanMember(string name, ClanRelationType relationType, string roleTitle, int age, float relationship, string personalityTrait = "Warm & Devoted", float generosity = 50f)
+        {
+            this.name = name;
+            this.relationType = relationType;
+            this.roleTitle = roleTitle;
+            this.age = age;
+            this.relationship = Mathf.Clamp(relationship, 0f, 100f);
+            this.nobleRank = NobleRank.Commoner;
+            this.powerTier = 0;
+            this.personalityTrait = personalityTrait;
+            this.generosity = generosity;
+            this.isAlive = true;
+            this.causeOfDeath = "";
         }
     }
 

@@ -48,14 +48,40 @@ namespace ArmyLife.Systems
 
             if (nextRank == null) return; // Reached highest military rank (General)
 
-            // Enlisted cannot cross to Officer without attending the 2-Year War Academy
+            // Enlisted crossing to Officer:
             if (!soldier.isOfficer && nextRank.type == PaygradeType.Officer)
             {
-                GameEvents.OnFeedEventLogged?.Invoke("CAREER APEX",
-                    $"<color=#00FFAA><b>[ENLISTED CAREER APEX • {currentRank?.rankName?.ToUpper() ?? "COMMAND SERGEANT MAJOR"}]</b></color> " +
-                    "You have reached the apex of the enlisted paygrades! To earn an Officer Commission (O-1+), " +
-                    "regulations require completing the 2-Year Imperial War Academy.");
-                return;
+                // Battlefield Commission (Mustang Officer Pathway)
+                bool qualifiesForBattlefieldCommission = (soldier.HasMedal("Silver Cross") || soldier.HasMedal("Bronze Star") || soldier.HasMedal("Distinguished Service Cross") || soldier.HasTrait("Life Saver"))
+                    && soldier.meritRating >= 65f
+                    && soldier.combatSkill >= 55f
+                    && (currentRank != null && currentRank.rankOrder >= 5); // Must be at least E-5 Sergeant
+
+                if (qualifiesForBattlefieldCommission)
+                {
+                    soldier.AddTrait("Battlefield Commission (Mustang)");
+                    GameEvents.OnFeedEventLogged?.Invoke("MUSTANG COMMISSION",
+                        $"<color=#FFD700><b>[DIRECT BATTLEFIELD COMMISSION • MUSTANG OFFICER]</b></color> " +
+                        $"By decree of High Command, in recognition of extraordinary battlefield gallantry and seasoned combat leadership under fire, " +
+                        $"<b>{currentRank.rankName} {soldier.characterName}</b> is directly commissioned as a <b>Second Lieutenant (O-1)</b>! " +
+                        $"You take command of a frontline rifle platoon with the deep respect of both enlisted grunts and senior officers.");
+
+                    soldier.accumulatedPromotionPoints = 0;
+                    soldier.timeInCurrentRankSemesters = 0;
+                    if (GameManager.Instance != null)
+                    {
+                        GameManager.Instance.PromoteSoldier(nextRank);
+                    }
+                    return;
+                }
+                else
+                {
+                    GameEvents.OnFeedEventLogged?.Invoke("CAREER APEX",
+                        $"<color=#00FFAA><b>[ENLISTED CAREER APEX • {currentRank?.rankName?.ToUpper() ?? "COMMAND SERGEANT MAJOR"}]</b></color> " +
+                        "You have reached the apex of the enlisted paygrades! To earn an Officer Commission (O-1+), " +
+                        "regulations require completing the Imperial War Academy or earning a Battlefield Commission through valorous medals (Silver Cross / Bronze Star / Life Saver) at E-5+.");
+                    return;
+                }
             }
 
             // 3. Time-in-Grade and Board Criteria Check

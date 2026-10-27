@@ -23,6 +23,8 @@ namespace ArmyLife.Data
         public bool isDead;
         public string deathReason;
         public string personalityTrait; // e.g. "Cynical Veteran", "Warm-Hearted Medic", "Nervous Farmboy"
+        public string hometown = "Imperial Capital Province";
+        public string backstoryAndQuirk = "A reliable soldier forged in the line of duty.";
         public int battlesSurvived;
 
         [Header("Tactical Readiness & Morale")]

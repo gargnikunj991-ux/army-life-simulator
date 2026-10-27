@@ -28,8 +28,9 @@ namespace ArmyLife.Systems
                 soldier.cashBalance += familySupport;
             }
 
-            // Ensure Clan & School are active and synced
+            // Ensure Family & School are active, aged, and synced (BitLife dynamic events)
             soldier.InitializeDefaultClanMembers();
+            soldier.ProcessFamilySemesterTurn();
             if (age >= 6.0f)
             {
                 soldier.InitializeSchoolPeersIfEligible();
@@ -355,9 +356,12 @@ namespace ArmyLife.Systems
                 soldier.meritRating = Mathf.Max(0f, soldier.meritRating - 4f);
                 soldier.InitializeSchoolPeersIfEligible();
 
+                var rivalSibling = soldier.clanMembers?.Find(m => m.IsSibling && m.isAlive);
+                string reactionText = rivalSibling != null ? $"Sibling {rivalSibling.name} sneered at your report card" : "Peers sneered at your demotion";
+
                 GameEvents.OnFeedEventLogged?.Invoke("ACADEMIC REASSIGNMENT",
                     $"<color=#FF4444><b>[ANNUAL SCHOOL REASSIGNMENT • AGE {age:F0}]</b></color> " +
-                    $"Failing to meet rigorous benchmarks ({soldier.schoolPerformance:F1}%), you were transferred down from {SchoolHelper.GetTierTitle(oldTier)} to <color=#FF8800><b>{soldier.schoolName}</b></color>. Sibling Lucian sneered at your report card (-4 Merit).");
+                    $"Failing to meet rigorous benchmarks ({soldier.schoolPerformance:F1}%), you were transferred down from {SchoolHelper.GetTierTitle(oldTier)} to <color=#FF8800><b>{soldier.schoolName}</b></color>. {reactionText} (-4 Merit).");
             }
             else
             {

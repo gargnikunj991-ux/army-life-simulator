@@ -134,8 +134,8 @@ namespace ArmyLife.Systems
                 }
             }
 
-            int currentYear = 2026;
-            string expiryStr = isExpired ? $"Year {currentYear - 1}, Semester 2 (EXPIRED)" : $"Year {currentYear + 2}, Semester 1";
+            int currentYear = TimeCycleManager.Instance != null ? TimeCycleManager.Instance.currentYear : 2026;
+            string expiryStr = isExpired ? $"Year {currentYear - 1}, Semester 2" : $"Year {currentYear + 2}, Semester 1";
             string photoId = $"ID-VAL-{rand.Next(1000, 9999)}";
 
             var passport = new TransitPassport(

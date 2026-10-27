@@ -48,6 +48,17 @@ namespace ArmyLife.Systems
         }
 
         /// <summary>
+        /// Calculates the total housing/living costs for a soldier over a 6-month semester.
+        /// </summary>
+        public static long CalculateSemesterHousingCost(SoldierProfile soldier)
+        {
+            if (soldier == null) return 0L;
+            return (soldier.careerTrack == CareerTrack.MilitaryRecruitBasic)
+                ? 0L
+                : WartimeMarketEngine.GetAdjustedHousingCost(soldier.housingTier, soldier.militaryBranch);
+        }
+
+        /// <summary>
         /// Primary turn-cycle financial calculation executed every 6-month semester.
         /// Processes income, taxation, debt interest/amortization, investments, businesses, combat plunder, and housing upkeep.
         /// </summary>
@@ -113,28 +124,28 @@ namespace ArmyLife.Systems
             long businessRevenue = CalculateSemesterBusinessRevenue(soldier);
             soldier.businessRevenueLastSemester = businessRevenue;
 
-            // 6. Ground Combat & War Criminal Bounties (Major Army Incentive!)
+            // 6. Frontline Combat Hazard Pay & Operational Stipends
             long semesterCombatBounties = 0L;
             if (soldier.isInCombatDeployment && !soldier.isCivilian && !soldier.isRetired)
             {
                 if (soldier.militaryBranch == MilitaryBranch.Army)
                 {
-                    // Army soldiers engage in ground trench warfare, eliminating war criminals and capturing enemy bunkers
-                    semesterCombatBounties = (long)(UnityEngine.Random.Range(2500L, 6500L) + (soldier.combatSkill * 25f));
+                    // Realistic monthly frontline combat hazard pay ($200-$400/mo = $1,200-$2,400/semester)
+                    semesterCombatBounties = (long)(UnityEngine.Random.Range(1200L, 2400L) + (soldier.combatSkill * 5f));
                     if (soldier.isSpecialForces)
                     {
-                        // The Iron Vanguard Commandos capture high-value enemy commanders
-                        semesterCombatBounties += (long)UnityEngine.Random.Range(4000L, 8000L);
+                        // Special Forces direct action hazardous duty stipend (+$350/mo = +$2,100/semester)
+                        semesterCombatBounties += (long)UnityEngine.Random.Range(1800L, 2500L);
                     }
                     semesterCombatBounties = WartimeMarketEngine.GetAdjustedCombatBounty(semesterCombatBounties);
                     soldier.combatBountiesEarned += semesterCombatBounties;
                 }
                 else
                 {
-                    // Air Force: High-altitude air defense has rare aerial victory prize bounties
-                    if (soldier.isFlightDuty && UnityEngine.Random.value < 0.35f)
+                    // Air Force: Combat flight duty hazard pay ($150-$300/mo = $900-$1,800/semester)
+                    if (soldier.isFlightDuty && UnityEngine.Random.value < 0.60f)
                     {
-                        semesterCombatBounties = (long)UnityEngine.Random.Range(1500L, 3000L);
+                        semesterCombatBounties = (long)UnityEngine.Random.Range(900L, 1800L);
                         semesterCombatBounties = WartimeMarketEngine.GetAdjustedCombatBounty(semesterCombatBounties);
                         soldier.combatBountiesEarned += semesterCombatBounties;
                     }
@@ -142,9 +153,7 @@ namespace ArmyLife.Systems
             }
 
             // 7. Housing Living Costs / Upkeep (Adjusted dynamically by WartimeMarketEngine)
-            long housingUpkeep = (soldier.careerTrack == CareerTrack.MilitaryRecruitBasic)
-                ? 0L
-                : WartimeMarketEngine.GetAdjustedHousingCost(soldier.housingTier, soldier.militaryBranch);
+            long housingUpkeep = CalculateSemesterHousingCost(soldier);
             soldier.totalHousingExpensesPaid += housingUpkeep;
 
             // Air Force base housing living condition advantage: +15% Morale, +10% Health recovery
@@ -170,8 +179,8 @@ namespace ArmyLife.Systems
                 soldier.childHeir.hasPrivateTutors = true;
             }
 
-            // 9. Total Net Cash Flow
-            long totalInflow = netTakeHomeSalary + totalDividends + businessRevenue + semesterCombatBounties;
+            // 9. Total Net Cash Flow (including War Memoir Royalties if published)
+            long totalInflow = netTakeHomeSalary + totalDividends + businessRevenue + semesterCombatBounties + soldier.warMemoirRoyaltiesPerSemester;
             long totalOutflow = housingUpkeep + tutorExpense;
             long netCashFlow = totalInflow - totalOutflow;
 

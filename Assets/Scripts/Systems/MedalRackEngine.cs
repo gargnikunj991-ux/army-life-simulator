@@ -467,5 +467,164 @@ namespace ArmyLife.Systems
         {
             _memorialRegistry.Clear();
         }
+
+        // =========================================================================================
+        // 4. MILITARY PYRAMID OF VALOR: STRICT MEDAL EVALUATION ENGINE
+        // =========================================================================================
+
+        /// <summary>
+        /// Evaluates battlefield performance against the strict Military Pyramid of Valor hierarchy:
+        /// Level 1 (Precedence #1): Medal of Honor / Grand Imperial Star - Supreme valor at risk of life
+        /// Level 2 (Precedence #2): Distinguished Service Cross - Extraordinary heroism against hostile forces
+        /// Level 3 (Precedence #3): Silver Star / Silver Cross - Conspicuous gallantry in action
+        /// Level 4 (Precedence #4): Bronze Star - Meritorious combat achievement under fire
+        /// Level 5 (Precedence #5): Purple Heart / Imperial Wound Star - STRICT REQUIREMENT: Recipient must be wounded in combat
+        /// Level 6 (Precedence #6): Valor Citation - Tactical initiative and gallantry under fire
+        /// Level 7 (Precedence #32): Combat Infantry Badge - First active ground combat engagement
+        /// Level 8 (Precedence #20-24): Campaign Medals - Completing combat tours in active theater
+        /// </summary>
+        public static List<string> EvaluateBattlefieldMedalAwards(
+            SoldierProfile soldier, 
+            CombatOperationOutcome outcome, 
+            TacticalMission mission, 
+            WarTheaterInfo theater,
+            bool hasRescuedComrade = false,
+            bool hasSlayedNemesis = false)
+        {
+            var newHonors = new List<string>();
+            if (soldier == null || outcome == null) return newHonors;
+
+            // =========================================================================
+            // LEVEL 5: PURPLE HEART / IMPERIAL WOUND STAR (STRICT CASUALTY REQUIREMENT)
+            // Strict rule: Awarded ONLY if recipient sustained physical combat wounds!
+            // =========================================================================
+            if (outcome.playerDamageTaken >= 15f || outcome.playerWounded || soldier.hasLostLimb || soldier.inMedicalConvalescence)
+            {
+                if (!soldier.HasMedal("Imperial Wound Star"))
+                {
+                    soldier.AddMedal("Imperial Wound Star");
+                    newHonors.Add("Imperial Wound Star");
+                }
+                else
+                {
+                    soldier.woundStarsCount++;
+                }
+            }
+
+            // =========================================================================
+            // LEVEL 1: MEDAL OF HONOR / GRAND IMPERIAL STAR (SUPREME VALOR)
+            // Strict criteria: Extreme risk of life above and beyond the call of duty:
+            // High danger theater (>=4), Decisive Victory, and either heroic rescue under critical health (<35 HP)
+            // or high-tier Nemesis kill or single-handedly shattering overwhelming enemy forces (skill >= 75)
+            // =========================================================================
+            bool qualifiesForMOH = !soldier.HasMedal("Grand Imperial Star") &&
+                theater != null && theater.dangerLevel >= 4 &&
+                (outcome.outcomeType == TacticalOutcomeType.DecisiveVictory || outcome.outcomeType == TacticalOutcomeType.PyrrhicVictory) &&
+                ((hasRescuedComrade && soldier.health < 35f) ||
+                 (hasSlayedNemesis && theater.dangerLevel >= 5) ||
+                 (soldier.combatSkill >= 75f && mission != null && mission.missionDifficulty >= 4 && outcome.playerDamageTaken >= 20f));
+
+            if (qualifiesForMOH)
+            {
+                soldier.AddMedal("Grand Imperial Star");
+                newHonors.Add("Grand Imperial Star");
+                GameEvents.OnFeedEventLogged?.Invoke("SUPREME_VALOR",
+                    $"<color=#FFD700><b>[SUPREME MILITARY HONOR • MEDAL OF HONOR]</b></color> For conspicuous gallantry and intrepidity at the risk of life above and beyond the call of duty in {theater.theaterName}, you have been awarded the <b>Grand Imperial Star (Medal of Honor)</b>!");
+                return newHonors;
+            }
+
+            // =========================================================================
+            // LEVEL 2: DISTINGUISHED SERVICE CROSS (EXTRAORDINARY HEROISM)
+            // Strict criteria: Extraordinary heroism in operations against armed enemy:
+            // Decisive Victory in theater danger >= 3, with combatSkill >= 60 and either Nemesis slayed
+            // or flawless victory against fortified pillboxes with 0 squad casualties.
+            // =========================================================================
+            bool qualifiesForDSC = !soldier.HasMedal("Distinguished Service Cross") &&
+                outcome.outcomeType == TacticalOutcomeType.DecisiveVictory &&
+                theater != null && theater.dangerLevel >= 3 &&
+                (hasSlayedNemesis || (soldier.combatSkill >= 60f && outcome.casualties == 0 && mission != null && mission.missionDifficulty >= 3));
+
+            if (qualifiesForDSC)
+            {
+                soldier.AddMedal("Distinguished Service Cross");
+                newHonors.Add("Distinguished Service Cross");
+                GameEvents.OnFeedEventLogged?.Invoke("HIGH_VALOR",
+                    $"<color=#FFD700><b>[EXTRAORDINARY HEROISM • DISTINGUISHED SERVICE CROSS]</b></color> In recognition of extraordinary heroism under intense hostile fire at {theater.theaterName}, you have been awarded the <b>Distinguished Service Cross</b>!");
+                return newHonors;
+            }
+
+            // =========================================================================
+            // LEVEL 3: SILVER STAR / SILVER CROSS (CONSPICUOUS GALLANTRY)
+            // Strict criteria: Conspicuous gallantry under direct enemy fire.
+            // Decisive Victory OR (Tactical Success in danger >= 3 with combatSkill >= 45).
+            // =========================================================================
+            if (outcome.outcomeType == TacticalOutcomeType.DecisiveVictory)
+            {
+                if (!soldier.HasMedal("Silver Cross"))
+                {
+                    soldier.AddMedal("Silver Cross");
+                    newHonors.Add("Silver Cross");
+                }
+                else if (!soldier.HasMedal("Bronze Star"))
+                {
+                    soldier.AddMedal("Bronze Star");
+                    newHonors.Add("Bronze Star");
+                }
+            }
+            else if (outcome.outcomeType == TacticalOutcomeType.TacticalSuccess)
+            {
+                // =====================================================================
+                // LEVEL 4: BRONZE STAR (MERITORIOUS COMBAT ACHIEVEMENT)
+                // =====================================================================
+                if (!soldier.HasMedal("Bronze Star"))
+                {
+                    soldier.AddMedal("Bronze Star");
+                    newHonors.Add("Bronze Star");
+                }
+                else if (!soldier.HasMedal("Valor Citation"))
+                {
+                    soldier.AddMedal("Valor Citation");
+                    newHonors.Add("Valor Citation");
+                }
+            }
+            else if (outcome.outcomeType == TacticalOutcomeType.PyrrhicVictory)
+            {
+                // =====================================================================
+                // LEVEL 6: VALOR CITATION (COMBAT TENACITY UNDER SEVERE HOSTILE FIRE)
+                // =====================================================================
+                if (!soldier.HasMedal("Valor Citation"))
+                {
+                    soldier.AddMedal("Valor Citation");
+                    newHonors.Add("Valor Citation");
+                }
+            }
+
+            // =========================================================================
+            // LEVEL 7: COMBAT INFANTRY BADGE (GROUND COMBAT QUALIFICATION)
+            // Awarded on active ground combat engagement under enemy fire
+            // =========================================================================
+            if (!soldier.HasMedal("Combat Infantry Badge"))
+            {
+                soldier.AddMedal("Combat Infantry Badge");
+                newHonors.Add("Combat Infantry Badge");
+            }
+
+            // =========================================================================
+            // LEVEL 8: CAMPAIGN THEATER BATTLE STAR
+            // Awarded for completing frontline combat tours in theater
+            // =========================================================================
+            if (soldier.toursInCurrentTheater >= 1 && theater != null)
+            {
+                string campaignMedal = GetCampaignMedalKeyForTheater(theater.theaterType);
+                var def = MedalRegistry.GetDefinition(campaignMedal);
+                if (def != null && !soldier.HasMedal(def.displayName))
+                {
+                    soldier.AddMedal(def.displayName);
+                    newHonors.Add(def.displayName);
+                }
+            }
+
+            return newHonors;
+        }
     }
 }
