@@ -49,7 +49,7 @@ namespace ArmyLife.Data
         [Obsolete("Deprecated in pure military sim.")]
         public int powerTier;
         [Obsolete("Deprecated in pure military sim.")]
-        public PowerSubTier subTier;
+        public int subTier;
         [Obsolete("Deprecated in pure military sim.")]
         public int preTierStage;
         [Obsolete("Deprecated in pure military sim.")]

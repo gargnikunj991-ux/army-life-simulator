@@ -653,7 +653,7 @@ namespace ArmyLife.UI
             var medalObj = new GameObject("PosthumousMedal");
             medalObj.transform.SetParent(actionRow.transform, false);
             var medalTxt = medalObj.AddComponent<TextMeshProUGUI>();
-            medalTxt.text = $"<b>Decorated:</b> <color=#FFD700>🏅 {hero.posthumousMedal}</color>";
+            medalTxt.text = $"<b>Decorated:</b> <color=#FFD700>[MEDAL] {hero.posthumousMedal}</color>";
             medalTxt.fontSize = 12f;
             var medalLe = medalObj.AddComponent<LayoutElement>();
             medalLe.preferredWidth = 320;
@@ -679,11 +679,11 @@ namespace ArmyLife.UI
 
             if (hero.wreathLaid)
             {
-                wTxt.text = $"<color=#00FFAA>✓ Wreath Laid ({hero.tributesPaidCount})</color>";
+                wTxt.text = $"<color=#00FFAA>[TRIBUTE] Wreath Laid ({hero.tributesPaidCount})</color>";
             }
             else
             {
-                wTxt.text = "<color=#FFD700>🌿 Lay Laurel Wreath (-$50)</color>";
+                wTxt.text = "<color=#FFD700>[TRIBUTE] Lay Laurel Wreath (-$50)</color>";
             }
 
             wBtn.onClick.AddListener(() =>
@@ -866,9 +866,9 @@ namespace ArmyLife.UI
             tabsHlg.childForceExpandHeight = true;
             tabsHlg.spacing = 4f;
 
-            tabRackButton = CreateTabButton(tabsBarObj.transform, "🎖️ Ribbon Rack & Uniform", out tabRackButtonText);
-            tabCitationsButton = CreateTabButton(tabsBarObj.transform, "📜 Medal Citations Dossier", out tabCitationsButtonText);
-            tabMemorialButton = CreateTabButton(tabsBarObj.transform, "🏛️ Regimental Memorial Wall", out tabMemorialButtonText);
+            tabRackButton = CreateTabButton(tabsBarObj.transform, "[RACK] Ribbon Rack & Uniform", out tabRackButtonText);
+            tabCitationsButton = CreateTabButton(tabsBarObj.transform, "[CITATIONS] Medal Dossier", out tabCitationsButtonText);
+            tabMemorialButton = CreateTabButton(tabsBarObj.transform, "[MEMORIAL] Regimental Wall", out tabMemorialButtonText);
 
             // ==================== TAB CONTENT CONTAINER ====================
             var contentAreaObj = new GameObject("TabContentArea");

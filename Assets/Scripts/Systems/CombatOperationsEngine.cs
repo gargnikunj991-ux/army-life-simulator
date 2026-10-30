@@ -604,10 +604,11 @@ namespace ArmyLife.Systems
                 }
             }
 
-            // Apply player damage and health updates
+            // Apply player damage and health updates scaled by GameDifficulty
             if (outcome.playerDamageTaken > 0f)
             {
-                soldier.health = Mathf.Max(0f, soldier.health - outcome.playerDamageTaken);
+                float scaledDamage = outcome.playerDamageTaken * DifficultySettings.CombatMortalityMultiplier;
+                soldier.health = Mathf.Max(0f, soldier.health - scaledDamage);
                 if (soldier.health <= 0f)
                 {
                     // Medic emergency save
@@ -623,6 +624,13 @@ namespace ArmyLife.Systems
                         soldier.fieldMedkitsCount--;
                         soldier.health = 18f;
                         outcome.squadmateReports.Add("Applied emergency PX field trauma medkit, preventing fatal blood loss (-1 Medkit)!");
+                    }
+                    else if (DifficultySettings.AllowCasualtyRevival)
+                    {
+                        // Story Mode: emergency CASEVAC airlift saves life and transfers to field hospital
+                        soldier.health = 12f;
+                        FieldHospitalEngine.AdmitToHospital(soldier, $"Story Mode CASEVAC evacuation during {mission.missionName}", isIEDAmputation: false);
+                        outcome.squadmateReports.Add("<color=#00FFAA><b>[STORY MODE EMERGENCY AIRLIFT]</b></color> Dustoff CASEVAC braved intense hostile RPG fire to pull you out alive!");
                     }
                     else
                     {

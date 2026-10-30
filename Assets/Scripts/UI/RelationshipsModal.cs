@@ -57,7 +57,6 @@ namespace ArmyLife.UI
             if (closeButton != null) closeButton.onClick.AddListener(CloseModal);
             if (clanTabButton != null) clanTabButton.onClick.AddListener(() => SwitchTab(ActiveTab.Clan));
             if (friendsTabButton != null) friendsTabButton.onClick.AddListener(() => SwitchTab(ActiveTab.Friends));
-            if (openFullClanHallButton != null) openFullClanHallButton.onClick.AddListener(OnOpenFullClanHallClicked);
 
             ThemeManager.OnThemeChanged += OnThemeChanged;
         }
@@ -67,7 +66,6 @@ namespace ArmyLife.UI
             if (closeButton != null) closeButton.onClick.RemoveListener(CloseModal);
             if (clanTabButton != null) clanTabButton.onClick.RemoveAllListeners();
             if (friendsTabButton != null) friendsTabButton.onClick.RemoveAllListeners();
-            if (openFullClanHallButton != null) openFullClanHallButton.onClick.RemoveListener(OnOpenFullClanHallClicked);
 
             ThemeManager.OnThemeChanged -= OnThemeChanged;
         }
@@ -112,23 +110,18 @@ namespace ArmyLife.UI
 
         private void UpdateTabButtonVisuals()
         {
-            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
-            bool isMilitary = s != null && !s.isCivilian;
-
             if (clanTabButtonText != null)
             {
-                string tab1Title = isMilitary ? "FAMILY & HOMEFRONT" : "CLAN & SUCCESSION";
                 clanTabButtonText.text = (currentTab == ActiveTab.Clan) 
-                    ? $"<b>{tab1Title} [ACTIVE]</b>" 
-                    : tab1Title;
+                    ? "<b>FAMILY & HOMEFRONT [ACTIVE]</b>" 
+                    : "FAMILY & HOMEFRONT";
             }
 
             if (friendsTabButtonText != null)
             {
-                string tab2Title = isMilitary ? "BAND OF BROTHERS" : "CLASSMATES & FRIENDS";
                 friendsTabButtonText.text = (currentTab == ActiveTab.Friends) 
-                    ? $"<b>{tab2Title} [ACTIVE]</b>" 
-                    : tab2Title;
+                    ? "<b>FIRETEAM SQUADMATES [ACTIVE]</b>" 
+                    : "FIRETEAM SQUADMATES";
             }
         }
 
@@ -146,9 +139,7 @@ namespace ArmyLife.UI
 
             if (titleText != null)
             {
-                titleText.text = isMilitary 
-                    ? $"FAMILY & HOMEFRONT • HOUSE {s.lastName.ToUpper()}" 
-                    : $"HOUSE {s.lastName.ToUpper()} • CLAN DECISIONS";
+                titleText.text = $"FAMILY & HOMEFRONT • {s.lastName.ToUpper()} FAMILY";
             }
 
             if (clanOverviewText != null)
@@ -161,10 +152,9 @@ namespace ArmyLife.UI
                 }
                 else
                 {
-                    string rankName = s.nobleTitle > NobleRank.Commoner ? $"{s.nobleTitle} House" : "Commoner Family";
                     clanOverviewText.text = 
-                        $"<b>Noble Lineage:</b> {rankName}   |   <b>Clan Succession Favor:</b> +{s.clanSuccessionScore} Favor   |   <b>Clan Standing:</b> {s.clanFavor:F0}%\n" +
-                        $"<i>Take crucial decisions regarding family succession, filial duty, and clan alliances.</i>";
+                        $"<b>Family Background:</b> {s.origin} ({s.originTrait})   |   <b>Family Relationship:</b> {s.parentRelationship:F0}%\n" +
+                        $"<i>Take crucial decisions regarding family welfare, filial support, and sibling bonds.</i>";
                 }
             }
 
@@ -488,7 +478,7 @@ namespace ArmyLife.UI
                     {
                         if (member.relationship >= 45f)
                         {
-                            int gift = (soldier.nobleTitle > NobleRank.Commoner) ? 150 : 40;
+                            int gift = (soldier.origin == SoldierOrigin.MilitaryLegacy || soldier.origin == SoldierOrigin.WorkingMechanic) ? 80 : 40;
                             soldier.cashBalance += gift;
                             member.relationship = Mathf.Max(0f, member.relationship - 4f);
                             GameEvents.OnFeedEventLogged?.Invoke("CLAN",
@@ -859,16 +849,7 @@ namespace ArmyLife.UI
 
         private void OnOpenFullClanHallClicked()
         {
-            CloseModal();
-            if (ClanModal.Instance != null)
-            {
-                ClanModal.Instance.OpenModal();
-            }
-            else
-            {
-                var found = FindAnyObjectByType<ClanModal>(FindObjectsInactive.Include);
-                if (found != null) found.OpenModal();
-            }
+            // Clan Hall modal deprecated in pure military sim
         }
 
         private void OnThemeChanged(ThemeMode mode, ThemePalette palette)

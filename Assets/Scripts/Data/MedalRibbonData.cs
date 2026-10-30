@@ -643,5 +643,10 @@ namespace ArmyLife.Data
             list.Sort((a, b) => a.precedenceOrder.CompareTo(b.precedenceOrder));
             return list;
         }
+
+        /// <summary>
+        /// Compatibility alias for GetAllOfficialMedals().
+        /// </summary>
+        public static List<MedalRibbonDefinition> GetAllMedals() => GetAllOfficialMedals();
     }
 }

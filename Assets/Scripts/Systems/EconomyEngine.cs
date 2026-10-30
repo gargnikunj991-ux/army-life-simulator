@@ -152,9 +152,44 @@ namespace ArmyLife.Systems
                 }
             }
 
-            // 7. Housing Living Costs / Upkeep (Adjusted dynamically by WartimeMarketEngine)
-            long housingUpkeep = CalculateSemesterHousingCost(soldier);
+            // 7. Housing & Dining Living Costs (Adjusted dynamically by WartimeMarketEngine)
+            // While on active combat deployment, theater forward operating bases and combat rations are 100% military subsidized ($0).
+            long housingUpkeep = 0L;
+            long diningUpkeep = 0L;
+            if (!soldier.isInCombatDeployment && !soldier.isYouthPhase && soldier.careerTrack != CareerTrack.MilitaryRecruitBasic)
+            {
+                housingUpkeep = CalculateSemesterHousingCost(soldier);
+                diningUpkeep = EconomyData.GetDiningSemesterCost(soldier.garrisonDiningTier);
+            }
             soldier.totalHousingExpensesPaid += housingUpkeep;
+            soldier.totalFoodExpensesPaid += diningUpkeep;
+
+            // Apply Dining Plan benefits during garrison
+            if (!soldier.isInCombatDeployment && !soldier.isDead)
+            {
+                switch (soldier.garrisonDiningTier)
+                {
+                    case DiningPlanTier.CommissaryCooking:
+                        soldier.fitness = Math.Min(100f, soldier.fitness + 2f);
+                        soldier.health = Math.Min(100f, soldier.health + 2f);
+                        soldier.happiness = Math.Min(100f, soldier.happiness + 2f);
+                        break;
+                    case DiningPlanTier.HighProteinAthletic:
+                        soldier.fitness = Math.Min(100f, soldier.fitness + 4f);
+                        soldier.health = Math.Min(100f, soldier.health + 4f);
+                        soldier.combatReadiness = Math.Min(100f, soldier.combatReadiness + 3f);
+                        break;
+                    case DiningPlanTier.OfficersClubDining:
+                        soldier.happiness = Math.Min(100f, soldier.happiness + 6f);
+                        soldier.squadRespect = Math.Min(100f, soldier.squadRespect + 3f);
+                        break;
+                    case DiningPlanTier.PrivateChefExecutive:
+                        soldier.happiness = Math.Min(100f, soldier.happiness + 10f);
+                        soldier.health = Math.Min(100f, soldier.health + 5f);
+                        soldier.squadRespect = Math.Min(100f, soldier.squadRespect + 5f);
+                        break;
+                }
+            }
 
             // Air Force base housing living condition advantage: +15% Morale, +10% Health recovery
             if (soldier.militaryBranch == MilitaryBranch.AirForce && !soldier.isCivilian && !soldier.isRetired)
@@ -181,7 +216,7 @@ namespace ArmyLife.Systems
 
             // 9. Total Net Cash Flow (including War Memoir Royalties if published)
             long totalInflow = netTakeHomeSalary + totalDividends + businessRevenue + semesterCombatBounties + soldier.warMemoirRoyaltiesPerSemester;
-            long totalOutflow = housingUpkeep + tutorExpense;
+            long totalOutflow = housingUpkeep + diningUpkeep + tutorExpense;
             long netCashFlow = totalInflow - totalOutflow;
 
             soldier.cashBalance = Math.Max(0L, soldier.cashBalance + netCashFlow);
@@ -199,6 +234,7 @@ namespace ArmyLife.Systems
                 businessRevenue,
                 semesterCombatBounties,
                 housingUpkeep,
+                diningUpkeep,
                 tutorExpense,
                 netCashFlow
             );
@@ -268,6 +304,7 @@ namespace ArmyLife.Systems
             long businessRevenue,
             long combatBounties,
             long housingCost,
+            long diningCost,
             long tutorCost,
             long netCashFlow)
         {
@@ -289,8 +326,9 @@ namespace ArmyLife.Systems
                 string branchTag = (soldier.militaryBranch == MilitaryBranch.AirForce) ? "AIR FORCE" : "IMPERIAL ARMY";
                 string flightTag = soldier.isFlightDuty ? " (Flight Pay +15%)" : "";
                 phaseTitle = $"{branchTag} COMPENSATION{flightTag}";
+                int taxPercent = Mathf.RoundToInt(DifficultySettings.WarTaxRate * 100f);
                 taxTag = (semesterTax > 0)
-                    ? $"<color=#FF6666>Imperial War Tax (40%): -${semesterTax:N0}</color>"
+                    ? $"<color=#FF6666>War Tax ({taxPercent}%): -${semesterTax:N0}</color>"
                     : "<color=#00FFAA>Cadet Stipend (Tax Exempt)</color>";
             }
 
@@ -306,7 +344,13 @@ namespace ArmyLife.Systems
                 ? $" | <color=#FF4444>Combat Bounties & Plunder: +${combatBounties:N0}</color>"
                 : "";
 
-            string housingStr = $" | <color=#FFBB88>{EconomyData.GetHousingDisplayName(soldier.housingTier, soldier.militaryBranch)} Rent: -${housingCost:N0}</color>";
+            string housingStr = housingCost > 0
+                ? $" | <color=#FFBB88>{EconomyData.GetHousingDisplayName(soldier.housingTier, soldier.militaryBranch)}: -${housingCost:N0}</color>"
+                : (soldier.isInCombatDeployment ? " | <color=#00FFAA>Theater FOB Quarters: Subsidized ($0)</color>" : "");
+
+            string diningStr = diningCost > 0
+                ? $" | <color=#FFCC66>{EconomyData.GetDiningDisplayName(soldier.garrisonDiningTier)}: -${diningCost:N0}</color>"
+                : (soldier.isInCombatDeployment ? " | <color=#00FFAA>Combat MRE Rations: Subsidized ($0)</color>" : "");
 
             string loanStr = (academyLoan > 0 || collegeLoan > 0)
                 ? $" | <color=#FF8866>Debt Payments: -${academyLoan + collegeLoan:N0}</color>"
@@ -321,7 +365,7 @@ namespace ArmyLife.Systems
                 : $"<color=#FF4444>-${Math.Abs(netCashFlow):N0}</color>";
 
             GameEvents.OnFeedEventLogged?.Invoke("PAYDAY",
-                $"<b>[{phaseTitle}]</b> Base: ${monthlyGross:N0}/mo (Semester: ${semesterGrossSalary:N0}) | {taxTag}{dividendStr}{businessStr}{bountyStr}{housingStr}{loanStr}{tutorStr} | " +
+                $"<b>[{phaseTitle}]</b> Base: ${monthlyGross:N0}/mo (Semester: ${semesterGrossSalary:N0}) | {taxTag}{dividendStr}{businessStr}{bountyStr}{housingStr}{diningStr}{loanStr}{tutorStr} | " +
                 $"<b>Semester Net: {netStr}</b>. Cash Reserves: <b>${soldier.cashBalance:N0}</b>.");
         }
 

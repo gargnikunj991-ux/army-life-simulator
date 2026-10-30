@@ -22,11 +22,6 @@ namespace ArmyLife.UI
         public TextMeshProUGUI cmpBalanceLabel;
         public TextMeshProUGUI monthlyPayLabel;
 
-        [Header("Power Cultivation & Talent")]
-        public TextMeshProUGUI powerTierLabel;
-        public TextMeshProUGUI talentLabel;
-        public Slider cultivationProgressBar;
-
         [Header("Stat Gauges (Sliders 0-100)")]
         public Slider healthSlider;
         public TextMeshProUGUI healthBarText;
@@ -46,13 +41,9 @@ namespace ArmyLife.UI
         public ActivitiesModal activitiesModal;
         public SettingsModal settingsModal;
         public DilemmaModal dilemmaModal;
-        public ClanModal clanModal;
-        public SchoolModal schoolModal;
-        public YouthActivitiesModal youthActivitiesModal;
         public CareerDossierModal careerDossierModal;
         public MailCallModal mailCallModal;
         public MedalRibbonRackModal medalRibbonRackModal;
-        public TacticalMinigamesModal tacticalMinigamesModal;
         public StrategicWarMapModal strategicWarMapModal;
         public SemesterDispatchModal semesterDispatchModal;
         public TacticalFirefightModal tacticalFirefightModal;
@@ -67,12 +58,6 @@ namespace ArmyLife.UI
         [Header("Top Header Action Buttons")]
         public Button settingsButton;
         public Button returnToMenuButton;
-
-        [Header("Legacy Action Buttons (Backwards Compatibility)")]
-        public Button testTalentButton;
-        public Button sendMoneyHomeButton;
-        public Button clanButton;
-        public Button schoolButton;
 
         [Header("Themed Background Panels")]
         public Image headerPanelImage;
@@ -139,6 +124,15 @@ namespace ArmyLife.UI
         /// </summary>
         public void EnsureUIBindings()
         {
+            // 0. Auto-upgrade Canvas to 16:9 PC Widescreen (1920x1080)
+            var scaler = GetComponentInParent<CanvasScaler>();
+            if (scaler != null && scaler.referenceResolution.x < 1900)
+            {
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920, 1080);
+                scaler.matchWidthOrHeight = 0.5f;
+            }
+
             // 1. Modals auto-link
             if (lifeModal == null) lifeModal = LifeModal.Instance ?? FindAnyObjectByType<LifeModal>(FindObjectsInactive.Include);
             if (financeModal == null) financeModal = FinanceModal.Instance ?? FindAnyObjectByType<FinanceModal>(FindObjectsInactive.Include);
@@ -146,13 +140,9 @@ namespace ArmyLife.UI
             if (activitiesModal == null) activitiesModal = ActivitiesModal.Instance ?? FindAnyObjectByType<ActivitiesModal>(FindObjectsInactive.Include);
             if (settingsModal == null) settingsModal = SettingsModal.Instance ?? FindAnyObjectByType<SettingsModal>(FindObjectsInactive.Include);
             if (dilemmaModal == null) dilemmaModal = DilemmaModal.Instance ?? FindAnyObjectByType<DilemmaModal>(FindObjectsInactive.Include);
-            if (clanModal == null) clanModal = ClanModal.Instance ?? FindAnyObjectByType<ClanModal>(FindObjectsInactive.Include);
-            if (schoolModal == null) schoolModal = SchoolModal.Instance ?? FindAnyObjectByType<SchoolModal>(FindObjectsInactive.Include);
-            if (youthActivitiesModal == null) youthActivitiesModal = YouthActivitiesModal.Instance ?? FindAnyObjectByType<YouthActivitiesModal>(FindObjectsInactive.Include);
             if (careerDossierModal == null) careerDossierModal = CareerDossierModal.Instance ?? FindAnyObjectByType<CareerDossierModal>(FindObjectsInactive.Include);
             if (mailCallModal == null) mailCallModal = MailCallModal.Instance ?? FindAnyObjectByType<MailCallModal>(FindObjectsInactive.Include);
             if (medalRibbonRackModal == null) medalRibbonRackModal = MedalRibbonRackModal.Instance ?? FindAnyObjectByType<MedalRibbonRackModal>(FindObjectsInactive.Include);
-            if (tacticalMinigamesModal == null) tacticalMinigamesModal = TacticalMinigamesModal.Instance ?? FindAnyObjectByType<TacticalMinigamesModal>(FindObjectsInactive.Include);
             if (strategicWarMapModal == null) strategicWarMapModal = StrategicWarMapModal.Instance ?? FindAnyObjectByType<StrategicWarMapModal>(FindObjectsInactive.Include);
             if (semesterDispatchModal == null) semesterDispatchModal = SemesterDispatchModal.Instance ?? FindAnyObjectByType<SemesterDispatchModal>(FindObjectsInactive.Include);
             if (tacticalFirefightModal == null) tacticalFirefightModal = TacticalFirefightModal.Instance ?? FindAnyObjectByType<TacticalFirefightModal>(FindObjectsInactive.Include);
@@ -183,14 +173,6 @@ namespace ArmyLife.UI
             if (settingsButton != null) settingsButton.onClick.AddListener(OnSettingsButtonClicked);
             if (returnToMenuButton != null) returnToMenuButton.onClick.AddListener(OnReturnToMenuClicked);
 
-            if (testTalentButton != null) testTalentButton.onClick.AddListener(OnTestTalentClicked);
-            // Guard against legacy inspector references sharing GameObjects with the 5 bottom buttons
-            if (sendMoneyHomeButton != null && sendMoneyHomeButton != activitiesButton && sendMoneyHomeButton != financeButton)
-                sendMoneyHomeButton.onClick.AddListener(OnSendMoneyHomeClicked);
-            if (clanButton != null && clanButton != relationshipsButton)
-                clanButton.onClick.AddListener(OnClanButtonClicked);
-            if (schoolButton != null) schoolButton.onClick.AddListener(OnSchoolButtonClicked);
-
             // 4. Sanitize button labels to clean ASCII
             SanitizeButtonLabel(lifeButton, "LIFE");
             SanitizeButtonLabel(financeButton, "FINANCE");
@@ -209,11 +191,6 @@ namespace ArmyLife.UI
 
             if (settingsButton != null) settingsButton.onClick.RemoveListener(OnSettingsButtonClicked);
             if (returnToMenuButton != null) returnToMenuButton.onClick.RemoveListener(OnReturnToMenuClicked);
-
-            if (testTalentButton != null) testTalentButton.onClick.RemoveListener(OnTestTalentClicked);
-            if (sendMoneyHomeButton != null) sendMoneyHomeButton.onClick.RemoveListener(OnSendMoneyHomeClicked);
-            if (clanButton != null) clanButton.onClick.RemoveListener(OnClanButtonClicked);
-            if (schoolButton != null) schoolButton.onClick.RemoveListener(OnSchoolButtonClicked);
         }
 
         private void SanitizeButtonLabel(Button btn, string cleanText)
@@ -292,7 +269,7 @@ namespace ArmyLife.UI
 
             if (nobleTitleLabel != null)
             {
-                nobleTitleLabel.text = $"Origin: {soldier.origin} ({soldier.originTrait})";
+                nobleTitleLabel.text = $"Combat: <b>{soldier.combatSkill:F0}%</b>   |   Fitness: <b>{soldier.fitness:F0}%</b>   |   Origin: {soldier.origin} ({soldier.originTrait})";
             }
 
             // Finances (Reflecting Taxes & Career Track)
@@ -320,6 +297,10 @@ namespace ArmyLife.UI
                 {
                     long net = SalaryCalculator.CalculateNetMonthlyPay(soldier);
                     monthlyPayLabel.text = $"+${net:N0} / mo (50% Civil Tax Deducted)";
+                }
+                else if (soldier.careerTrack == CareerTrack.MilitaryRecruitBasic || (soldier.currentRank != null && soldier.currentRank.paygrade == "E-1" && soldier.totalSemestersLived <= 1))
+                {
+                    monthlyPayLabel.text = "$0 / mo (Recruit Boot Camp • Lodging & Rations Covered)";
                 }
                 else if (soldier.careerTrack == CareerTrack.MilitaryTechSchool)
                 {
@@ -351,11 +332,6 @@ namespace ArmyLife.UI
                 }
             }
 
-            // Cultivation & Talent: Hidden to focus on authentic military simulation
-            if (powerTierLabel != null) powerTierLabel.gameObject.SetActive(false);
-            if (cultivationProgressBar != null) cultivationProgressBar.gameObject.SetActive(false);
-            if (talentLabel != null) talentLabel.gameObject.SetActive(false);
-
             // Center Tour Advance Button label update
             if (advanceSemesterButton != null)
             {
@@ -370,7 +346,7 @@ namespace ArmyLife.UI
                 }
             }
 
-            // Stat Sliders & Clean Percentage Texts
+            // 4 BitLife-Style Core Attribute Gauges (Health, Happiness, Smarts, Looks)
             if (healthSlider != null) healthSlider.value = soldier.health / 100f;
             if (healthBarText != null)
             {
@@ -382,14 +358,30 @@ namespace ArmyLife.UI
                     healthBarText.text = $"Health: {soldier.health:F0}%";
             }
 
-            if (fitnessSlider != null) fitnessSlider.value = soldier.fitness / 100f;
-            if (fitnessBarText != null) fitnessBarText.text = $"Readiness: {soldier.fitness:F0}%";
+            if (fitnessSlider != null) fitnessSlider.value = soldier.happiness / 100f; // Morale / Resolve
+            if (fitnessBarText != null)
+            {
+                if (soldier.combatStress >= 60f)
+                    fitnessBarText.text = $"<color=#FF7744>Morale: {soldier.happiness:F0}% (PTSD)</color>";
+                else if (soldier.happiness < 30f)
+                    fitnessBarText.text = $"<color=#FF6666>Morale: {soldier.happiness:F0}% (Low)</color>";
+                else
+                    fitnessBarText.text = $"Morale: {soldier.happiness:F0}%";
+            }
 
-            if (combatSkillSlider != null) combatSkillSlider.value = soldier.combatSkill / 100f;
-            if (combatBarText != null) combatBarText.text = $"Combat: {soldier.combatSkill:F0}%";
+            if (intellectSlider != null) intellectSlider.value = soldier.intellect / 100f; // Tactics / Smarts
+            if (intellectBarText != null)
+            {
+                string rankTag = soldier.intellect >= 85f ? " (Tactician)" : (soldier.intellect >= 70f ? " (Sharp)" : "");
+                intellectBarText.text = $"Tactics: {soldier.intellect:F0}%{rankTag}";
+            }
 
-            if (intellectSlider != null) intellectSlider.value = soldier.intellect / 100f;
-            if (intellectBarText != null) intellectBarText.text = $"Discipline: {soldier.intellect:F0}%";
+            if (combatSkillSlider != null) combatSkillSlider.value = soldier.combatSkill / 100f; // Combat Skill
+            if (combatBarText != null)
+            {
+                string combatTag = soldier.combatSkill >= 85f ? " (Elite Marksman)" : (soldier.combatSkill >= 60f ? " (Veteran)" : " (Recruit)");
+                combatBarText.text = $"Combat Skill: {soldier.combatSkill:F0}%{combatTag}";
+            }
 
             if (meritSlider != null) meritSlider.value = soldier.meritRating / 100f;
             if (influenceSlider != null) influenceSlider.value = soldier.politicalInfluence / 100f;
@@ -401,22 +393,18 @@ namespace ArmyLife.UI
 
         public void CloseAllModals()
         {
-            if (lifeModal != null && lifeModal.gameObject.activeSelf) lifeModal.CloseModal();
-            if (financeModal != null && financeModal.gameObject.activeSelf) financeModal.CloseModal();
-            if (relationshipsModal != null && relationshipsModal.gameObject.activeSelf) relationshipsModal.CloseModal();
-            if (activitiesModal != null && activitiesModal.gameObject.activeSelf) activitiesModal.CloseModal();
-            if (settingsModal != null && settingsModal.gameObject.activeSelf) settingsModal.CloseModal();
-            if (dilemmaModal != null && dilemmaModal.gameObject.activeSelf) dilemmaModal.CloseModal();
-            if (clanModal != null && clanModal.gameObject.activeSelf) clanModal.CloseModal();
-            if (schoolModal != null && schoolModal.gameObject.activeSelf) schoolModal.CloseModal();
-            if (youthActivitiesModal != null && youthActivitiesModal.gameObject.activeSelf) youthActivitiesModal.CloseModal();
-            if (careerDossierModal != null && careerDossierModal.gameObject.activeSelf) careerDossierModal.CloseModal();
-            if (mailCallModal != null && mailCallModal.gameObject.activeSelf) mailCallModal.CloseModal();
-            if (medalRibbonRackModal != null && medalRibbonRackModal.gameObject.activeSelf) medalRibbonRackModal.CloseModal();
-            if (tacticalMinigamesModal != null && tacticalMinigamesModal.gameObject.activeSelf) tacticalMinigamesModal.CloseModal();
-            if (strategicWarMapModal != null && strategicWarMapModal.gameObject.activeSelf) strategicWarMapModal.CloseModal();
-            if (semesterDispatchModal != null && semesterDispatchModal.gameObject.activeSelf) semesterDispatchModal.CloseModal();
-            if (tacticalFirefightModal != null && tacticalFirefightModal.gameObject.activeSelf) tacticalFirefightModal.CloseModal();
+            if (lifeModal != null) lifeModal.CloseModal();
+            if (financeModal != null) financeModal.CloseModal();
+            if (relationshipsModal != null) relationshipsModal.CloseModal();
+            if (activitiesModal != null) activitiesModal.CloseModal();
+            if (settingsModal != null) settingsModal.CloseModal();
+            if (dilemmaModal != null) dilemmaModal.CloseModal();
+            if (careerDossierModal != null) careerDossierModal.CloseModal();
+            if (mailCallModal != null) mailCallModal.CloseModal();
+            if (medalRibbonRackModal != null) medalRibbonRackModal.CloseModal();
+            if (strategicWarMapModal != null) strategicWarMapModal.CloseModal();
+            if (semesterDispatchModal != null) semesterDispatchModal.CloseModal();
+            if (tacticalFirefightModal != null) tacticalFirefightModal.CloseModal();
         }
 
         public void OnLifeButtonClicked()
@@ -553,44 +541,6 @@ namespace ArmyLife.UI
             }
         }
 
-        // Legacy / Backwards compatibility
-        public void OnClanButtonClicked()
-        {
-            if (relationshipsModal != null)
-            {
-                relationshipsModal.OpenModal(showFriendsFirst: false);
-            }
-            else if (clanModal != null)
-            {
-                clanModal.OpenModal();
-            }
-        }
-
-        public void OnSchoolButtonClicked()
-        {
-            if (schoolModal != null)
-            {
-                schoolModal.OpenModal();
-            }
-        }
-
-        public void OnSendMoneyHomeClicked()
-        {
-            OnFinanceButtonClicked();
-        }
-
-        public void OnTestTalentClicked()
-        {
-            if (GameManager.Instance != null && GameManager.Instance.currentSoldier != null)
-            {
-                var soldier = GameManager.Instance.currentSoldier;
-                if (!soldier.isYouthPhase)
-                {
-                    TalentTestingApparatus.PerformSelfApparatusTest(soldier);
-                }
-            }
-        }
-
         // ==========================================
         // Theme Styling
         // ==========================================
@@ -617,23 +567,10 @@ namespace ArmyLife.UI
             if (cashBalanceLabel != null) cashBalanceLabel.color = p.accentEmerald;
             if (cmpBalanceLabel != null) cmpBalanceLabel.color = p.accentGold;
             if (monthlyPayLabel != null) monthlyPayLabel.color = p.textSecondary;
-            if (powerTierLabel != null) powerTierLabel.color = p.textPrimary;
 
             // Top Buttons
-            if (settingsButton != null)
-            {
-                var img = settingsButton.GetComponent<Image>();
-                if (img != null) img.color = p.btnNormalBg;
-                var txt = settingsButton.GetComponentInChildren<TextMeshProUGUI>();
-                if (txt != null) txt.color = p.btnNormalText;
-            }
-            if (returnToMenuButton != null)
-            {
-                var img = returnToMenuButton.GetComponent<Image>();
-                if (img != null) img.color = p.btnNormalBg;
-                var txt = returnToMenuButton.GetComponentInChildren<TextMeshProUGUI>();
-                if (txt != null) txt.color = p.btnNormalText;
-            }
+            if (settingsButton != null) StyleHUDButton(settingsButton, p.btnNormalBg, p.btnNormalText);
+            if (returnToMenuButton != null) StyleHUDButton(returnToMenuButton, p.btnNormalBg, p.btnNormalText);
 
             // Stat Gauge Sliders & Text
             ApplySliderTheme(healthSlider, p.healthBarColor, p.barBackgroundColor);
@@ -652,45 +589,27 @@ namespace ArmyLife.UI
             ApplySliderTheme(influenceSlider, p.accentCobalt, p.barBackgroundColor);
 
             // Recolor buttons if present
-            if (lifeButton != null)
-            {
-                var img = lifeButton.GetComponent<Image>();
-                if (img != null) img.color = p.btnNormalBg;
-                var txt = lifeButton.GetComponentInChildren<TextMeshProUGUI>();
-                if (txt != null) txt.color = p.btnNormalText;
-            }
+            if (lifeButton != null) StyleHUDButton(lifeButton, p.btnNormalBg, p.btnNormalText);
+            if (financeButton != null) StyleHUDButton(financeButton, p.btnNormalBg, p.btnNormalText);
+            if (advanceSemesterButton != null) StyleHUDButton(advanceSemesterButton, p.btnAgeGrowBg, p.btnAgeGrowText);
+            if (relationshipsButton != null) StyleHUDButton(relationshipsButton, p.btnNormalBg, p.btnNormalText);
+            if (activitiesButton != null) StyleHUDButton(activitiesButton, p.btnNormalBg, p.btnNormalText);
+        }
 
-            if (financeButton != null)
-            {
-                var img = financeButton.GetComponent<Image>();
-                if (img != null) img.color = p.btnNormalBg;
-                var txt = financeButton.GetComponentInChildren<TextMeshProUGUI>();
-                if (txt != null) txt.color = p.btnNormalText;
-            }
+        private static void StyleHUDButton(Button btn, Color bg, Color text)
+        {
+            if (btn == null) return;
+            var img = btn.GetComponent<Image>();
+            if (img != null) img.color = bg;
+            var txt = btn.GetComponentInChildren<TextMeshProUGUI>();
+            if (txt != null) txt.color = text;
 
-            if (advanceSemesterButton != null)
-            {
-                var img = advanceSemesterButton.GetComponent<Image>();
-                if (img != null) img.color = p.btnAgeGrowBg;
-                var txt = advanceSemesterButton.GetComponentInChildren<TextMeshProUGUI>();
-                if (txt != null) txt.color = p.btnAgeGrowText;
-            }
-
-            if (relationshipsButton != null)
-            {
-                var img = relationshipsButton.GetComponent<Image>();
-                if (img != null) img.color = p.btnNormalBg;
-                var txt = relationshipsButton.GetComponentInChildren<TextMeshProUGUI>();
-                if (txt != null) txt.color = p.btnNormalText;
-            }
-
-            if (activitiesButton != null)
-            {
-                var img = activitiesButton.GetComponent<Image>();
-                if (img != null) img.color = p.btnNormalBg;
-                var txt = activitiesButton.GetComponentInChildren<TextMeshProUGUI>();
-                if (txt != null) txt.color = p.btnNormalText;
-            }
+            var colors = btn.colors;
+            colors.normalColor = bg;
+            colors.highlightedColor = Color.Lerp(bg, Color.white, 0.15f);
+            colors.pressedColor = Color.Lerp(bg, Color.black, 0.15f);
+            colors.selectedColor = bg;
+            btn.colors = colors;
         }
 
         private void ApplySliderTheme(Slider slider, Color fillColor, Color bgColor)

@@ -39,6 +39,10 @@ namespace ArmyLife.UI
         public Button emergencyAdvanceButton;
         public TextMeshProUGUI warBondStatusText;
 
+        [Header("Garrison Living Quarters & Dining Plan")]
+        public Button changeHousingButton;
+        public Button changeDiningButton;
+
         [Header("Expanded Three-Phase Economy Actions (Optional Inspector Bindings)")]
         public Button buyTradeGuildShareButton;
         public Button payDebt1000Button;
@@ -52,14 +56,18 @@ namespace ArmyLife.UI
         private Button _runtimePayDebtBtn;
         private Button _runtimeTreatSquadBtn;
         private Button _runtimeHospitalBtn;
+        private Button _runtimeChangeHousingBtn;
+        private Button _runtimeChangeDiningBtn;
+        private TextMeshProUGUI _runtimeHousingBtnText;
+        private TextMeshProUGUI _runtimeDiningBtnText;
 
         private void Awake()
         {
             if (Instance == null) Instance = this;
             else Destroy(gameObject);
 
-            if (modalRoot != null) modalRoot.SetActive(false);
-            else gameObject.SetActive(false);
+            if (modalRoot != null && modalRoot != gameObject) modalRoot.SetActive(false);
+            gameObject.SetActive(false);
         }
 
         private void OnEnable()
@@ -75,6 +83,8 @@ namespace ArmyLife.UI
             if (payDebt1000Button != null) payDebt1000Button.onClick.AddListener(OnPayDebt1000Clicked);
             if (treatSquadButton != null) treatSquadButton.onClick.AddListener(OnTreatSquadClicked);
             if (specialistHospitalButton != null) specialistHospitalButton.onClick.AddListener(OnSpecialistHospitalClicked);
+            if (changeHousingButton != null) changeHousingButton.onClick.AddListener(OnCycleHousingClicked);
+            if (changeDiningButton != null) changeDiningButton.onClick.AddListener(OnCycleDiningClicked);
 
             EnsureDynamicActionButtons();
 
@@ -94,11 +104,15 @@ namespace ArmyLife.UI
             if (payDebt1000Button != null) payDebt1000Button.onClick.RemoveListener(OnPayDebt1000Clicked);
             if (treatSquadButton != null) treatSquadButton.onClick.RemoveListener(OnTreatSquadClicked);
             if (specialistHospitalButton != null) specialistHospitalButton.onClick.RemoveListener(OnSpecialistHospitalClicked);
+            if (changeHousingButton != null) changeHousingButton.onClick.RemoveListener(OnCycleHousingClicked);
+            if (changeDiningButton != null) changeDiningButton.onClick.RemoveListener(OnCycleDiningClicked);
 
             if (_runtimeBuyTradeShareBtn != null) _runtimeBuyTradeShareBtn.onClick.RemoveListener(OnBuyTradeGuildShareClicked);
             if (_runtimePayDebtBtn != null) _runtimePayDebtBtn.onClick.RemoveListener(OnPayDebt1000Clicked);
             if (_runtimeTreatSquadBtn != null) _runtimeTreatSquadBtn.onClick.RemoveListener(OnTreatSquadClicked);
             if (_runtimeHospitalBtn != null) _runtimeHospitalBtn.onClick.RemoveListener(OnSpecialistHospitalClicked);
+            if (_runtimeChangeHousingBtn != null) _runtimeChangeHousingBtn.onClick.RemoveListener(OnCycleHousingClicked);
+            if (_runtimeChangeDiningBtn != null) _runtimeChangeDiningBtn.onClick.RemoveListener(OnCycleDiningClicked);
 
             ThemeManager.OnThemeChanged -= OnThemeChanged;
         }
@@ -119,10 +133,7 @@ namespace ArmyLife.UI
             {
                 modalRoot.SetActive(false);
             }
-            else
-            {
-                gameObject.SetActive(false);
-            }
+            gameObject.SetActive(false);
         }
 
         public void RefreshUI()
@@ -261,7 +272,10 @@ namespace ArmyLife.UI
                     long loanDeduction = SalaryCalculator.CalculateMonthlyLoanDeduction(s);
                     long disability = s.vaDisabilityAllowancePerMonth;
 
-                    long monthlyNetWithHousing = Math.Max(0L, net + disability - housingPerMonth);
+                    long monthlyRent = s.isInCombatDeployment ? 0L : s.GetMonthlyRent();
+                    long monthlyFood = s.isInCombatDeployment ? 0L : s.GetMonthlyFood();
+                    long livingExpensesMonth = monthlyRent + monthlyFood;
+                    long monthlyNetWithHousing = Math.Max(0L, net + disability - livingExpensesMonth);
                     long semesterNetCashflow = monthlyNetWithHousing * 6;
 
                     string rankName = s.currentRank != null ? s.currentRank.rankName : "Private";
@@ -274,11 +288,15 @@ namespace ArmyLife.UI
                         ? $"\n<color=#FF8866><b>War Academy Loan Repayment:</b> -${loanDeduction:N0} / mo (-${loanDeduction * 6:N0} / sem) [Debt: ${s.academyTuitionDebt:N0} @ 9% Int]</color>" 
                         : "";
 
+                    string livingCostLine = s.isInCombatDeployment
+                        ? "<color=#00FFAA><b>Living Expenses (FOB Quarters & Combat Rations):</b> $0 / mo (100% Subsidized)</color>\n"
+                        : $"<color=#FFAA44><b>Garrison Living Expenses (Rent: ${monthlyRent:N0} | Food: ${monthlyFood:N0}):</b> -${livingExpensesMonth:N0} / mo (-${livingExpensesMonth * 6:N0} / sem)</color>\n";
+
                     monthlyBreakdownText.text = 
                         $"<b><color=#00FFAA>PHASE: ACTIVE DUTY MILITARY • {rankName.ToUpper()}</color></b>\n" +
                         $"<b>Gross Monthly Compensation:</b> ${gross:N0} / mo (${gross * 6:N0} / sem){tourBonus}{sfLine}{extTourLine}{vaLine}\n" +
                         $"<color=#FF6666><b>Mandatory Imperial War Tax (40%):</b> -${tax:N0} / mo (-${tax * 6:N0} / sem)</color>{loanLine}\n" +
-                        $"<color=#FFAA44><b>Housing Rent & Mess ({housingName}):</b> -${housingPerMonth:N0} / mo (-${housingPerSemester:N0} / sem)</color>\n" +
+                        $"{livingCostLine}" +
                         $"<color=#00FF88><b>Net Monthly Take-Home Pay:</b> +${monthlyNetWithHousing:N0} / mo</color>\n" +
                         $"<color=#00FFAA><b>Estimated Semester Net Cashflow:</b> +${semesterNetCashflow:N0} / sem</color>\n" +
                         "<i>Imperial Decree: 40% of military compensation is deducted for logistics and wartime ammunition reserves.</i>";
@@ -326,24 +344,24 @@ namespace ArmyLife.UI
                     $"<color=#FFD700><b>Total Semi-Annual Portfolio Return:</b> +${totalPassiveIncome:N0} / semester</color>";
             }
 
-            // Family Status & Spending
+            // Family Status & Living Conditions
             if (familyWealthStatusText != null)
             {
                 string familyHouseStr;
                 switch (s.familyHouseTier)
                 {
                     case FamilyHouseTier.AncestralEstate:
-                        familyHouseStr = "Ancestral Dynastic Castle & Estate (Landed Aristocracy)";
+                        familyHouseStr = "Spacious Suburban Residence & Estate";
                         break;
                     case FamilyHouseTier.CityTownhouse:
                         familyHouseStr = "Capital City Townhouse (High Working Class)";
                         break;
                     case FamilyHouseTier.RuralHomestead:
-                        familyHouseStr = "Fertile Rural Homestead (Landed Gentry)";
+                        familyHouseStr = "Fertile Rural Family Homestead";
                         break;
                     default:
-                        if (s.familyLineage != null && s.familyLineage.startingNobleRank > NobleRank.Commoner)
-                            familyHouseStr = "Hereditary Aristocratic Manor";
+                        if (s.origin == SoldierOrigin.MilitaryLegacy)
+                            familyHouseStr = "Historic Officer Family Residence";
                         else if (s.totalRemittancesSentToFamily >= 3000)
                             familyHouseStr = "Comfortable Townhouse (Lifted by Remittances)";
                         else if (s.totalRemittancesSentToFamily >= 1000)
@@ -362,11 +380,56 @@ namespace ArmyLife.UI
                     : "";
 
                 familyWealthStatusText.text = 
-                    $"<b>Family House:</b> House {s.lastName}   |   <b>Living Standard:</b> {s.familyLivingCondition:F0}/100\n" +
+                    $"<b>Family Household:</b> {s.lastName} Family   |   <b>Living Standard:</b> {s.familyLivingCondition:F0}/100\n" +
                     $"<b>Family Real Estate:</b> {familyHouseStr}\n" +
-                    $"<b>Total Remittances Sent:</b> ${s.totalRemittancesSentToFamily:N0}   |   <b>Parent Approval:</b> {s.parentRelationship:F0}%   |   <b>Clan Favor:</b> {s.clanFavor:F0}%\n" +
+                    $"<b>Total Remittances Sent:</b> ${s.totalRemittancesSentToFamily:N0}   |   <b>Parent Approval:</b> {s.parentRelationship:F0}%   |   <b>Family Favor:</b> {s.clanFavor:F0}%\n" +
                     $"<b>Generational Heir Tutoring:</b> {heirTutoringStr}{bionicStr}\n" +
-                    "<i>Sending money home elevates your house standing and awards filial approval and succession points.</i>";
+                    "<i>Sending money home elevates family living standards and strengthens parental bonds.</i>";
+            }
+
+            // Garrison Living Quarters & Dining Plan Breakdown
+            if (spendingBreakdownText != null)
+            {
+                if (s.isInCombatDeployment)
+                {
+                    spendingBreakdownText.text = 
+                        "<b><color=#00D4FF>[ACTIVE COMBAT DEPLOYMENT • LIVING SUBSIDY]</color></b>\n" +
+                        "<b>Theater Quarters:</b> Forward Operating Base (FOB) Quarters (<color=#00FFAA>$0 / mo • 100% Armed Forces Subsidized</color>)\n" +
+                        "<b>Combat Dining:</b> Tactical Field Combat Rations (<color=#00FFAA>$0 / mo • 100% Armed Forces Subsidized</color>)\n" +
+                        "<i>While deployed in combat operations, all housing, lodging, and nutrition are fully subsidized by the military.</i>";
+                }
+                else
+                {
+                    long rentMo = s.GetMonthlyRent();
+                    long rentSem = rentMo * 6L;
+                    long foodMo = s.GetMonthlyFood();
+                    long foodSem = foodMo * 6L;
+                    long totalLivingMo = rentMo + foodMo;
+                    long totalLivingSem = totalLivingMo * 6L;
+
+                    string housingTitle = EconomyData.GetHousingDisplayName(s.housingTier, s.militaryBranch);
+                    string housingDesc = EconomyData.GetHousingDescription(s.housingTier, s.militaryBranch);
+                    string diningTitle = EconomyData.GetDiningDisplayName(s.garrisonDiningTier);
+                    string diningDesc = EconomyData.GetDiningDescription(s.garrisonDiningTier);
+
+                    spendingBreakdownText.text = 
+                        "<b><color=#FFD700>[GARRISON LIVING EXPENSES & LIFESTYLE]</color></b>\n" +
+                        $"<b>Living Quarters:</b> {housingTitle} (-${rentMo:N0}/mo | -${rentSem:N0}/sem)\n" +
+                        $"<size=17><i>{housingDesc}</i></size>\n" +
+                        $"<b>Dining Plan:</b> {diningTitle} (-${foodMo:N0}/mo | -${foodSem:N0}/sem)\n" +
+                        $"<size=17><i>{diningDesc}</i></size>\n" +
+                        $"<color=#FFAA44><b>Total Monthly Living Expenses:</b> -${totalLivingMo:N0} / mo (-${totalLivingSem:N0} / semester)</color>\n" +
+                        "<i>Click buttons below to upgrade/downgrade quarters (rank permitting) or alter meal plan.</i>";
+                }
+            }
+
+            if (_runtimeHousingBtnText != null)
+            {
+                _runtimeHousingBtnText.text = $"QUARTERS: {EconomyData.GetHousingDisplayName(s.housingTier, s.militaryBranch)}";
+            }
+            if (_runtimeDiningBtnText != null)
+            {
+                _runtimeDiningBtnText.text = $"DINING: {EconomyData.GetDiningDisplayName(s.garrisonDiningTier)}";
             }
 
             // Apply Theme Palette
@@ -449,6 +512,138 @@ namespace ArmyLife.UI
                     rt.offsetMax = Vector2.zero;
                 }
             }
+
+            // Housing Selection Button (Barracks $200/mo up to Command Estate $5,000/mo)
+            if (changeHousingButton == null && _runtimeChangeHousingBtn == null && buyWarBondButton != null)
+            {
+                var parent = buyWarBondButton.transform.parent;
+                var btnObj = new GameObject("Runtime_ChangeHousingBtn");
+                btnObj.transform.SetParent(parent, false);
+
+                var img = btnObj.AddComponent<Image>();
+                img.color = new Color(0.18f, 0.40f, 0.55f);
+
+                _runtimeChangeHousingBtn = btnObj.AddComponent<Button>();
+                _runtimeChangeHousingBtn.targetGraphic = img;
+                _runtimeChangeHousingBtn.onClick.AddListener(OnCycleHousingClicked);
+
+                var le = btnObj.AddComponent<LayoutElement>();
+                le.preferredHeight = 52;
+                le.minHeight = 48;
+
+                var textObj = new GameObject("Text");
+                textObj.transform.SetParent(btnObj.transform, false);
+                _runtimeHousingBtnText = textObj.AddComponent<TextMeshProUGUI>();
+                _runtimeHousingBtnText.text = "CHANGE LIVING QUARTERS ($200 - $5,000/mo)";
+                _runtimeHousingBtnText.fontSize = 19;
+                _runtimeHousingBtnText.fontStyle = FontStyles.Bold;
+                _runtimeHousingBtnText.alignment = TextAlignmentOptions.Center;
+                _runtimeHousingBtnText.color = Color.white;
+
+                var rt = textObj.GetComponent<RectTransform>();
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+            }
+
+            // Dining Plan Selection Button (Mess Hall $100/mo up to Executive Chef $2,000/mo)
+            if (changeDiningButton == null && _runtimeChangeDiningBtn == null && buyWarBondButton != null)
+            {
+                var parent = buyWarBondButton.transform.parent;
+                var btnObj = new GameObject("Runtime_ChangeDiningBtn");
+                btnObj.transform.SetParent(parent, false);
+
+                var img = btnObj.AddComponent<Image>();
+                img.color = new Color(0.22f, 0.48f, 0.32f);
+
+                _runtimeChangeDiningBtn = btnObj.AddComponent<Button>();
+                _runtimeChangeDiningBtn.targetGraphic = img;
+                _runtimeChangeDiningBtn.onClick.AddListener(OnCycleDiningClicked);
+
+                var le = btnObj.AddComponent<LayoutElement>();
+                le.preferredHeight = 52;
+                le.minHeight = 48;
+
+                var textObj = new GameObject("Text");
+                textObj.transform.SetParent(btnObj.transform, false);
+                _runtimeDiningBtnText = textObj.AddComponent<TextMeshProUGUI>();
+                _runtimeDiningBtnText.text = "CHANGE GARRISON DINING PLAN ($100 - $2,000/mo)";
+                _runtimeDiningBtnText.fontSize = 19;
+                _runtimeDiningBtnText.fontStyle = FontStyles.Bold;
+                _runtimeDiningBtnText.alignment = TextAlignmentOptions.Center;
+                _runtimeDiningBtnText.color = Color.white;
+
+                var rt = textObj.GetComponent<RectTransform>();
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+            }
+        }
+
+        public void OnCycleHousingClicked()
+        {
+            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
+            if (s == null) return;
+
+            if (s.isInCombatDeployment)
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("FINANCE",
+                    "<color=#FF8844>[HOUSING LOCKED]</color> You are actively deployed in combat operations. Quarters are assigned by theater command ($0/mo).");
+                return;
+            }
+
+            int current = (int)s.housingTier;
+            bool foundNext = false;
+            for (int offset = 1; offset < 5; offset++)
+            {
+                HousingTier candidate = (HousingTier)((current + offset) % 5);
+                if (s.IsRankEligibleForHousing(candidate))
+                {
+                    s.housingTier = candidate;
+                    foundNext = true;
+                    break;
+                }
+            }
+
+            if (!foundNext)
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("FINANCE",
+                    $"<color=#FFAA44>[HOUSING LIMIT]</color> Your current military rank only qualifies for <b>{EconomyData.GetHousingDisplayName(s.housingTier, s.militaryBranch)}</b>. Earn promotion to unlock higher officer quarters!");
+            }
+            else
+            {
+                AudioManager.PlayUiClick();
+                GameEvents.OnFeedEventLogged?.Invoke("FINANCE",
+                    $"<color=#00FFAA>[LIVING QUARTERS UPDATED]</color> You moved into <b>{EconomyData.GetHousingDisplayName(s.housingTier, s.militaryBranch)}</b> (Rent: ${s.GetMonthlyRent():N0}/mo | ${s.GetMonthlyRent() * 6:N0}/semester).");
+            }
+
+            GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+            RefreshUI();
+        }
+
+        public void OnCycleDiningClicked()
+        {
+            var s = GameManager.Instance != null ? GameManager.Instance.currentSoldier : null;
+            if (s == null) return;
+
+            if (s.isInCombatDeployment)
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("FINANCE",
+                    "<color=#FF8844>[DINING LOCKED]</color> You are actively deployed in combat operations. Field combat rations are fully subsidized by theater command ($0/mo).");
+                return;
+            }
+
+            int current = (int)s.garrisonDiningTier;
+            s.garrisonDiningTier = (DiningPlanTier)((current + 1) % 5);
+
+            AudioManager.PlayUiClick();
+            GameEvents.OnFeedEventLogged?.Invoke("FINANCE",
+                $"<color=#00FFAA>[DINING PLAN UPDATED]</color> You switched to <b>{EconomyData.GetDiningDisplayName(s.garrisonDiningTier)}</b> (Expense: ${s.GetMonthlyFood():N0}/mo | ${s.GetMonthlyFood() * 6:N0}/semester). {EconomyData.GetDiningDescription(s.garrisonDiningTier)}");
+
+            GameEvents.OnSoldierStatsUpdated?.Invoke(s);
+            RefreshUI();
         }
 
         private void SendRemittance(int amount)
@@ -687,6 +882,10 @@ namespace ArmyLife.UI
             StyleFinanceButton(payDebt1000Button, p);
             StyleFinanceButton(treatSquadButton, p);
             StyleFinanceButton(specialistHospitalButton, p);
+            StyleFinanceButton(changeHousingButton, p);
+            StyleFinanceButton(changeDiningButton, p);
+            StyleFinanceButton(_runtimeChangeHousingBtn, p);
+            StyleFinanceButton(_runtimeChangeDiningBtn, p);
         }
 
         private void StyleFinanceButton(Button btn, ThemePalette p)

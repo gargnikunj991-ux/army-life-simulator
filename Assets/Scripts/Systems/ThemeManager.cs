@@ -51,7 +51,28 @@ namespace ArmyLife.Systems
 
     public class ThemeManager : MonoBehaviour
     {
-        public static ThemeManager Instance { get; private set; }
+        private static ThemeManager _instance;
+        public static ThemeManager Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = FindAnyObjectByType<ThemeManager>(FindObjectsInactive.Include);
+                    if (_instance == null)
+                    {
+                        var go = new GameObject("ThemeManager");
+                        _instance = go.AddComponent<ThemeManager>();
+                        if (Application.isPlaying)
+                        {
+                            DontDestroyOnLoad(go);
+                        }
+                    }
+                }
+                return _instance;
+            }
+            private set => _instance = value;
+        }
 
         private const string THEME_PREF_KEY = "ArmyLife_ThemeMode";
 
@@ -63,22 +84,28 @@ namespace ArmyLife.Systems
 
         private void Awake()
         {
-            if (Instance == null)
+            if (_instance == null)
             {
-                Instance = this;
-                DontDestroyOnLoad(gameObject);
+                _instance = this;
+                if (Application.isPlaying) DontDestroyOnLoad(gameObject);
                 LoadSavedTheme();
             }
-            else
+            else if (_instance != this)
             {
                 Destroy(gameObject);
             }
         }
 
-        private void LoadSavedTheme()
+        private void Start()
+        {
+            // Broadcast initial active theme so all UI components adapt on startup
+            OnThemeChanged?.Invoke(currentMode, GetPalette(currentMode));
+        }
+
+        public void LoadSavedTheme()
         {
             string saved = PlayerPrefs.GetString(THEME_PREF_KEY, "Dark");
-            if (Enum.TryParse(saved, out ThemeMode loaded))
+            if (Enum.TryParse<ThemeMode>(saved, true, out var loaded))
             {
                 currentMode = loaded;
             }

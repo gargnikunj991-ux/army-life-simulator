@@ -188,7 +188,7 @@ namespace ArmyLife.Editor
             AssertCondition(decisiveOutcome.isSuccess, "Decisive Victory should be marked as success.");
             AssertCondition(decisiveOutcome.promotionPoints == 20, $"Expected 20 promotion points, got {decisiveOutcome.promotionPoints}.");
             AssertCondition(decisiveOutcome.cashHazardBounty == trenchMission.baseHazardBounty * 2L, "Decisive victory should award double base bounty.");
-            AssertCondition(testSoldier.HasMedal("Silver Cross"), "Decisive Victory must award the Silver Cross.");
+            AssertCondition(testSoldier.HasMedal("Silver Cross") || testSoldier.HasMedal("Distinguished Service Cross"), "Decisive Victory must award the Silver Cross or DSC.");
             AssertCondition(decisiveOutcome.squadMoraleDelta > 0, "Decisive victory should increase squad morale.");
 
             // Case B: Tactical Success

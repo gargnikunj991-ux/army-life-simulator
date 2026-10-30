@@ -426,8 +426,8 @@ namespace ArmyLife.Systems
                                     $"Only candidates with unbreakable mental grit and physical conditioning survive to earn the Beret, <b>+$800/mo Elite Stipend</b>, and legendary military respect.\n\n" +
                                     $"Will you volunteer to face the Selection Crucible?";
 
-                                string choiceAccept = $"⚡ REPORT TO SELECTION (THE CRUCIBLE)\n<size=75%>(Face 70% Attrition Selection Course • Earn Beret & Immense Respect)</size>";
-                                string choiceDecline = "🎖️ DECLINE & CONTINUE STANDARD CADET TRACK\n<size=75%>(Commission as Standard Line Officer upon Graduation)</size>";
+                                string choiceAccept = $"[SELECTION] REPORT TO SELECTION (THE CRUCIBLE)\n<size=75%>(Face 70% Attrition Selection Course • Earn Beret & Immense Respect)</size>";
+                                string choiceDecline = "[DECLINE] DECLINE & CONTINUE STANDARD CADET TRACK\n<size=75%>(Commission as Standard Line Officer upon Graduation)</size>";
 
                                 var dilemma = DilemmaModal.Instance ?? Object.FindAnyObjectByType<DilemmaModal>(FindObjectsInactive.Include);
                                 if (dilemma != null)
@@ -511,8 +511,8 @@ namespace ArmyLife.Systems
                                     $"Special Forces soldiers hold immense prestige and respect over regular troops—every soldier dreams of joining, but only the most relentless survive Hell Week.\n\n" +
                                     $"Will you report to the Selection Course or take standard regimental command?";
 
-                                string choiceAccept = $"⚡ REPORT TO SELECTION (THE CRUCIBLE)\n<size=75%>(Face 70% Attrition Selection Course • Earn Beret & Immense Respect)</size>";
-                                string choiceDecline = "🎖️ REPORT TO STANDARD REGIMENTAL COMMAND\n<size=75%>(Direct Commission as Standard Line Officer O-1)</size>";
+                                string choiceAccept = $"[SELECTION] REPORT TO SELECTION (THE CRUCIBLE)\n<size=75%>(Face 70% Attrition Selection Course • Earn Beret & Immense Respect)</size>";
+                                string choiceDecline = "[COMMISSION] REPORT TO STANDARD REGIMENTAL COMMAND\n<size=75%>(Direct Commission as Standard Line Officer O-1)</size>";
 
                                 var dilemma = DilemmaModal.Instance ?? Object.FindAnyObjectByType<DilemmaModal>(FindObjectsInactive.Include);
                                 if (dilemma != null)

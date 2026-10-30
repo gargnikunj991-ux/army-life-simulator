@@ -14,7 +14,6 @@ namespace ArmyLife.Core
         public SoldierProfile currentSoldier;
 
         [Header("Data Registries")]
-        public PowerTierSO[] powerTierDatabase;
         public MilitaryRankSO[] militaryRankDatabase;
         public FamilyLineageSO[] familyLineageDatabase;
 
@@ -147,7 +146,7 @@ namespace ArmyLife.Core
             if (parts.Length > 1) currentSoldier.lastName = parts[parts.Length - 1];
 
             // Roll realistic birth state and city from continental geography
-            var (state, city, isImperial) = WorldGeographyDatabase.RollBirthLocation(birthCountry, currentSoldier.nobleTitle);
+            var (state, city, isImperial) = WorldGeographyDatabase.RollBirthLocation(birthCountry, (int)currentSoldier.politicalInfluence);
             currentSoldier.birthState = state;
             currentSoldier.birthCity = city;
             currentSoldier.isBornInImperialState = isImperial;
@@ -318,28 +317,130 @@ namespace ArmyLife.Core
             {
                 currentSoldier.consecutiveCombatSemesters = 0;
 
-                // Garrison Duty: PT Drills & Recovery
-                currentSoldier.fitness = Mathf.Min(100f, currentSoldier.fitness + Random.Range(3f, 6f));
-                currentSoldier.health = Mathf.Min(100f, currentSoldier.health + 12f);
+                // 1. Physical Fitness & Aging Curve
+                // Fitness decreases each year without exercise, and the older they get, the faster the decrease!
+                if (!currentSoldier.hasExercisedThisSemester)
+                {
+                    float decay = 0f;
+                    if (currentSoldier.age >= 60f)
+                        decay = 4.5f + ((currentSoldier.age - 60f) * 0.30f);
+                    else if (currentSoldier.age >= 50f)
+                        decay = 2.8f + ((currentSoldier.age - 50f) * 0.18f);
+                    else if (currentSoldier.age >= 45f)
+                        decay = 1.8f;
+                    else if (currentSoldier.age >= 35f)
+                        decay = 1.0f;
+                    else if (currentSoldier.age >= 25f)
+                        decay = 0.5f;
+
+                    if (decay > 0f)
+                    {
+                        currentSoldier.fitness = Mathf.Max(15f, currentSoldier.fitness - decay);
+                        GameEvents.OnFeedEventLogged?.Invoke("PHYSICAL AGING",
+                            $"<color=#FF8844><b>[AGING & FITNESS DECAY]</b></color> At age {currentSoldier.age:F0}, lack of regular physical exercise caused muscle deconditioning (-{decay:F1}% Fitness). " +
+                            "Exercise at the base gym or run drills to maintain physical readiness.");
+                    }
+                }
+                else
+                {
+                    // Exercised this semester: maintain fitness
+                    currentSoldier.fitness = Mathf.Min(100f, currentSoldier.fitness + Random.Range(1.5f, 3.5f));
+                }
+                currentSoldier.hasExercisedThisSemester = false; // Reset for next semester
+
+                currentSoldier.health = Mathf.Min(100f, currentSoldier.health + 10f);
                 GameEvents.OnFeedEventLogged?.Invoke("GARRISON",
-                    $"<color=#00FFAA><b>[GARRISON DUTY & REFIT]</b></color> Stationed at Fort Valerius for refit, physical conditioning, and marksmanship drills. (+Health, +Fitness).");
+                    $"<color=#00FFAA><b>[GARRISON DUTY & REFIT]</b></color> Stationed at Fort Valerius for refit, administrative duties, and garrison drills. (+Health).");
 
                 // Roll High-Stakes Tactical / Barracks Dilemma
                 MilitaryDilemmaEngine.EvaluateAdultSemesterDilemma(currentSoldier, this);
 
-                // Natural Deployment Mobilization:
-                // After 1 semester of garrison refit (or immediately if volunteer extended tour is set), mobilize to the frontline!
+                // 2. Age 45+ Deployment Exemption:
+                // When someone reaches age 45, stop automatic deployment!
+                if (currentSoldier.age >= 45.0f && !currentSoldier.isVoluntaryExtendedTour)
+                {
+                    currentSoldier.isInCombatDeployment = false;
+                    currentSoldier.garrisonSemestersInRow = 0;
+                    GameEvents.OnFeedEventLogged?.Invoke("GARRISON STAFF",
+                        $"<color=#00D4FF><b>[SENIOR GARRISON APPOINTMENT • AGE 45+]</b></color> Having attained age {currentSoldier.age:F0}, " +
+                        "military doctrine exempts you from automatic frontline combat deployment. " +
+                        "You are assigned to Base Headquarters staff, training doctrine, and strategic logistics.");
+                    FinishTurnPostActions();
+                    return;
+                }
+
+                // 3. Deployment Mobilization & War Scale Hierarchy:
                 currentSoldier.garrisonSemestersInRow++;
                 if (currentSoldier.garrisonSemestersInRow >= 1 || currentSoldier.isVoluntaryExtendedTour)
                 {
-                    currentSoldier.isInCombatDeployment = true;
                     currentSoldier.garrisonSemestersInRow = 0;
-                    currentSoldier.currentTheater = RollNextWarTheater();
-                    var nextTheater = WarTheaterInfo.GetInfo(currentSoldier.currentTheater);
-                    GameEvents.OnFeedEventLogged?.Invoke("DEPLOYMENT ORDERS",
-                        $"<color=#FFD700><b>[MOBILIZATION ORDER • HIGH COMMAND]</b></color> Your garrison refit has concluded. " +
-                        $"High Command has ordered your regiment to deploy to the frontlines of <b>{nextTheater.theaterName}</b> next tour! " +
-                        $"(Danger: {nextTheater.dangerLevel}/5 | Hazard Pay: +${nextTheater.hazardPayRate}/mo). Prepare your gear and inspect your squad!");
+                    var nextTheaterType = RollNextWarTheater();
+                    var nextTheater = WarTheaterInfo.GetInfo(nextTheaterType);
+
+                    bool isColonelOrHigher = currentSoldier.currentRank != null && currentSoldier.currentRank.rankOrder >= 15; // O-6 Colonel+
+                    bool isO10General = currentSoldier.currentRank != null && currentSoldier.currentRank.paygrade == "O-10";
+
+                    if (isColonelOrHigher)
+                    {
+                        if (nextTheater.warScale == WarScale.SmallScale)
+                        {
+                            // Small-scale war: Colonel personally deploys and oversees regimental field operations
+                            currentSoldier.isInCombatDeployment = true;
+                            currentSoldier.currentTheater = nextTheaterType;
+                            GameEvents.OnFeedEventLogged?.Invoke("REGIMENTAL DEPLOYMENT",
+                                $"<color=#FFD700><b>[REGIMENTAL FIELD COMMAND • SMALL-SCALE CONFLICT]</b></color> As {currentSoldier.currentRank.rankName}, " +
+                                $"you deployed to <b>{nextTheater.theaterName}</b> to direct localized counter-insurgency operations from the tactical command post.");
+                        }
+                        else if (nextTheater.warScale == WarScale.MidScale)
+                        {
+                            // Mid-scale war: A Brigade Force arrives to command soldiers; Colonel stays at division HQ
+                            currentSoldier.isInCombatDeployment = false;
+                            GameEvents.OnFeedEventLogged?.Invoke("BRIGADE COMMAND",
+                                $"<color=#00FFAA><b>[BRIGADE FORCE MOBILIZATION • MID-SCALE WAR]</b></color> High Command mobilized a Brigade Combat Team for <b>{nextTheater.theaterName}</b>! " +
+                                $"A Brigadier General (O-7) has arrived to assume command of frontline soldiers. As Colonel, you remain in Division Headquarters directing strategic staff.");
+                        }
+                        else if (nextTheater.warScale == WarScale.LargeScale)
+                        {
+                            // Large-scale war: O-10 4-Star General commands, receiving orders directly from Government!
+                            if (isO10General)
+                            {
+                                currentSoldier.isInCombatDeployment = true;
+                                currentSoldier.currentTheater = nextTheaterType;
+                                GameEvents.OnFeedEventLogged?.Invoke("WAR CABINET DIRECTIVE",
+                                    $"<color=#FFD700><b>[DIRECT GOVERNMENT DIRECTIVE • SUPREME ALLIED COMMANDER]</b></color> " +
+                                    $"By decree of the President and Imperial War Cabinet, General <b>{currentSoldier.characterName}</b> (O-10) is designated Supreme Allied Commander for the Continental War in <b>{nextTheater.theaterName}</b>! " +
+                                    $"You receive strategic war directives directly from the Head of State.");
+                            }
+                            else
+                            {
+                                currentSoldier.isInCombatDeployment = false;
+                                GameEvents.OnFeedEventLogged?.Invoke("SUPREME COMMAND",
+                                    $"<color=#FF4444><b>[CONTINENTAL THEATER WAR • O-10 SUPREME COMMAND]</b></color> " +
+                                    $"A large-scale continental war has erupted in <b>{nextTheater.theaterName}</b>! The civilian Government has deployed a 4-Star General (O-10) to assume Supreme Theater Command, receiving war directives directly from the Head of State. You serve as Division Chief of Staff.");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Enlisted & Junior Officers (E-1 to O-5)
+                        currentSoldier.isInCombatDeployment = true;
+                        currentSoldier.currentTheater = nextTheaterType;
+
+                        string commandContext = "";
+                        if (nextTheater.warScale == WarScale.MidScale)
+                        {
+                            commandContext = " [Mid-Scale War: A Brigade Force under Brigadier General O-7 has arrived to take command of the soldiers!]";
+                        }
+                        else if (nextTheater.warScale == WarScale.LargeScale)
+                        {
+                            commandContext = " [Large-Scale War: A 4-Star General O-10 has been brought in to take Supreme Command, receiving directives directly from the Government!]";
+                        }
+
+                        GameEvents.OnFeedEventLogged?.Invoke("DEPLOYMENT ORDERS",
+                            $"<color=#FFD700><b>[MOBILIZATION ORDER • HIGH COMMAND]</b></color> Your garrison refit has concluded. " +
+                            $"High Command has ordered your regiment to deploy to the frontlines of <b>{nextTheater.theaterName}</b> next tour!{commandContext} " +
+                            $"(Danger: {nextTheater.dangerLevel}/5 | Hazard Pay: +${nextTheater.hazardPayRate}/mo). Prepare your gear and inspect your squad!");
+                    }
                 }
 
                 FinishTurnPostActions();
@@ -408,9 +509,9 @@ namespace ArmyLife.Core
                 $"• Heavy Gunner: <b>{gunner?.nickname ?? "Anvil"}</b> ({gunnerStatus}) | Combat Medic: <b>{medic?.nickname ?? "Doc"}</b> ({medicStatus})\n\n" +
                 $"<i>Phase 1: Make your critical tactical approach choice:</i>";
 
-            string choiceA = "📻 OBEY HQ ORDERS: MAIN ROAD ADVANCE\n<size=75%>Follow battalion orders (+10 CO Standing, but high risk of catastrophic IED detonation!)</size>";
-            string choiceB = "🥾 TRUST SCOUT'S FIELD WHISPER\n<size=75%>Divert through the marsh creek defiles (+20 Tactical Advantage, bypasses IED, saves squad)</size>";
-            string choiceC = "💥 CALL ARTILLERY PRE-BOMBARDMENT\n<size=75%>Blanket road with high-explosive battery fire to detonate buried IEDs from a distance</size>";
+            string choiceA = "[HQ ORDER] OBEY HQ: MAIN ROAD ADVANCE\n<size=75%>Follow battalion orders (+10 CO Standing, but high risk of catastrophic IED detonation!)</size>";
+            string choiceB = "[RECON] TRUST SCOUT'S FIELD WHISPER\n<size=75%>Divert through marsh creek defiles (+20 Tactical Advantage, bypasses IED, saves squad)</size>";
+            string choiceC = "[FIRE SUPPORT] CALL ARTILLERY PRE-BOMBARDMENT\n<size=75%>Blanket road with high-explosive battery fire to detonate buried IEDs from a distance</size>";
 
             var dilemma = DilemmaModal.Instance ?? Object.FindAnyObjectByType<DilemmaModal>(FindObjectsInactive.Include);
             if (dilemma != null)
@@ -517,24 +618,24 @@ namespace ArmyLife.Core
 
             if (isCommander)
             {
-                choiceA = "⚔️ AGGRESSIVE BREACH ASSAULT\n<size=75%>Direct Gunner suppression & storm redoubt with grenades</size>";
+                choiceA = "[ASSAULT] AGGRESSIVE BREACH ASSAULT\n<size=75%>Direct Gunner suppression & storm redoubt with grenades</size>";
                 orderA = TacticalChoiceOrder.AggressiveBreach;
 
-                choiceB = "💥 HEAVY CYCLIC SUPPRESSION PIN\n<size=75%>Lay continuous machine gun crossfire to silence bunker slits</size>";
+                choiceB = "[SUPPRESSION] HEAVY CYCLIC SUPPRESSION PIN\n<size=75%>Lay continuous machine gun crossfire to silence bunker slits</size>";
                 orderB = TacticalChoiceOrder.HeavySuppression;
 
-                choiceC = "📞 DANGER-CLOSE ARTILLERY STRIKE\n<size=75%>Coordinate 155mm battery barrage onto redoubt roof</size>";
+                choiceC = "[RADIO] DANGER-CLOSE ARTILLERY STRIKE\n<size=75%>Coordinate 155mm battery barrage onto redoubt roof</size>";
                 orderC = TacticalChoiceOrder.ArtilleryStrikeCall;
             }
             else
             {
-                choiceA = "🪖 LEAD POINT BREACH ASSAULT\n<size=75%>Aggressive breach through wire with grenades (High Risk / High Merit)</size>";
+                choiceA = "[POINT] LEAD POINT BREACH ASSAULT\n<size=75%>Aggressive breach through wire with grenades (High Risk / High Merit)</size>";
                 orderA = TacticalChoiceOrder.AggressiveBreach;
 
-                choiceB = "💥 COVERING MACHINE GUN SUPPRESSION\n<size=75%>Coordinate with Heavy Gunner to maintain suppressing crossfire</size>";
+                choiceB = "[FIRE SUPPORT] COVERING MACHINE GUN SUPPRESSION\n<size=75%>Coordinate with Heavy Gunner to maintain suppressing crossfire</size>";
                 orderB = TacticalChoiceOrder.HeavySuppression;
 
-                choiceC = "🎯 ACCURATE RIFLE OVERWATCH\n<size=75%>Pick off enemy counter-snipers and bunker gunners</size>";
+                choiceC = "[SNIPER] ACCURATE RIFLE OVERWATCH\n<size=75%>Pick off enemy counter-snipers and bunker gunners</size>";
                 orderC = TacticalChoiceOrder.ReconnaissanceFlank;
             }
 
@@ -595,9 +696,9 @@ namespace ArmyLife.Core
                 $"• Available Medkits: <b>{currentSoldier.fieldMedkitsCount}</b>\n\n" +
                 $"<i>Make your critical command decision under enemy fire:</i>";
 
-            string choiceA = "🩸 HEROIC CASUALTY RESCUE (CASEVAC)\n<size=75%>Drag your pinned brother to safety under mortar fire! (Heroic valor, saves comrade)</size>";
-            string choiceB = "🛡️ DEFENSIVE OVERWATCH WITHDRAWAL\n<size=75%>Establish leap-frog firing line preserving squad cohesion and minimal losses</size>";
-            string choiceC = "📦 RAID HOSTILE CIPHER VAULT\n<size=75%>Seize enemy operational maps & ciphers before detonating bunker (+Merit & Bounty)</size>";
+            string choiceA = "[CASEVAC] HEROIC CASUALTY RESCUE\n<size=75%>Drag your pinned brother to safety under mortar fire! (Heroic valor, saves comrade)</size>";
+            string choiceB = "[OVERWATCH] DEFENSIVE WITHDRAWAL\n<size=75%>Establish leap-frog firing line preserving squad cohesion and minimal losses</size>";
+            string choiceC = "[INTEL] RAID HOSTILE CIPHER VAULT\n<size=75%>Seize enemy operational maps & ciphers before detonating bunker (+Merit & Bounty)</size>";
 
             var dilemma = DilemmaModal.Instance ?? Object.FindAnyObjectByType<DilemmaModal>(FindObjectsInactive.Include);
             if (dilemma != null)
@@ -702,24 +803,38 @@ namespace ArmyLife.Core
                 PromotionBoardEngine.EvaluatePromotionBoard(currentSoldier, militaryRankDatabase);
             }
 
-            // Annual Longevity Pay Step (Awarded each full year of service, unless promoted that year)
-            if (currentSoldier.totalSemestersLived > 0 && currentSoldier.totalSemestersLived % 2 == 0)
-            {
-                if (currentSoldier.wasPromotedThisYear)
-                {
-                    currentSoldier.wasPromotedThisYear = false;
-                }
-                else if (!currentSoldier.isRetired && !currentSoldier.isCivilian && currentSoldier.careerTrack != CareerTrack.MilitaryWarAcademy && !currentSoldier.isYouthPhase)
-                {
-                    long baseSalary = (currentSoldier.currentRank != null) ? currentSoldier.currentRank.baseMonthlySalary : 600L;
-                    long annualRaise = System.Math.Max(150L, (long)(baseSalary * 0.05f));
-                    currentSoldier.longevityMonthlyPayBonus += annualRaise;
-                    currentSoldier.annualLongevityRaisesEarned++;
+            // Track semesters toward multi-year longevity pay steps
+            currentSoldier.semestersSinceLastPayRaise++;
 
-                    GameEvents.OnFeedEventLogged?.Invoke("PAYDAY",
-                        $"<color=#00FFAA><b>[ANNUAL SERVICE PAY RAISE]</b></color> You completed a full year of military service without rank promotion. " +
-                        $"Imperial regulations awarded you an annual longevity pay raise of <b>+${annualRaise:N0}/mo</b>! " +
-                        $"(Total Accumulated Longevity Pay: +${currentSoldier.longevityMonthlyPayBonus:N0}/mo).");
+            // Diminishing Scale Longevity Pay Step:
+            // 10.0% initial rise, decreases by 0.5% with each rise until 5.0%, then stops entirely.
+            // Frequency restrictions: E-1..E-3 (every 1 yr), E-4..E-5 (every 2 yrs), E-6+ (every 3 yrs + merit >= 80 + squad respect >= 65).
+            if (currentSoldier.wasPromotedThisYear)
+            {
+                currentSoldier.wasPromotedThisYear = false;
+                currentSoldier.semestersSinceLastPayRaise = 0;
+            }
+            else if (!currentSoldier.isRetired && !currentSoldier.isCivilian && currentSoldier.careerTrack != CareerTrack.MilitaryWarAcademy && !currentSoldier.isYouthPhase)
+            {
+                if (SalaryCalculator.CanEarnPayRise(currentSoldier, out string payReason))
+                {
+                    float nextRate = SalaryCalculator.GetNextPayRisePercentage(currentSoldier.annualLongevityRaisesEarned);
+                    if (nextRate > 0f)
+                    {
+                        long baseSalary = (currentSoldier.currentRank != null) ? currentSoldier.currentRank.baseMonthlySalary : 600L;
+                        long annualRaise = (long)(baseSalary * nextRate);
+                        currentSoldier.longevityMonthlyPayBonus += annualRaise;
+                        currentSoldier.annualLongevityRaisesEarned++;
+                        currentSoldier.semestersSinceLastPayRaise = 0;
+
+                        bool ceilingReached = SalaryCalculator.GetNextPayRisePercentage(currentSoldier.annualLongevityRaisesEarned) <= 0f;
+                        if (ceilingReached) currentSoldier.hasReachedPayRaiseCeiling = true;
+
+                        string ceilingNote = ceilingReached ? " Career longevity pay rise ceiling reached (step raises now stop)." : "";
+                        GameEvents.OnFeedEventLogged?.Invoke("PAYDAY",
+                            $"<color=#00FFAA><b>[PAY RISE]</b></color> Pay rise: <b>+${annualRaise:N0}/mo (+{nextRate * 100f:F1}%)</b>! " +
+                            $"(New Base + Longevity Pay: ${baseSalary + currentSoldier.longevityMonthlyPayBonus:N0}/mo).{ceilingNote}");
+                    }
                 }
             }
 
@@ -852,8 +967,8 @@ namespace ArmyLife.Core
                 $"You will report immediately for military Basic Training. From recruit drills, you will forge your military career—with an open pipeline to rise through the ranks, even reaching commissioned officer rank as an <b>Ensign (O-1) / 2nd Lieutenant</b> and leading your forces to victory!\n\n" +
                 $"<b>Which branch will you answer the call to join?</b>";
 
-            string choiceArmy = "🪖 JOIN THE ARMY\n<size=75%>Ground Forces & Infantry • Basic Combat Training (100% State Funded • Path to 2nd Lt)</size>";
-            string choiceAirForce = "✈️ JOIN THE AIR FORCE\n<size=75%>Aviation & Flight Wing • Basic Flight Training (100% State Funded • Path to Ensign)</size>";
+            string choiceArmy = "[ARMY] JOIN THE ARMY\n<size=75%>Ground Forces & Infantry • Basic Combat Training (100% State Funded • Path to 2nd Lt)</size>";
+            string choiceAirForce = "[AIR FORCE] JOIN THE AIR FORCE\n<size=75%>Aviation & Flight Wing • Basic Flight Training (100% State Funded • Path to Ensign)</size>";
 
             var dilemma = DilemmaModal.Instance;
             if (dilemma == null)
@@ -1033,34 +1148,65 @@ namespace ArmyLife.Core
                 return;
             }
 
-            // Admission Standards: Discipline (intellect) >= 55% and Physical Readiness (fitness) >= 55%
-            bool meetsDiscipline = currentSoldier.intellect >= 55f;
-            bool meetsFitness = currentSoldier.fitness >= 55f;
+            // 1. Check Special Admission Waivers
+            bool isFreeMedalAppointment = currentSoldier.hasFreeOfficerSchoolWaiver;
+            bool isCOEndorsed = currentSoldier.hasOfficerCandidateSchoolRecommendation;
 
-            // Limited seats check: Competitive Entrance Board (Quota)
-            float applicantScore = (currentSoldier.intellect * 0.40f) + (currentSoldier.fitness * 0.35f) + (currentSoldier.meritRating * 0.25f);
-            if (currentSoldier.origin == SoldierOrigin.MilitaryLegacy || currentSoldier.nobleTitle > NobleRank.Commoner)
+            // Admission Standards:
+            // Highest Medal or E-5 CO Recommendation: 100% Guaranteed Board Admission Waiver!
+            if (!isFreeMedalAppointment && !isCOEndorsed)
             {
-                applicantScore += 5f; // Legacy consideration bonus
+                // Normal Lateral Admission (A Lot Harder):
+                // Requires Discipline/Tactics >= 75%, Physical Readiness >= 75%, Merit >= 75%, clean record, score >= 75
+                int demerits = (currentSoldier.disciplinaryRecords != null ? currentSoldier.disciplinaryRecords.Count : 0) + currentSoldier.article15PunishmentsCount;
+                bool meetsDiscipline = currentSoldier.intellect >= 75f;
+                bool meetsFitness = currentSoldier.fitness >= 75f;
+                bool meetsMerit = currentSoldier.meritRating >= 75f;
+                bool cleanRecord = demerits == 0 && !currentSoldier.hasFelonyDischargeRecord;
+
+                float applicantScore = (currentSoldier.intellect * 0.40f) + (currentSoldier.fitness * 0.35f) + (currentSoldier.meritRating * 0.25f);
+                if (currentSoldier.origin == SoldierOrigin.MilitaryLegacy)
+                {
+                    applicantScore += 5f;
+                }
+                bool seatsAvailable = applicantScore >= 75f;
+
+                if (!meetsDiscipline || !meetsFitness || !meetsMerit || !cleanRecord || !seatsAvailable)
+                {
+                    string reason = "";
+                    if (!meetsDiscipline) reason += $"Discipline/Tactics ({currentSoldier.intellect:F0}/75% min) ";
+                    if (!meetsFitness) reason += $"Physical Fitness ({currentSoldier.fitness:F0}/75% min) ";
+                    if (!meetsMerit) reason += $"Merit Rating ({currentSoldier.meritRating:F0}/75% min) ";
+                    if (!cleanRecord) reason += $"Spotless UCMJ Record ({demerits} marks) ";
+                    if (!seatsAvailable) reason += $"Competitive Lateral Quota ({applicantScore:F0}/75 score required) ";
+
+                    GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
+                        $"<color=#FF8800><b>[ACADEMY ADMISSION REJECTED • STRICT LATERAL STANDARDS]</b></color> The {academyName} Selection Board rejected your lateral application. " +
+                        $"Normal lateral officer entry is extremely rigorous. Deficiencies: <b>{reason}</b>. " +
+                        $"(Tip: Win an E-5 CO Recommendation or a Top Valor Medal for guaranteed/free entry).");
+                    GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+                    return;
+                }
             }
-            bool seatsAvailable = applicantScore >= 55f;
 
-            if (!meetsDiscipline || !meetsFitness || !seatsAvailable)
+            // Tuition cost calculation:
+            if (isFreeMedalAppointment)
             {
-                string reason = "";
-                if (!meetsDiscipline) reason += $"Discipline/Tactics ({currentSoldier.intellect:F0}/55% min) ";
-                if (!meetsFitness) reason += $"Physical Fitness ({currentSoldier.fitness:F0}/55% min) ";
-                if (!seatsAvailable) reason += $"Competitive Seat Quota ({applicantScore:F0}/55 score required for limited admission seats) ";
-
-                GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
-                    $"<color=#FF8800><b>[ACADEMY ADMISSION REJECTED • LIMITED SEATS]</b></color> The {academyName} Selection Board rejected your application. " +
-                    $"Deficiencies: <b>{reason}</b>. Improve your stats and reapply next term!");
-                GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
-                return;
+                tuitionCost = 0L;
+                currentSoldier.academyTuitionDebt = 0;
+            }
+            else if (isCOEndorsed)
+            {
+                tuitionCost = tuitionCost / 2; // 50% command sponsorship discount
             }
 
             // Tuition Payment check
-            if (!takeLoan)
+            string paymentMethod;
+            if (isFreeMedalAppointment)
+            {
+                paymentMethod = "100% Free Congressional / High Command Medal of Honor Full Scholarship ($0 Tuition, $0 Debt)";
+            }
+            else if (!takeLoan)
             {
                 if (currentSoldier.cashBalance < tuitionCost)
                 {
@@ -1071,23 +1217,14 @@ namespace ArmyLife.Core
                 }
                 currentSoldier.cashBalance -= tuitionCost;
                 currentSoldier.academyTuitionDebt = 0;
+                paymentMethod = isCOEndorsed ? $"Paid Command-Discounted ${tuitionCost:N0} cash upfront" : $"Paid ${tuitionCost:N0} cash upfront";
             }
             else
             {
                 currentSoldier.academyTuitionDebt = tuitionCost;
                 currentSoldier.academyLoanDeductionPercent = Mathf.Clamp(loanRepaymentPercent, 0.10f, 0.80f);
+                paymentMethod = $"Approved for ${tuitionCost:N0} Education Loan at 9% annual interest ({currentSoldier.academyLoanDeductionPercent * 100f:F0}% monthly salary deduction)";
             }
-
-            // Enroll in Academy
-            currentSoldier.careerTrack = CareerTrack.MilitaryWarAcademy;
-            currentSoldier.academySemestersCompleted = 0;
-            currentSoldier.militarySchoolSemestersCompleted = 0;
-            currentSoldier.assignedDepartment = academyName;
-            currentSoldier.isInCombatDeployment = false;
-
-            string paymentMethod = (!takeLoan) 
-                ? $"Paid ${tuitionCost:N0} cash upfront" 
-                : $"Approved for ${tuitionCost:N0} Education Loan at 9% annual interest ({currentSoldier.academyLoanDeductionPercent * 100f:F0}% monthly salary deduction)";
 
             GameEvents.OnFeedEventLogged?.Invoke("ACADEMY",
                 $"<color=#FFD700><b>[{academyName.ToUpper()} ADMISSION GRANTED • {programYears}-YEAR OFFICER PROGRAM]</b></color> " +
@@ -1133,13 +1270,35 @@ namespace ArmyLife.Core
                 return;
             }
 
-            // Enlisted criteria: CO favor >= 70, Merit >= 60, Fitness >= 60, Combat >= 45
-            bool meetsCO = currentSoldier.coFavor >= 70f;
-            bool meetsMerit = currentSoldier.meritRating >= 60f;
-            bool meetsFit = currentSoldier.fitness >= 60f;
-            bool meetsCombat = currentSoldier.combatSkill >= 45f;
+            // Direct Selection Invitation via Top Valor Medals (Medal of Honor / DSC / Silver Star)
+            if (currentSoldier.hasSpecialForcesInvitation)
+            {
+                currentSoldier.hasCOSpecialForcesRecommendation = true;
+                currentSoldier.isSpecialForcesCandidate = true;
+                currentSoldier.specialForcesTrainingSemesters = 0;
+                currentSoldier.isInCombatDeployment = false;
 
-            if (meetsCO && meetsMerit && meetsFit && meetsCombat)
+                GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES",
+                    "<color=#FFD700><b>[DIRECT SFAS ORDERS ISSUED • SOCOM INVITATION]</b></color> " +
+                    "Special Operations Command processed your Direct Selection Invitation! " +
+                    "Orders cut immediately. You reported to Camp Mackall for Phase 1: The Crucible (Hell Week). " +
+                    "Candidate Warning: Exactly 10% survive Selection; 90% wash out.");
+                LifePersistenceManager.SaveSoldierLife(currentSoldier);
+                GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
+                return;
+            }
+
+            // Normal lateral petition (A Lot Harder):
+            // Requires rank E-4+ or Officer, CO favor >= 80, Merit >= 75, Fitness >= 80, Combat >= 75, zero demerits
+            int demerits = (currentSoldier.disciplinaryRecords != null ? currentSoldier.disciplinaryRecords.Count : 0) + currentSoldier.article15PunishmentsCount;
+            bool meetsRank = currentSoldier.isOfficer || (currentSoldier.currentRank != null && currentSoldier.currentRank.rankOrder >= 4);
+            bool meetsCO = currentSoldier.coFavor >= 80f;
+            bool meetsMerit = currentSoldier.meritRating >= 75f;
+            bool meetsFit = currentSoldier.fitness >= 80f;
+            bool meetsCombat = currentSoldier.combatSkill >= 75f;
+            bool cleanDiscipline = demerits == 0 && !currentSoldier.hasFelonyDischargeRecord;
+
+            if (meetsRank && meetsCO && meetsMerit && meetsFit && meetsCombat && cleanDiscipline)
             {
                 currentSoldier.hasCOSpecialForcesRecommendation = true;
                 currentSoldier.isSpecialForcesCandidate = true;
@@ -1148,21 +1307,26 @@ namespace ArmyLife.Core
 
                 GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES",
                     "<color=#FFD700><b>[CO RECOMMENDATION APPROVED • SELECTION ORDERS ISSUED]</b></color> " +
-                    "Your Commanding Officer signed your Special Forces candidate packet: " +
+                    "After rigorous vetting, your Commanding Officer signed your Special Forces candidate packet: " +
                     "<i>'This soldier has the exceptional combat lethality and discipline required for covert operations.'</i> " +
-                    "You have been issued official orders to attend **Special Forces Assessment & Selection (SFAS)**! You must now face Phase 1: The Crucible and 70% attrition Hell Week.");
+                    "You have been issued official orders to attend **Special Forces Assessment & Selection (SFAS)**! " +
+                    "Prepare for Phase 1: The Crucible. Note: Exactly 10% of candidates survive.");
             }
             else
             {
                 string missing = "";
-                if (!meetsCO) missing += $"CO Favor ({currentSoldier.coFavor:F0}/70% min) ";
-                if (!meetsMerit) missing += $"Merit ({currentSoldier.meritRating:F0}/60% min) ";
-                if (!meetsFit) missing += $"Fitness ({currentSoldier.fitness:F0}/60% min) ";
-                if (!meetsCombat) missing += $"Combat Skill ({currentSoldier.combatSkill:F0}/45% min) ";
+                if (!meetsRank) missing += "Minimum Rank E-4 Corporal/Specialist required; ";
+                if (!meetsCO) missing += $"CO Favor ({currentSoldier.coFavor:F0}/80% min); ";
+                if (!meetsMerit) missing += $"Merit ({currentSoldier.meritRating:F0}/75% min); ";
+                if (!meetsFit) missing += $"Fitness ({currentSoldier.fitness:F0}/80% min); ";
+                if (!meetsCombat) missing += $"Combat Skill ({currentSoldier.combatSkill:F0}/75% min); ";
+                if (!cleanDiscipline) missing += $"Clean UCMJ Record required ({demerits} demerits); ";
 
                 GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES",
-                    $"<color=#FF8800><b>[CO RECOMMENDATION DENIED]</b></color> Your CO reviewed your request and shook his head: " +
-                    $"<i>'Not ready for the black ops group yet.'</i> Deficiencies: <b>{missing}</b>. Prove yourself on the frontlines first.");
+                    $"<color=#FF8800><b>[CO RECOMMENDATION DENIED • STRINGENT SF PREREQUISITES]</b></color> " +
+                    $"Your CO reviewed your request and shook his head: " +
+                    $"<i>'Normal lateral entry into Special Forces is strictly reserved for the most elite NCOs.'</i> " +
+                    $"Deficiencies: <b>{missing}</b>. (Tip: Win a Top Valor Medal for an automatic SOCOM Direct Invitation).");
             }
 
             LifePersistenceManager.SaveSoldierLife(currentSoldier);
@@ -1253,8 +1417,8 @@ namespace ArmyLife.Core
                 $"<i>'Just ring the bell three times, candidate. Warm shower, hot chow, clean sheets, and no shame. Your conventional unit is waiting for you.'</i>\n\n" +
                 $"What is your decision?";
 
-            string choiceEndure = "⚔️ REFUSE TO QUIT: DRIVE INTO THE NIGHT!\n<size=75%>(Endure the agony • Requires Fitness ≥ 65 & Discipline ≥ 55)</size>";
-            string choiceDOR = "🔔 RING THE BRASS BELL (DROP ON REQUEST)\n<size=75%>(Withdraw with honor to regular conventional forces)</size>";
+            string choiceEndure = "[ENDURE] REFUSE TO QUIT: DRIVE INTO THE NIGHT!\n<size=75%>(Endure the agony • Requires Fitness ≥ 65 & Discipline ≥ 55)</size>";
+            string choiceDOR = "[WITHDRAW] RING THE BRASS BELL (DROP ON REQUEST)\n<size=75%>(Withdraw with honor to regular conventional forces)</size>";
 
             var dilemma = DilemmaModal.Instance ?? Object.FindAnyObjectByType<DilemmaModal>(FindObjectsInactive.Include);
             if (dilemma != null)
@@ -1303,10 +1467,19 @@ namespace ArmyLife.Core
                 return;
             }
 
-            // Evaluate grit based on Physical Fitness, Discipline, and Combat Skill
-            float gritScore = (currentSoldier.fitness * 0.40f) + (currentSoldier.discipline * 0.35f) + (currentSoldier.combatSkill * 0.25f) + Random.Range(-5f, 10f);
+            // Authentic 10% Selection Pass Rate (90% Attrition):
+            // "and even in this only the 10% who go to selection pass"
+            float basePassRate = 0.10f;
+            float statBonus = 0f;
+            if (currentSoldier.fitness >= 90f) statBonus += 0.03f;
+            if (currentSoldier.discipline >= 90f) statBonus += 0.02f;
+            if (currentSoldier.intellect >= 85f) statBonus += 0.02f;
+            if (currentSoldier.hasSpecialForcesInvitation) statBonus += 0.03f;
 
-            if (gritScore >= 56f && currentSoldier.health > 25f)
+            float passProbability = Mathf.Clamp(basePassRate + statBonus, 0.05f, 0.18f);
+            bool survived = (Random.value < passProbability) && (currentSoldier.health > 25f);
+
+            if (survived)
             {
                 // SURVIVED THE CRUCIBLE!
                 AudioManager.PlayBugleFanfare();
@@ -1314,12 +1487,13 @@ namespace ArmyLife.Core
                 currentSoldier.fitness = Mathf.Min(100f, currentSoldier.fitness + 10f);
                 currentSoldier.combatSkill = Mathf.Min(100f, currentSoldier.combatSkill + 12f);
                 currentSoldier.discipline = Mathf.Min(100f, currentSoldier.discipline + 12f);
-                currentSoldier.squadRespect = Mathf.Min(100f, currentSoldier.squadRespect + 20f);
+                currentSoldier.squadRespect = Mathf.Min(100f, currentSoldier.squadRespect + 25f);
 
                 GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES SELECTION",
-                    $"<color=#00FFAA><b>[CRUCIBLE CONQUERED • 70% ATTRITION SURVIVED]</b></color> " +
-                    $"You gritted your teeth through the freezing darkness, refusing to ring the bell! Out of 130 hopefuls, only 34 made it past the Crucible. " +
-                    $"You have been officially selected to advance to Phase 2: Advanced Weapons, Foreign Tactics & SERE Survival!");
+                    $"<color=#00FFAA><b>[CRUCIBLE CONQUERED • 10% SELECTION SURVIVOR]</b></color> " +
+                    $"Through freezing darkness and grueling 30-mile rucks, you refused to ring the brass bell! " +
+                    $"Against 90% attrition, you were among the legendary <b>10%</b> of candidates who survived Selection. " +
+                    $"You advance to Phase 2: Tactical Q-Course, Advanced Weapons & SERE Survival!");
             }
             else
             {
@@ -1331,9 +1505,10 @@ namespace ArmyLife.Core
                 currentSoldier.fitness = Mathf.Max(30f, currentSoldier.fitness - 5f);
 
                 GameEvents.OnFeedEventLogged?.Invoke("SPECIAL FORCES SELECTION",
-                    $"<color=#FF8800><b>[SELECTION ATTRITION • MEDICALLY DROPPED]</b></color> " +
-                    $"On Mile 34, severe hypothermia and torn ligaments collapsed your legs. The cadre medical team pulled you from the course for your own safety. " +
-                    $"Like 70% of candidates who attempt Selection, you washed out of the Crucible. Reassigned with honor to conventional forces. You may rebuild your conditioning and re-apply later!");
+                    $"<color=#FF8800><b>[SELECTION ATTRITION • 90% CASUALTY RATE]</b></color> " +
+                    $"On the grueling 35-mile trek across Hoffman Ridge, severe muscle failure and exhaustion collapsed your legs. " +
+                    $"Like <b>90% of candidates</b> who attempt Selection, you washed out of the Crucible (10% pass rate). " +
+                    $"Reassigned with honor to conventional units. You may rebuild your conditioning and re-apply later!");
             }
 
             LifePersistenceManager.SaveSoldierLife(currentSoldier);
@@ -1378,6 +1553,9 @@ namespace ArmyLife.Core
                     $"Inducted into <b>{sfName}</b> as an elite <b>{sfRole}</b> and pinned with the <i>{sfMedal}</i>!\n" +
                     $"<b>Special Forces Prestige Aura Activated:</b> Regular soldiers, squadmates, and officers look up to you with legendary respect (+35 Squad Respect, +25 Merit Rating, +20 CO Favor)! " +
                     $"You now draw an exclusive <b>+$800/mo Elite Combat Stipend</b>.");
+
+                // Special Forces ceremony feed entry logged above
+                AudioManager.PlayBugleFanfare();
             }
             else
             {
@@ -1445,6 +1623,7 @@ namespace ArmyLife.Core
         {
             if (currentSoldier == null || nextRank == null || currentSoldier.isRetired || currentSoldier.isDead) return;
 
+            MilitaryRankSO oldRank = currentSoldier.currentRank;
             AudioManager.PlayBugleFanfare();
 
             currentSoldier.currentRank = nextRank;
@@ -1452,13 +1631,19 @@ namespace ArmyLife.Core
             currentSoldier.accumulatedPromotionPoints = 0;
             currentSoldier.timeInCurrentRankSemesters = 0;
             currentSoldier.wasPromotedThisYear = true;
+            currentSoldier.semestersSinceLastPayRaise = 0;
             currentSoldier.longevityMonthlyPayBonus = 0L;
+
+            long oldSalary = oldRank != null ? oldRank.baseMonthlySalary : 0L;
+            long salaryRaise = nextRank.baseMonthlySalary - oldSalary;
+            float pct = oldSalary > 0 ? ((float)salaryRaise / oldSalary) * 100f : 0f;
+            string raiseText = (salaryRaise > 0) ? $"Pay rise: +${salaryRaise:N0}/mo (+{pct:F1}%). " : "";
 
             GameEvents.OnFeedEventLogged?.Invoke("PROMOTION",
                 $"<color=#00FFAA><b>[PROMOTION APPROVED!]</b></color> You have been promoted to <b>{nextRank.rankName} ({nextRank.paygrade})</b>! " +
-                $"New Base Salary: ${nextRank.baseMonthlySalary:N0}/mo.");
+                $"{raiseText}New Base Salary: ${nextRank.baseMonthlySalary:N0}/mo.");
 
-            if (nextRank.unlocksSelfTalentTesting && !currentSoldier.isPersonalTalentRevealed)
+            if (nextRank.paygrade == "E-4" && !currentSoldier.isPersonalTalentRevealed)
             {
                 currentSoldier.isPersonalTalentRevealed = true;
                 GameEvents.OnFeedEventLogged?.Invoke("CLEARANCE",
@@ -1473,16 +1658,9 @@ namespace ArmyLife.Core
             }
 
             GameEvents.OnSoldierStatsUpdated?.Invoke(currentSoldier);
-        }
 
-        public PowerTierSO GetPowerTierSO(int tierLevel)
-        {
-            if (powerTierDatabase == null) return null;
-            foreach (var tier in powerTierDatabase)
-            {
-                if (tier != null && tier.tierLevel == tierLevel) return tier;
-            }
-            return null;
+            // Promotion ceremony fanfare & feed log
+            AudioManager.PlayBugleFanfare();
         }
 
         public FamilyLineageSO GetDefaultLineage()

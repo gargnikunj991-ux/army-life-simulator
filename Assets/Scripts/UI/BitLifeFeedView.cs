@@ -94,38 +94,32 @@ namespace ArmyLife.UI
 
             switch (category.ToUpper())
             {
-                case "BIRTH":
                 case "ORIGIN":
                 case "ENLISTMENT":    return $"<color=#{oliveHex}><b>[ENLISTMENT]</b></color>";
                 case "PAYDAY":
                 case "FINANCES":      return $"<color=#{greenHex}><b>[PAYROLL]</b></color>";
                 case "PROMOTION":     return $"<color=#{goldHex}><b>[PROMOTION]</b></color>";
-                case "BREAKTHROUGH":
                 case "QUALIFICATION": return $"<color=#{goldHex}><b>[QUALIFICATION]</b></color>";
-                case "TESTING":
                 case "ASVAB":         return $"<color=#{blueHex}><b>[MEPS / ASVAB]</b></color>";
-                case "SECRET CAVE":
                 case "INTELLIGENCE":  return $"<color=#{coyoteHex}><b>[INTELLIGENCE]</b></color>";
                 case "MARRIAGE":
                 case "PERSONAL":
-                case "DYNASTY":       return $"<color=#{coyoteHex}><b>[PERSONAL LIFE]</b></color>";
+                case "FAMILY":        return $"<color=#{coyoteHex}><b>[PERSONAL LIFE]</b></color>";
                 case "CLEARANCE":     return $"<color=#{goldHex}><b>[SECURITY CLEARANCE]</b></color>";
-                case "BOTTLENECK":
                 case "WARNING":       return $"<color=#{goldHex}><b>[DISCIPLINARY WARNING]</b></color>";
                 case "COMBAT":
                 case "WARFARE":       return $"<color=#{coyoteHex}><b>[COMBAT DEPLOYMENT]</b></color>";
                 case "CASUALTY":      return $"<color=#{redHex}><b>[CASUALTY REPORT]</b></color>";
                 case "RETIREMENT":    return $"<color=#{goldHex}><b>[HONORABLE RETIREMENT]</b></color>";
-                case "CRIPPLED":      return $"<color=#{redHex}><b>[COMBAT WOUND]</b></color>";
+                case "WOUND":         return $"<color=#{redHex}><b>[COMBAT WOUND]</b></color>";
                 case "DEATH":
-                case "FATALITY":
                 case "KIA":           return $"<color=#{redHex}><b>[K.I.A. NOTICE]</b></color>";
-                case "REINCARNATION":
-                case "SUCCESSION":    return $"<color=#{goldHex}><b>[NEXT GENERATION]</b></color>";
                 case "SETTINGS":      return $"<color=#{blueHex}><b>[SETTINGS]</b></color>";
                 case "MEDICAL":       return $"<color=#{redHex}><b>[MEDICAL CLINIC]</b></color>";
                 case "TRAINING":      return $"<color=#{oliveHex}><b>[TRAINING DRILL]</b></color>";
-                case "ACADEMICS":     return $"<color=#{blueHex}><b>[ACADEMIC STUDY]</b></color>";
+                case "BARRACKS":      return $"<color=#{oliveHex}><b>[BARRACKS LIFE]</b></color>";
+                case "ARMORY":
+                case "PX":            return $"<color=#{coyoteHex}><b>[PX ARMORY]</b></color>";
                 default:              return $"<color=#{coyoteHex}><b>[{category.ToUpper()}]</b></color>";
             }
         }

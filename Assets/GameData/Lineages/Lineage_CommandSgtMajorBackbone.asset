@@ -14,14 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmyLife.Data.FamilyLineageSO
   archetypeName: Command Sgt Major Backbone
   fatherTitle: CSM Miller, 75th Rangers
-  description: Enlisted royalty. You know every rule loophole in the book and have
-    the grunts' unwavering trust.
-  startingNobleRank: 1
+  description: Enlisted heritage through and through. You were raised around barracks
+    discipline and have the grunts' unwavering trust.
   startingInfluence: 35
   startingRespect: 75
-  startingClanFavor: 50
   startingFamilyWealth: 10000
-  startingPowerTier: 1
-  startingFoundationalTempering: 20
   hasWestPointFastTrack: 0
   hasSecretBranchInvitation: 0

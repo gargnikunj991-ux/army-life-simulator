@@ -19,6 +19,17 @@ namespace ArmyLife.Data
         UrbanCitadel = 8
     }
 
+    /// <summary>
+    /// Scale and strategic escalation level of military conflicts.
+    /// Determines senior officer (O-6+ Colonel, O-7/O-8 General, O-10 4-Star General) command hierarchy.
+    /// </summary>
+    public enum WarScale
+    {
+        SmallScale = 0,     // Low-intensity border skirmish, counter-insurgency (Colonel O-6 oversees deployment)
+        MidScale = 1,       // Regional brigade combat (Brigade force arrives, General O-7/O-8 commands soldiers)
+        LargeScale = 2      // Continental / Theater War (Supreme O-10 4-Star General commands, receives directives from civilian Government)
+    }
+
     [Serializable]
     public class WarTheaterInfo
     {
@@ -33,6 +44,7 @@ namespace ArmyLife.Data
         public string enemyDoctrine;                  // Hostile tactical doctrine
         public string weatherAndEnvironment;          // Atmospheric weather conditions
         public float baseHazardModifier;              // Backward compatibility with legacy hazard modifier
+        public WarScale warScale = WarScale.MidScale; // Conflict escalation scale
 
         public WarTheaterInfo()
         {
@@ -93,7 +105,7 @@ namespace ArmyLife.Data
                         "Static Trench Defense & Rolling Creeping Barrages",
                         "Bleak Drizzle & Sucking Mud",
                         new List<string> { "Static Trench Defense", "Heavy Gunner Suppression", "Trench Breach Assault", "Artillery Counter-Battery" }
-                    );
+                    ) { warScale = WarScale.MidScale };
 
                 case WarTheaterType.PortIronAmphibiousFront:
                 case WarTheaterType.PacificJungleIslands:
@@ -108,7 +120,7 @@ namespace ArmyLife.Data
                         "Interlocking Bunker Crossfire & Heavy Coastal Batteries",
                         "Salt Spray & Churning Surf",
                         new List<string> { "Amphibious Breach Assault", "Naval Gunfire Support", "Under-Fire CASEVAC", "Bunker Clearing" }
-                    );
+                    ) { warScale = WarScale.LargeScale };
 
                 case WarTheaterType.KaelenValleyUrbanZone:
                 case WarTheaterType.UrbanCitadel:
@@ -123,7 +135,7 @@ namespace ArmyLife.Data
                         "Urban Guerrilla Ambushes, Snipers & Booby-Trapped Basements",
                         "Smothering Concrete Dust & Ash",
                         new List<string> { "Room-Clearing CQB", "Lead Scout Overwatch", "Night Sabotage Raid", "IED Countermeasures" }
-                    );
+                    ) { warScale = WarScale.MidScale };
 
                 case WarTheaterType.BadlandsSteppeRecon:
                     return new WarTheaterInfo(
@@ -137,7 +149,7 @@ namespace ArmyLife.Data
                         "Mechanized Hit-and-Run & Long-Range Skirmishing",
                         "Scorching Sun & Blinding Dust Storms",
                         new List<string> { "High-Value Recon Patrol", "Convoy Overwatch & Ambush Defense", "Long-Range Marksman Flank", "Mechanized Armor Patrol" }
-                    );
+                    ) { warScale = WarScale.SmallScale };
 
                 case WarTheaterType.NorthernTaigaOutpost:
                 case WarTheaterType.EasternFrozenSteppe:
@@ -152,7 +164,7 @@ namespace ArmyLife.Data
                         "Mountain Guerrilla Raids & Deep Winter Infiltration",
                         "Freezing Blizzards & Deep Snowdrifts",
                         new List<string> { "Forward Artillery Observation", "Cold Weather Guerrilla Warfare", "Snow Scout Infiltration", "Under-Fire CASEVAC" }
-                    );
+                    ) { warScale = WarScale.SmallScale };
 
                 default:
                     return new WarTheaterInfo(

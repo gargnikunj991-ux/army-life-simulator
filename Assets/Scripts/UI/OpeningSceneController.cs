@@ -101,7 +101,7 @@ namespace ArmyLife.UI
 
         private static readonly (string name, string desc)[] Countries = 
         {
-            ("The Valerian Empire", "Imperial military superpower. Grounded discipline, artillery superiority, and noble officer dynasties."),
+            ("The Valerian Empire", "Imperial military superpower. Grounded discipline, artillery superiority, and distinguished officer corps."),
             ("The Iron Federation", "Industrial and mechanized power. Powered by heavy armor, mobile artillery corps, and mechanized infantry."),
             ("The Ouroboros Dominion", "Northern coalition of martial warlords hardened by arctic trench warfare.")
         };
@@ -168,6 +168,15 @@ namespace ArmyLife.UI
 
         private void ApplyRuntimeLayoutSafeguards()
         {
+            // Auto-upgrade CanvasScaler to 16:9 PC Native Widescreen (1920x1080)
+            var scaler = GetComponentInParent<CanvasScaler>();
+            if (scaler != null && scaler.referenceResolution.x < 1900)
+            {
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920, 1080);
+                scaler.matchWidthOrHeight = 0.5f;
+            }
+
             if (characterCreationModal != null)
             {
                 // Ensure 100% solid background so title screen never bleeds or overlays
@@ -717,12 +726,12 @@ namespace ArmyLife.UI
 
             // Country
             var country = Countries[selectedCountryIndex];
-            if (countryTitleText != null) countryTitleText.text = $"<color=#00FFAA><b>{country.name}</b></color>";
+            if (countryTitleText != null) countryTitleText.text = $"<color=#D4AF37><b>{country.name}</b></color>";
             if (countryDescText != null) countryDescText.text = country.desc;
 
             // Background Origin
             var origin = Origins[selectedLineageIndex % Origins.Length];
-            if (lineageTitleText != null) lineageTitleText.text = $"<color=#FFD700><b>{origin.title}</b></color>";
+            if (lineageTitleText != null) lineageTitleText.text = $"<color=#D4AF37><b>{origin.title}</b></color>";
             if (lineageDetailsText != null) lineageDetailsText.text = origin.desc;
 
             // Appearance Texts
@@ -738,7 +747,7 @@ namespace ArmyLife.UI
                 string last = (characterLastNameInput != null && !string.IsNullOrWhiteSpace(characterLastNameInput.text)) ? characterLastNameInput.text.Trim() : "Vance";
                 string genderIcon = (selectedGender == "Female") ? "[F]" : "[M]";
                 characterPreviewBadgeText.text = 
-                    $"<color=#00D4FF><b>{genderIcon} {first} {last}</b></color> (Enlistment Age 18.0)\n" +
+                    $"<color=#D4AF37><b>{genderIcon} {first} {last}</b></color> (Enlistment Age 18.0)\n" +
                     $"<b>Service:</b> 1st Infantry Division  |  <b>Initial Rank:</b> Private Recruit (E-1)\n" +
                     $"<b>Origin:</b> {origin.title}";
 

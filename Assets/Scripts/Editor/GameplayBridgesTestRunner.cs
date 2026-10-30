@@ -45,6 +45,7 @@ namespace ArmyLife.Editor
                 youngCadet.age = 22.0f;
                 youngCadet.intellect = 75f;
                 youngCadet.fitness = 75f;
+                youngCadet.meritRating = 80f;
                 youngCadet.cashBalance = 150000L;
                 gm.currentSoldier = youngCadet;
 

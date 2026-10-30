@@ -14,14 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmyLife.Data.FamilyLineageSO
   archetypeName: Special Forces Legend
   fatherTitle: Major Vance (Medal of Honor)
-  description: Your father breached enemy bunkers single-handedly. Soldiers instantly
-    respect you, but expect you to perform miracles.
-  startingNobleRank: 3
+  description: Your father was a decorated battlefield commander. Soldiers immediately
+    respect your heritage and leadership potential.
   startingInfluence: 50
   startingRespect: 85
-  startingClanFavor: 60
   startingFamilyWealth: 20000
-  startingPowerTier: 1
-  startingFoundationalTempering: 35
   hasWestPointFastTrack: 0
   hasSecretBranchInvitation: 1

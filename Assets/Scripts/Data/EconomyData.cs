@@ -23,16 +23,29 @@ namespace ArmyLife.Data
     }
 
     /// <summary>
-    /// Residential housing tiers for soldiers, civilians, and retired veterans.
-    /// Determines semester living expenses and provides lifestyle benefits.
+    /// Residential housing & living quarters tiers for military personnel and veterans.
+    /// Determines monthly rent and provides morale, rest, and lifestyle benefits.
     /// </summary>
     public enum HousingTier
     {
-        BarracksOrSlums = 0,    // Spartan military barracks bunk or civilian slum tenement ($250/sem)
-        ModestApartment = 1,    // Clean modest city apartment with running water ($600/sem)
-        ComfortableHome = 2,    // Comfortable standalone private villa with garden ($1,800/sem)
-        NobleEstate = 3,        // Grand aristocratic ancestral manor with domestic staff ($5,000/sem)
-        ImperialPalaceWing = 4  // Sovereign imperial palace wing with royal guard and banquet halls ($25,000/sem)
+        BarracksOrSlums = 0,            // On-Base Enlisted Barracks ($200/mo = $1,200/sem) - Minimum
+        ModestApartment = 1,            // NCO Private Quarters / Dorms ($600/mo = $3,600/sem) - E-4+
+        ComfortableHome = 2,            // Off-Base Rental Townhouse ($1,400/mo = $8,400/sem) - E-6+ / O-1+
+        NobleEstate = 3,                // Officer Family Single Quarters ($2,800/mo = $16,800/sem) - E-8+ / O-3+
+        ImperialPalaceWing = 4          // Senior Command Estate / General's Manor ($5,000/mo = $30,000/sem) - O-6+
+    }
+
+    /// <summary>
+    /// Garrison dining and nutritional meal plans for military personnel.
+    /// Deducted during non-deployed garrison service.
+    /// </summary>
+    public enum DiningPlanTier
+    {
+        StandardMessHallDFAC = 0,       // Base Dining Facility Mess Hall ($100/mo = $600/sem) - Minimum
+        CommissaryCooking = 1,          // Commissary Fresh Groceries & Meal Prep ($350/mo = $2,100/sem)
+        HighProteinAthletic = 2,        // Athletic High-Protein Performance Diet ($750/mo = $4,500/sem)
+        OfficersClubDining = 3,         // Officers' Club Fine Dining ($1,300/mo = $7,800/sem)
+        PrivateChefExecutive = 4        // Private Chef & Gourmet Executive Cuisine ($2,000/mo = $12,000/sem) - Maximum
     }
 
     /// <summary>
@@ -184,7 +197,7 @@ namespace ArmyLife.Data
                 case HousingTier.ModestApartment:    cost = 600L; break;
                 case HousingTier.ComfortableHome:    cost = 1800L; break;
                 case HousingTier.NobleEstate:        cost = 5000L; break;
-                case HousingTier.ImperialPalaceWing: cost = 25000L; break;
+                case HousingTier.ImperialPalaceWing: cost = 15000L; break;
                 default:                             cost = 250L; break;
             }
 
@@ -197,21 +210,35 @@ namespace ArmyLife.Data
             return cost;
         }
 
+        public static long GetHousingMonthlyRent(HousingTier tier) => Math.Max(1L, GetHousingSemesterCost(tier) / 6L);
+
+        public static int GetMinimumRankOrderForHousing(HousingTier tier)
+        {
+            switch (tier)
+            {
+                case HousingTier.ModestApartment:    return 4;   // E-4 Corporal+
+                case HousingTier.ComfortableHome:    return 6;   // E-6 Staff Sgt+ or O-1+
+                case HousingTier.NobleEstate:        return 12;  // E-8+ or O-3 Captain+
+                case HousingTier.ImperialPalaceWing: return 15;  // O-6 Colonel+ to O-10 General
+                default:                             return 1;   // E-1 Recruit+
+            }
+        }
+
         public static string GetHousingDisplayName(HousingTier tier, MilitaryBranch branch = MilitaryBranch.Army)
         {
             if (branch == MilitaryBranch.AirForce && tier == HousingTier.BarracksOrSlums)
             {
-                return "Air Base Dormitory / Flight Quarters";
+                return "Air Base Dormitory ($200/mo)";
             }
 
             switch (tier)
             {
-                case HousingTier.BarracksOrSlums:    return "Barracks / Slum Tenement";
-                case HousingTier.ModestApartment:    return "City Apartment";
-                case HousingTier.ComfortableHome:    return "Comfortable Private Villa";
-                case HousingTier.NobleEstate:        return "Noble Ancestral Manor";
-                case HousingTier.ImperialPalaceWing: return "Sovereign Imperial Palace Wing";
-                default:                             return "Standard Quarters";
+                case HousingTier.BarracksOrSlums:    return "On-Base Enlisted Barracks ($200/mo)";
+                case HousingTier.ModestApartment:    return "NCO Private Quarters ($600/mo)";
+                case HousingTier.ComfortableHome:    return "Off-Base Rental Townhouse ($1,400/mo)";
+                case HousingTier.NobleEstate:        return "Officer Single Family Quarters ($2,800/mo)";
+                case HousingTier.ImperialPalaceWing: return "Senior Command Estate ($5,000/mo)";
+                default:                             return "Base Barracks ($200/mo)";
             }
         }
 
@@ -219,23 +246,71 @@ namespace ArmyLife.Data
         {
             if (branch == MilitaryBranch.AirForce && tier == HousingTier.BarracksOrSlums)
             {
-                return "Air-conditioned air base suite with private lockers, mess amenities, and flight simulator lounge ($200/sem). Superior comfort.";
+                return "Air-conditioned air base suite with private lockers, mess amenities, and flight simulator lounge ($200/mo). Superior comfort.";
             }
 
             switch (tier)
             {
                 case HousingTier.BarracksOrSlums:
-                    return "Spartan military bunkhouse or cramped civilian tenement ($250/sem). Free basic rations, minimal privacy.";
+                    return "Shared open-bay or double bunkhouse on base ($200/mo). Room inspections, shared latrines, military order.";
                 case HousingTier.ModestApartment:
-                    return "Clean multi-room apartment in the city ($600/sem). Modest comfort, warm hearth, and respectable urban standing.";
+                    return "Private room in NCO barracks or modest shared off-base flat ($600/mo). Quiet rest, personal study, +2 Happiness.";
                 case HousingTier.ComfortableHome:
-                    return "Spacious standalone villa with private courtyard and study ($1,800/sem). Excellent recovery and family comfort.";
+                    return "Spacious suburban rental home with yard and garage ($1,400/mo). Private lifestyle, +5 Happiness, +2 Fitness.";
                 case HousingTier.NobleEstate:
-                    return "Grand aristocratic estate staffed by groundskeepers and domestic retinue ($5,000/sem). Unlocks immense clan prestige.";
+                    return "Single-family officer row house in prestigious base quarters ($2,800/mo). Formal parlor, +8 Happiness, +4 Respect.";
                 case HousingTier.ImperialPalaceWing:
-                    return "Grand sovereign palace wing with marble colonnades, royal praetorian guard, and banquet halls ($25,000/sem). The absolute pinnacle of imperial lifestyle.";
+                    return "Historic Commanding Officer's Manor / Executive Villa ($5,000/mo). Gated perimeter, formal reception lawns, +15 Happiness, +8 Command Presence.";
                 default:
-                    return "Standard quarters.";
+                    return "Standard quarters ($200/mo).";
+            }
+        }
+
+        // ==================== DINING PLAN HELPERS ====================
+        public static long GetDiningMonthlyCost(DiningPlanTier tier)
+        {
+            switch (tier)
+            {
+                case DiningPlanTier.StandardMessHallDFAC: return 100L;   // Minimum: $100/mo standard mess hall
+                case DiningPlanTier.CommissaryCooking:    return 350L;   // $350/mo fresh groceries
+                case DiningPlanTier.HighProteinAthletic:  return 750L;   // $750/mo sports nutrition
+                case DiningPlanTier.OfficersClubDining:   return 1300L;  // $1,300/mo officer dining
+                case DiningPlanTier.PrivateChefExecutive: return 2000L;  // $2,000/mo private chef (Maximum)
+                default:                                  return 100L;
+            }
+        }
+
+        public static long GetDiningSemesterCost(DiningPlanTier tier) => GetDiningMonthlyCost(tier) * 6L;
+
+        public static string GetDiningDisplayName(DiningPlanTier tier)
+        {
+            switch (tier)
+            {
+                case DiningPlanTier.StandardMessHallDFAC: return "Base DFAC Mess Hall ($100/mo)";
+                case DiningPlanTier.CommissaryCooking:    return "Commissary Fresh Groceries ($350/mo)";
+                case DiningPlanTier.HighProteinAthletic:  return "Athletic Performance Nutrition ($750/mo)";
+                case DiningPlanTier.OfficersClubDining:   return "Officers' Club Dinners ($1,300/mo)";
+                case DiningPlanTier.PrivateChefExecutive: return "Private Chef Gourmet Dining ($2,000/mo)";
+                default:                                  return "Standard Mess Hall ($100/mo)";
+            }
+        }
+
+        public static string GetDiningDescription(DiningPlanTier tier)
+        {
+            switch (tier)
+            {
+                case DiningPlanTier.StandardMessHallDFAC:
+                    return "Standard cafeteria tray rations at the dining facility ($100/mo). Caloric baseline, zero fluff.";
+                case DiningPlanTier.CommissaryCooking:
+                    return "Home-cooked meals with fresh base commissary meats, greens, and fruits ($350/mo). +3 Fitness, +2 Health.";
+                case DiningPlanTier.HighProteinAthletic:
+                    return "Structured high-protein athletic meal prep, clean whole foods, and sports supplements ($750/mo). +6 Fitness, +5 Health.";
+                case DiningPlanTier.OfficersClubDining:
+                    return "Regular ribeye dinners, club lounge catering, and fine wines at the Officers' Club ($1,300/mo). +8 Happiness, +3 Respect.";
+                case DiningPlanTier.PrivateChefExecutive:
+                    return "Dedicated personal culinary chef delivering bespoke organic nutrition and executive banquets ($2,000/mo). +12 Happiness, +8 Health.";
+                default:
+                    return "Standard mess hall rations ($100/mo).";
             }
         }
 

@@ -39,6 +39,13 @@ namespace ArmyLife.Systems
                 Instance = this;
                 transform.SetParent(null);
                 DontDestroyOnLoad(gameObject);
+
+                // CRITICAL SAFEGUARD: Ensure an AudioListener exists so audio actually plays to speakers!
+                if (FindAnyObjectByType<AudioListener>(FindObjectsInactive.Include) == null)
+                {
+                    gameObject.AddComponent<AudioListener>();
+                }
+
                 InitializeAudioEngine();
             }
             else if (Instance != this)
@@ -49,7 +56,7 @@ namespace ArmyLife.Systems
 
         private void Start()
         {
-            // Auto-start ambient cadence music if desired
+            // Auto-start authentic atmospheric music
             if (bgmSource != null && !bgmSource.isPlaying)
             {
                 PlayBgmCadence();

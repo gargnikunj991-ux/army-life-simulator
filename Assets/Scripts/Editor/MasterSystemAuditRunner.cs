@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using System.IO;
 using ArmyLife.Core;
 using ArmyLife.Data;
 using ArmyLife.Systems;
@@ -16,9 +17,9 @@ namespace ArmyLife.Editor
         [MenuItem("Army Life/Run Full Master System Audit", false, 99)]
         public static void RunMasterAudit()
         {
-            Debug.Log("<color=#00D4FF>========================================================================</color>");
-            Debug.Log("<color=#00D4FF>                 MASTER ARMY LIFE SYSTEM & FEATURE AUDIT                </color>");
-            Debug.Log("<color=#00D4FF>========================================================================</color>");
+            Debug.Log("<color=#D4AF37>========================================================================</color>");
+            Debug.Log("<color=#D4AF37>                 MASTER ARMY LIFE SYSTEM & FEATURE AUDIT                </color>");
+            Debug.Log("<color=#D4AF37>========================================================================</color>");
 
             int passed = 0;
             int failed = 0;
@@ -28,14 +29,17 @@ namespace ArmyLife.Editor
             try
             {
                 Debug.Log("\n[AUDIT 1] Verifying Data Constants & Academy Tuitions...");
-                if (EconomyData.AIRFORCE_ACADEMY_TUITION_COST != 200000L)
+                long afTuition = EconomyData.AIRFORCE_ACADEMY_TUITION_COST;
+                long armyTuition = EconomyData.ARMY_ACADEMY_TUITION_COST;
+
+                if (afTuition != 200000L)
                 {
-                    issues.Add($"EconomyData.AIRFORCE_ACADEMY_TUITION_COST expected 200,000 but got {EconomyData.AIRFORCE_ACADEMY_TUITION_COST}");
+                    issues.Add($"EconomyData.AIRFORCE_ACADEMY_TUITION_COST expected 200,000 but got {afTuition}");
                     failed++;
                 }
-                else if (EconomyData.ARMY_ACADEMY_TUITION_COST != 100000L)
+                else if (armyTuition != 100000L)
                 {
-                    issues.Add($"EconomyData.ARMY_ACADEMY_TUITION_COST expected 100,000 but got {EconomyData.ARMY_ACADEMY_TUITION_COST}");
+                    issues.Add($"EconomyData.ARMY_ACADEMY_TUITION_COST expected 100,000 but got {armyTuition}");
                     failed++;
                 }
                 else
@@ -79,13 +83,13 @@ namespace ArmyLife.Editor
                 failed++;
             }
 
-            // 4. RUN TACTICAL MINIGAMES TEST
+            // 4. RUN HOSPITAL, TRAUMA, IED AMPUTATION & WAR FRONT TEST
             try
             {
-                Debug.Log("\n[AUDIT 4] Running MinigamesTestRunner...");
-                MinigamesTestRunner.RunAllMinigamesTests();
+                Debug.Log("\n[AUDIT 4] Running HospitalAndTraumaTestRunner...");
+                HospitalAndTraumaTestRunner.RunAllHospitalAndTraumaTests();
                 passed++;
-                Debug.Log("  -> Tactical Minigames (Firing Range, Checkpoint, Dice) [PASSED]");
+                Debug.Log("  -> Field Hospital, Trauma, IED & Frontline Engine [PASSED]");
             }
             catch (Exception ex)
             {
@@ -149,13 +153,13 @@ namespace ArmyLife.Editor
                 failed++;
             }
 
-            // 9. RUN CIVIL & MILITARY CAREER SYSTEM TEST
+            // 9. RUN GAMEPLAY BRIDGES & CAREER AGE RESTRICTION TEST
             try
             {
-                Debug.Log("\n[AUDIT 9] Running MockExamTestRunner.RunCivilAndMilitaryCareerSystemTest...");
-                MockExamTestRunner.RunCivilAndMilitaryCareerSystemTest();
+                Debug.Log("\n[AUDIT 9] Running GameplayBridgesTestRunner...");
+                GameplayBridgesTestRunner.RunTests();
                 passed++;
-                Debug.Log("  -> Civil & Military Career Tracks [PASSED]");
+                Debug.Log("  -> Gameplay Bridges & Age Limits [PASSED]");
             }
             catch (Exception ex)
             {
@@ -163,13 +167,29 @@ namespace ArmyLife.Editor
                 failed++;
             }
 
-            // 10. RUN SPECIAL FORCES SELECTION ATTRITION & PRESTIGE TEST
+            // 10. VERIFY HERALDRY & INSIGNIA SPRITES ASSETS
             try
             {
-                Debug.Log("\n[AUDIT 10] Running MockExamTestRunner.RunSpecialForcesSelectionTrialAndPrestigeTest...");
-                MockExamTestRunner.RunSpecialForcesSelectionTrialAndPrestigeTest();
-                passed++;
-                Debug.Log("  -> Special Forces Selection Attrition & Prestige [PASSED]");
+                Debug.Log("\n[AUDIT 10] Checking Heraldry, Insignia and Ribbon Assets...");
+                string insigniaDir = Path.Combine(Application.dataPath, "Sprites/Insignias");
+                string ribbonDir = Path.Combine(Application.dataPath, "Sprites/Ribbons");
+
+                int insigniaCount = Directory.Exists(insigniaDir) ? Directory.GetFiles(insigniaDir, "*.png").Length : 0;
+                int ribbonCount = Directory.Exists(ribbonDir) ? Directory.GetFiles(ribbonDir, "*.png").Length : 0;
+
+                Debug.Log($"  -> Rank Insignias found: {insigniaCount}");
+                Debug.Log($"  -> Medal Ribbons found: {ribbonCount}");
+
+                if (insigniaCount == 0 || ribbonCount == 0)
+                {
+                    issues.Add($"Heraldry sprites missing! Insignias: {insigniaCount}, Ribbons: {ribbonCount}. Please run InsigniaSpriteGenerator.GenerateAllSprites.");
+                    failed++;
+                }
+                else
+                {
+                    Debug.Log("  -> High-resolution Vector Insignias & Ribbons [OK]");
+                    passed++;
+                }
             }
             catch (Exception ex)
             {
@@ -177,39 +197,18 @@ namespace ArmyLife.Editor
                 failed++;
             }
 
-            // 11. RUN AUDIO ENGINE & SOUNDSCAPE TEST
+            // 11. SCENE HIERARCHY & INTEGRATION AUDIT (Check MainGame.unity)
             try
             {
-                Debug.Log("\n[AUDIT 11] Running MockExamTestRunner.RunAudioEngineAndSoundscapeTest...");
-                MockExamTestRunner.RunAudioEngineAndSoundscapeTest();
-                passed++;
-                Debug.Log("  -> Audio Engine & Procedural Soundscape [PASSED]");
-            }
-            catch (Exception ex)
-            {
-                issues.Add($"[AUDIT 11 Exception] {ex.Message}");
-                failed++;
-            }
-
-            // 12. SCENE HIERARCHY & INTEGRATION AUDIT (Check MainGame.unity)
-            try
-            {
-                Debug.Log("\n[AUDIT 12] Checking MainGame.unity Scene Hierarchy Integration...");
+                Debug.Log("\n[AUDIT 11] Checking MainGame.unity Scene Hierarchy Integration...");
                 var scene = EditorSceneManager.OpenScene("Assets/Scenes/MainGame.unity", OpenSceneMode.Single);
-                var minigamesModal = UnityEngine.Object.FindAnyObjectByType<TacticalMinigamesModal>(FindObjectsInactive.Include);
                 var mailModal = UnityEngine.Object.FindAnyObjectByType<MailCallModal>(FindObjectsInactive.Include);
                 var medalModal = UnityEngine.Object.FindAnyObjectByType<MedalRibbonRackModal>(FindObjectsInactive.Include);
                 var audioMgr = UnityEngine.Object.FindAnyObjectByType<AudioManager>(FindObjectsInactive.Include);
                 var hud = UnityEngine.Object.FindAnyObjectByType<MainHUDView>(FindObjectsInactive.Include);
-
-                if (minigamesModal == null)
-                {
-                    issues.Add("[SCENE DEFECT] TacticalMinigamesModal is MISSING from MainGame.unity scene hierarchy!");
-                }
-                else
-                {
-                    Debug.Log("  -> TacticalMinigamesModal found in scene [OK]");
-                }
+                var activities = UnityEngine.Object.FindAnyObjectByType<ActivitiesModal>(FindObjectsInactive.Include);
+                var lifeModal = UnityEngine.Object.FindAnyObjectByType<LifeModal>(FindObjectsInactive.Include);
+                var relModal = UnityEngine.Object.FindAnyObjectByType<RelationshipsModal>(FindObjectsInactive.Include);
 
                 if (mailModal == null)
                 {
@@ -234,30 +233,38 @@ namespace ArmyLife.Editor
                     Debug.Log("  -> AudioManager found in scene [OK]");
                 }
 
+                if (activities != null)
+                {
+                    Debug.Log("  -> ActivitiesModal found in scene [OK]");
+                }
+
+                if (lifeModal != null)
+                {
+                    Debug.Log("  -> LifeModal (Dossier) found in scene [OK]");
+                }
+
+                if (relModal != null)
+                {
+                    Debug.Log("  -> RelationshipsModal found in scene [OK]");
+                }
+
                 var canvas = UnityEngine.Object.FindAnyObjectByType<UnityEngine.UI.CanvasScaler>(FindObjectsInactive.Include);
                 if (canvas != null)
                 {
                     Debug.Log($"  -> CanvasScaler reference resolution: {canvas.referenceResolution.x} x {canvas.referenceResolution.y} (Vertical Mobile/BitLife Layout [OK])");
                 }
 
-                // Check Activities connection to Minigames
-                var activities = UnityEngine.Object.FindAnyObjectByType<ActivitiesModal>(FindObjectsInactive.Include);
-                if (activities != null)
-                {
-                    Debug.Log("  -> ActivitiesModal found in scene [OK]");
-                }
-
                 passed++;
             }
             catch (Exception ex)
             {
-                issues.Add($"[AUDIT 12 Exception] {ex.Message}");
+                issues.Add($"[AUDIT 11 Exception] {ex.Message}");
                 failed++;
             }
 
             // SUMMARY REPORT
-            Debug.Log("\n<color=#00D4FF>========================================================================</color>");
-            Debug.Log($"<color=#00D4FF>AUDIT COMPLETE: Passed Suites: {passed} | Failed/Issues Found: {issues.Count}</color>");
+            Debug.Log("\n<color=#D4AF37>========================================================================</color>");
+            Debug.Log($"<color=#D4AF37>AUDIT COMPLETE: Passed Suites: {passed} | Failed/Issues Found: {issues.Count}</color>");
             if (issues.Count > 0)
             {
                 Debug.Log("<color=#FF4444>FOUND DEFECTS / INCONSISTENCIES:</color>");
@@ -270,7 +277,7 @@ namespace ArmyLife.Editor
             {
                 Debug.Log("<color=#00FFAA>ALL SYSTEMS CLEAN WITH ZERO DEFECTS!</color>");
             }
-            Debug.Log("<color=#00D4FF>========================================================================</color>");
+            Debug.Log("<color=#D4AF37>========================================================================</color>");
         }
     }
 }

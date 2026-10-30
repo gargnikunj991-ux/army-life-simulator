@@ -20,5 +20,3 @@ MonoBehaviour:
   requiredMeritPoints: 1700
   requiredFitness: 75
   requiredCombatSkill: 0
-  unlocksSelfTalentTesting: 1
-  unlocksFamilyTalentTesting: 1

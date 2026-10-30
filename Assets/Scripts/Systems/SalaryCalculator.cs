@@ -5,7 +5,7 @@ namespace ArmyLife.Systems
 {
     public static class SalaryCalculator
     {
-        public const float ImperialWarTaxRate = 0.40f;   // 40% Imperial Wartime Tax for active military
+        public static float ImperialWarTaxRate => DifficultySettings.WarTaxRate;   // Scaled by Game Difficulty (Story: 20%, Realistic: 40%, Ironclad: 50%)
         public const float CivilMunicipalTaxRate = 0.50f; // 50% Civil Municipal Tax for civilian jobs
 
         /// <summary>
@@ -61,12 +61,13 @@ namespace ArmyLife.Systems
                 return 0L; // Full-time college student
             }
 
-            // 3. Military Training Schools & Pipelines (Paid Active Duty per US Military Standards)
-            if (soldier.careerTrack == CareerTrack.MilitaryRecruitBasic)
+            // 3. Military Training Schools & Pipelines
+            if (soldier.careerTrack == CareerTrack.MilitaryRecruitBasic || (soldier.currentRank != null && soldier.currentRank.paygrade == "E-1"))
             {
-                // In real military (e.g. US Armed Forces E-1 Private), basic training recruits are paid active duty base pay
-                long recruitPay = (soldier.currentRank != null) ? soldier.currentRank.baseMonthlySalary : 1800L;
-                return recruitPay;
+                // In basic combat training (first 6 months), recruits do NOT receive a cash salary!
+                // 100% of lodging, food rations, uniform, armory gear, and drill expenses are state-covered.
+                // Cash pay begins upon graduating to active line Private (E-2).
+                return 0L;
             }
             if (soldier.careerTrack == CareerTrack.MilitaryTechSchool)
             {
@@ -97,20 +98,6 @@ namespace ArmyLife.Systems
             {
                 long aviationBonus = (long)(basePay * EconomyData.AVIATION_FLIGHT_PAY_BONUS);
                 total += aviationBonus;
-            }
-
-            // Combat Readiness & Special Duty Stipend
-            total += (soldier.powerTier * 150L);
-
-            // Feudal Noble Aristocratic Allowance
-            switch (soldier.nobleTitle)
-            {
-                case NobleRank.Baron:     total += 2000L; break;
-                case NobleRank.Viscount:  total += 3500L; break;
-                case NobleRank.Count:     total += 5000L; break;
-                case NobleRank.Marquis:   total += 10000L; break;
-                case NobleRank.GrandDuke: total += 25000L; break;
-                case NobleRank.RoyalClan: total += 50000L; break;
             }
 
             // Technical School Graduate Certification Pay
@@ -219,6 +206,95 @@ namespace ArmyLife.Systems
             }
 
             return (long)(gross * ImperialWarTaxRate);
+        }
+
+        /// <summary>
+        /// Calculates the next longevity pay rise percentage based on raises earned so far:
+        /// Starts at 10.0%, decreases by 0.5% with each rise until 5.0%, then stops entirely (returns 0%).
+        /// Scale: Rise 1 = 10.0%, Rise 2 = 9.5%, ... Rise 11 = 5.0%, then stops.
+        /// </summary>
+        public static float GetNextPayRisePercentage(int currentRaisesCount)
+        {
+            float rate = 0.10f - (currentRaisesCount * 0.005f);
+            if (rate < 0.05f - 0.0001f) return 0f; // Stopped after 5% tier is exhausted
+            return rate;
+        }
+
+        /// <summary>
+        /// Evaluates whether a soldier qualifies for an annual or multi-year longevity pay rise.
+        /// Restricts E-4 to every 2 years, E-6+ to every 3 years with high merit (>=80) and squad respect (>=65).
+        /// </summary>
+        public static bool CanEarnPayRise(SoldierProfile soldier, out string reason)
+        {
+            reason = "";
+            if (soldier == null || soldier.isDead || soldier.isRetired || soldier.isCivilian || soldier.isYouthPhase)
+            {
+                reason = "Ineligible service status.";
+                return false;
+            }
+
+            if (soldier.hasReachedPayRaiseCeiling || GetNextPayRisePercentage(soldier.annualLongevityRaisesEarned) <= 0f)
+            {
+                reason = "Maximum career longevity pay rise ceiling reached.";
+                return false;
+            }
+
+            // Clean conduct check: no active Article 15 forfeiture or brig restriction
+            if (soldier.hasForfeitedPayThisSemester || soldier.isBarracksRestricted || soldier.isImprisoned || soldier.militaryBrigSemestersRemaining > 0)
+            {
+                reason = "Withheld due to active UCMJ non-judicial punishment or barracks restriction.";
+                return false;
+            }
+
+            string pg = soldier.currentRank != null ? soldier.currentRank.paygrade.ToUpper() : "E-1";
+
+            // 1. Junior Enlisted (E-1 to E-3): Eligible every 1 full year (2 semesters)
+            if (pg.StartsWith("E-1") || pg.StartsWith("E-2") || pg.StartsWith("E-3"))
+            {
+                if (soldier.semestersSinceLastPayRaise < 2)
+                {
+                    reason = "Junior enlisted longevity raises require 1 full year of service.";
+                    return false;
+                }
+                return true;
+            }
+
+            // 2. Corporal / Sergeant (E-4, E-5): Not given each year - requires 2 full years (4 semesters) + Merit >= 60
+            if (pg.StartsWith("E-4") || pg.StartsWith("E-5"))
+            {
+                if (soldier.semestersSinceLastPayRaise < 4)
+                {
+                    float servedYears = soldier.semestersSinceLastPayRaise * 0.5f;
+                    reason = $"E-4 and E-5 pay raises are awarded every 2 years (served {servedYears:F1}/2.0 yrs).";
+                    return false;
+                }
+                if (soldier.meritRating < 60f)
+                {
+                    reason = $"Requires at least 60% Merit Rating (current: {soldier.meritRating:F0}%).";
+                    return false;
+                }
+                return true;
+            }
+
+            // 3. Senior NCOs and Officers (E-6+ and Officers): Highly difficult - requires 3 full years (6 semesters) + Merit >= 80 + Squad Respect >= 65
+            if (soldier.semestersSinceLastPayRaise < 6)
+            {
+                float servedYears = soldier.semestersSinceLastPayRaise * 0.5f;
+                reason = $"Senior grade pay raises (E-6+) are awarded every 3 years (served {servedYears:F1}/3.0 yrs).";
+                return false;
+            }
+            if (soldier.meritRating < 80f)
+            {
+                reason = $"Senior pay step requires superior Merit Rating (current: {soldier.meritRating:F0}% / 80% min).";
+                return false;
+            }
+            if (soldier.squadRespect < 65f)
+            {
+                reason = $"Senior pay step requires high Squad Respect (current: {soldier.squadRespect:F0}% / 65% min).";
+                return false;
+            }
+
+            return true;
         }
     }
 }

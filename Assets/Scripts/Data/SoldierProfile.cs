@@ -151,6 +151,58 @@ namespace ArmyLife.Data
                 {
                     GameEvents.OnFeedEventLogged?.Invoke("HONOR", $"<color=#FFD700><b>[MEDAL AWARDED]</b></color> You were decorated with the <b>{medalName}</b>!");
                 }
+
+                // Check Top Valor Medal Honors: Free Officer Candidate School & Special Forces Direct Selection Invitation
+                CheckTopValorMedalPerks(medalName);
+            }
+        }
+
+        public bool HasTopValorMedal()
+        {
+            if (earnedMedals == null) return false;
+            foreach (var m in earnedMedals)
+            {
+                if (IsTopValorMedal(m)) return true;
+            }
+            return false;
+        }
+
+        public static bool IsTopValorMedal(string medalName)
+        {
+            if (string.IsNullOrEmpty(medalName)) return false;
+            string m = medalName.ToLowerInvariant();
+            return m.Contains("medal of honor") ||
+                   m.Contains("grand imperial star") ||
+                   m.Contains("distinguished service cross") ||
+                   m.Contains("silver star") ||
+                   m.Contains("silver cross") ||
+                   m.Contains("silver vanguard");
+        }
+
+        public void CheckTopValorMedalPerks(string medalName)
+        {
+            if (!IsTopValorMedal(medalName)) return;
+
+            // Enlisted and under officer candidate age (<= 35) gets Free Officer School Waiver!
+            if (!isOfficer && age <= 35.0f && !hasFreeOfficerSchoolWaiver)
+            {
+                hasFreeOfficerSchoolWaiver = true;
+                AddTrait("High Command Free OCS Appointment");
+                GameEvents.OnFeedEventLogged?.Invoke("HONOR",
+                    $"<color=#FFD700><b>[CONGRESSIONAL / WAR COUNCIL FULL SCHOLARSHIP • FREE OFFICER SCHOOL]</b></color> " +
+                    $"In recognition of winning the highest national valor decoration ({medalName}), the High Military Council has decreed you are awarded a " +
+                    $"<b>100% Free Appointment to Officer Candidate School (OCS)</b> with zero tuition and zero debt! You may enroll directly.");
+            }
+
+            // Direct Special Forces Selection Invitation (age <= 30)
+            if (!isSpecialForces && !isSpecialForcesCandidate && age <= 30.0f && !hasSpecialForcesInvitation)
+            {
+                hasSpecialForcesInvitation = true;
+                AddTrait("Direct Special Forces Selection Invitation");
+                GameEvents.OnFeedEventLogged?.Invoke("HONOR",
+                    $"<color=#FFD700><b>[SPECIAL OPERATIONS COMMAND DIRECT INVITATION • SFAS]</b></color> " +
+                    $"Impressed by your heroic combat leadership ({medalName}), Special Operations Command (SOCOM) has dispatched an official " +
+                    $"<b>Direct Selection Invitation</b>! You bypass standard unit endorsement and may report directly to Special Forces Assessment & Selection (SFAS).");
             }
         }
 
@@ -264,6 +316,20 @@ namespace ArmyLife.Data
 
         [Header("Dynamic Economy, Housing & Investments")]
         public HousingTier housingTier = HousingTier.BarracksOrSlums;
+        public DiningPlanTier garrisonDiningTier = DiningPlanTier.StandardMessHallDFAC;
+        public bool hasExercisedThisSemester = false;
+        public long totalFoodExpensesPaid = 0;
+
+        public long GetMonthlyRent() => EconomyData.GetHousingMonthlyRent(housingTier);
+        public long GetMonthlyFood() => EconomyData.GetDiningMonthlyCost(garrisonDiningTier);
+        public long GetTotalMonthlyLivingExpenses() => GetMonthlyRent() + GetMonthlyFood();
+
+        public bool IsRankEligibleForHousing(HousingTier tier)
+        {
+            int minOrder = EconomyData.GetMinimumRankOrderForHousing(tier);
+            int currentOrder = currentRank != null ? currentRank.rankOrder : 1;
+            return currentOrder >= minOrder;
+        }
         public FamilyHouseTier familyHouseTier = FamilyHouseTier.None;
         public int warBondsOwned = 0;
         public int tradeGuildShares = 0;
@@ -307,6 +373,11 @@ namespace ArmyLife.Data
         public bool wasPromotedThisYear = false;        // Tracked over the 2-semester service year
         public long longevityMonthlyPayBonus = 0L;      // Accumulated step increases on monthly gross pay
         public int annualLongevityRaisesEarned = 0;     // Number of annual step raises earned
+        public bool hasReachedPayRaiseCeiling = false;  // Stopped entire pay rise once 5% tier reached
+        public int semestersSinceLastPayRaise = 0;       // Semesters since last pay raise (tracks intervals)
+        public bool hasOfficerCandidateSchoolRecommendation = false; // Recommended by CO for OCS at E-5
+        public bool hasFreeOfficerSchoolWaiver = false;  // 100% Free OCS appointment via highest medal
+        public bool hasSpecialForcesInvitation = false; // Direct SFAS invitation from Special Operations Command
 
         [Header("Special Forces Program")]
         public bool isSpecialForces;                    // Qualified elite operator (+$800 pay, higher risk)
@@ -338,6 +409,7 @@ namespace ArmyLife.Data
         public bool hasFelonyDischargeRecord = false;
         public int article15PunishmentsCount = 0;
         public int courtMartialConvictionsCount = 0;
+        public int disciplinaryDemerits = 0;
 
         [Header("Brothers in Arms (Persistent Squadmates)")]
         public List<SquadMate> squadMates = new List<SquadMate>();
@@ -498,7 +570,7 @@ namespace ArmyLife.Data
         [Obsolete("Power tiers are deprecated; military standing uses MilitaryRankSO and Paygrades.")]
         public int powerTier = 0;
         [Obsolete("Cultivation sub-tiers are deprecated.")]
-        public PowerSubTier subTier = PowerSubTier.Early;
+        public int subTier = 0;
         [Obsolete("Tier progress percent is deprecated.")]
         public float tierProgressPercent = 0f;
         [Obsolete("Failed breakthroughs are deprecated.")]
@@ -547,22 +619,69 @@ namespace ArmyLife.Data
         public long warMemoirRoyaltiesPerSemester = 0L;
         public string civicOfficeHeld = "None";
 
+        /// <summary>
+        /// Skill and tactical learning rate scaled by Smarts / Intellect.
+        /// High-smarts soldiers grasp doctrine, marksmanship, and tactics significantly faster.
+        /// </summary>
+        public float StudySkillGainMultiplier => Mathf.Clamp(0.6f + (intellect / 80f), 0.7f, 2.0f);
+
+        private static readonly System.Random _attributeRng = new System.Random();
+
+        private static float RngFloat(float min, float max)
+        {
+            return (float)(min + (_attributeRng.NextDouble() * (max - min)));
+        }
+
+        private static int RngInt(int min, int max)
+        {
+            return _attributeRng.Next(min, max);
+        }
+
+        /// <summary>
+        /// Generates authentic, randomized BitLife core attributes (Health, Happiness, Smarts, Looks)
+        /// and derives initial physical fitness, combat awareness, and social standing uniquely for this life.
+        /// Uses System.Random so it is 100% thread-safe and safe during Unity serialization/instantiation.
+        /// </summary>
+        public void RandomizeBitLifeCoreAttributes(int? explicitTalent = null, float? explicitLooks = null)
+        {
+            // 1. BitLife 4 Core Attributes (Randomized every life)
+            health = RngFloat(72f, 98f);
+            happiness = RngFloat(65f, 95f);
+            
+            int baseTalent = explicitTalent ?? RngInt(45, 120);
+            talentScore = baseTalent;
+            
+            // Smarts / Intellect: based on innate talent + random distribution
+            intellect = Mathf.Clamp((baseTalent * 0.35f) + RngFloat(25f, 55f), 35f, 98f);
+            tacticalIntellect = intellect;
+
+            // Looks / Appearance: randomized unless customized by player
+            looks = explicitLooks ?? RngFloat(30f, 98f);
+
+            // 2. Physical Fitness is not uniform for everyone: influenced by Health + individual genetics
+            float fitnessRatio = RngFloat(0.65f, 0.95f);
+            physicalFitness = Mathf.Clamp((health * fitnessRatio) + RngFloat(-5f, 15f), 35f, 95f);
+
+            // 3. Combat Skill / Martial Awareness: blend of fitness, sharp intellect, and natural instinct
+            combatSkill = Mathf.Clamp((physicalFitness * 0.25f) + (intellect * 0.20f) + RngFloat(15f, 30f), 20f, 60f);
+
+            // 4. Marksmanship: steady hands (fitness) + sharp eye (intellect) + talent
+            marksmanshipScore = Mathf.Clamp((intellect * 0.30f) + (physicalFitness * 0.25f) + (baseTalent * 0.25f) + RngFloat(5f, 15f), 30f, 95f);
+
+            // 5. Discipline: mental stamina and orderliness
+            discipline = Mathf.Clamp((intellect * 0.35f) + RngFloat(35f, 55f), 40f, 85f);
+
+            // 6. Combat Readiness: combination of physical fitness, health, and combat awareness
+            combatReadiness = Mathf.Clamp((physicalFitness * 0.45f) + (health * 0.35f) + (combatSkill * 0.20f), 40f, 95f);
+
+            // 7. Initial Standing: Charismatic (Looks) and sharp (Smarts) soldiers make stronger first impressions
+            squadRespect = Mathf.Clamp(42f + (looks * 0.15f) + (combatSkill * 0.12f), 35f, 75f);
+            coFavor = Mathf.Clamp(42f + (intellect * 0.15f) + (discipline * 0.12f), 35f, 75f);
+            meritRating = Mathf.Clamp(45f + (intellect * 0.10f), 40f, 70f);
+        }
+
         public SoldierProfile()
         {
-            health = 100f;
-            physicalFitness = 50f;
-            marksmanshipScore = 50f;
-            tacticalIntellect = 50f;
-            discipline = 60f;
-            combatReadiness = 50f;
-            combatSkill = 30f;
-            meritRating = 50f;
-            politicalInfluence = 10f;
-            clanFavor = 50f;
-            squadRespect = 50f;
-            coFavor = 50f;
-            happiness = 80f;
-            leadership = 50f;
             inMedicalConvalescence = false;
             convalescenceSemestersRemaining = 0;
             hasLostLimb = false;
@@ -580,6 +699,7 @@ namespace ArmyLife.Data
         public int examScore;
         public string siblingRivalName = "Lucian";
         public float parentRelationship = 80f;
+        public float familyRelationship => parentRelationship;
         public float siblingRelationship = 50f;
 
         [Header("Mock Exam & Exam Preparation (Age 17.5)")]
@@ -662,15 +782,14 @@ namespace ArmyLife.Data
             }
 
             string famName = !string.IsNullOrEmpty(lastName) ? lastName : "Vance";
-            NobleRank rank = (lineage != null) ? lineage.startingNobleRank : NobleRank.Commoner;
             int playerAge = Mathf.Max(0, Mathf.RoundToInt(age));
 
             if (forceLegacyFixture)
             {
-                clanMembers.Add(new ClanMember($"Julian {famName}", ClanRelationType.Father, "Father", 46, 65f, rank, 2, "Strict & Honorable", 60f));
-                clanMembers.Add(new ClanMember($"Eleanor {famName}", ClanRelationType.Mother, "Mother", 44, 85f, rank, 1, "Warm & Devoted", 85f));
-                clanMembers.Add(new ClanMember($"Lucian {famName}", ClanRelationType.OlderBrother, "Older Brother (Rival Heir)", 21, 35f, rank, 1, "Jealous & Competitive", 15f));
-                clanMembers.Add(new ClanMember($"Seraphina {famName}", ClanRelationType.YoungerSister, "Younger Sister", 15, 70f, rank, 0, "Affectionate", 50f));
+                clanMembers.Add(new ClanMember($"Julian {famName}", ClanRelationType.Father, "Father", 46, 65f, "Strict & Honorable", 60f));
+                clanMembers.Add(new ClanMember($"Eleanor {famName}", ClanRelationType.Mother, "Mother", 44, 85f, "Warm & Devoted", 85f));
+                clanMembers.Add(new ClanMember($"Lucian {famName}", ClanRelationType.OlderBrother, "Older Brother", 21, 35f, "Jealous & Competitive", 15f));
+                clanMembers.Add(new ClanMember($"Seraphina {famName}", ClanRelationType.YoungerSister, "Younger Sister", 15, 70f, "Affectionate", 50f));
                 SyncImmediateFamilyMembers();
                 return;
             }
@@ -693,7 +812,7 @@ namespace ArmyLife.Data
                 string mTrait = PARENT_PERSONALITIES[UnityEngine.Random.Range(0, PARENT_PERSONALITIES.Length)];
                 float mRel = UnityEngine.Random.Range(70f, 95f);
                 float mGen = UnityEngine.Random.Range(60f, 90f);
-                clanMembers.Add(new ClanMember(mName, ClanRelationType.Mother, "Mother", motherAge, mRel, rank, 1, mTrait, mGen));
+                clanMembers.Add(new ClanMember(mName, ClanRelationType.Mother, "Mother", motherAge, mRel, mTrait, mGen));
             }
 
             if (hasFather)
@@ -703,7 +822,7 @@ namespace ArmyLife.Data
                 string fTrait = PARENT_PERSONALITIES[UnityEngine.Random.Range(0, PARENT_PERSONALITIES.Length)];
                 float fRel = UnityEngine.Random.Range(55f, 90f);
                 float fGen = UnityEngine.Random.Range(50f, 85f);
-                clanMembers.Add(new ClanMember(fName, ClanRelationType.Father, "Father", fatherAge, fRel, rank, 2, fTrait, fGen));
+                clanMembers.Add(new ClanMember(fName, ClanRelationType.Father, "Father", fatherAge, fRel, fTrait, fGen));
             }
 
             // 2. Variable Siblings:
@@ -771,7 +890,7 @@ namespace ArmyLife.Data
                 string sTrait = SIBLING_PERSONALITIES[UnityEngine.Random.Range(0, SIBLING_PERSONALITIES.Length)];
                 float sRel = UnityEngine.Random.Range(35f, 90f);
                 float sGen = UnityEngine.Random.Range(30f, 75f);
-                clanMembers.Add(new ClanMember(sFullName, relType, roleTitle, sAge, sRel, rank, 0, sTrait, sGen));
+                clanMembers.Add(new ClanMember(sFullName, relType, roleTitle, sAge, sRel, sTrait, sGen));
             }
 
             SyncImmediateFamilyMembers();
@@ -875,7 +994,7 @@ namespace ArmyLife.Data
 
             ClanRelationType relType = isBoy ? ClanRelationType.Brother : ClanRelationType.Sister;
             string role = isBoy ? "Baby Brother (Newborn)" : "Baby Sister (Newborn)";
-            var baby = new ClanMember(fullName, relType, role, 0, UnityEngine.Random.Range(80f, 95f), nobleTitle, 0, "Adorable & Innocent", 50f);
+            var baby = new ClanMember(fullName, relType, role, 0, UnityEngine.Random.Range(80f, 95f), "Adorable & Innocent", 50f);
             clanMembers.Add(baby);
 
             happiness = Mathf.Min(100f, happiness + 15f);
@@ -923,7 +1042,7 @@ namespace ArmyLife.Data
             string fullName = $"{babyFirst} {famName}";
             ClanRelationType relType = isBrother ? ClanRelationType.Brother : ClanRelationType.Sister;
             string role = isBrother ? "Baby Brother (Newborn)" : "Baby Sister (Newborn)";
-            var baby = new ClanMember(fullName, relType, role, 0, 85f, nobleTitle, 0, "Adorable & Innocent", 50f);
+            var baby = new ClanMember(fullName, relType, role, 0, 85f, "Adorable & Innocent", 50f);
             clanMembers.Add(baby);
 
             GameEvents.OnFeedEventLogged?.Invoke("FAMILY",
@@ -940,7 +1059,7 @@ namespace ArmyLife.Data
             {
                 if (!clanMembers.Exists(m => m.relationType == ClanRelationType.Spouse))
                 {
-                    clanMembers.Add(new ClanMember(spouseName, ClanRelationType.Spouse, "Beloved Military Spouse", Mathf.Max(18, (int)age), 85f, nobleTitle, 0, "Loving & Steadfast", 75f));
+                    clanMembers.Add(new ClanMember(spouseName, ClanRelationType.Spouse, "Beloved Military Spouse", Mathf.Max(18, (int)age), 85f, "Loving & Steadfast", 75f));
                 }
             }
 
@@ -949,7 +1068,7 @@ namespace ArmyLife.Data
                 var existingChild = clanMembers.Find(m => m.relationType == ClanRelationType.Child);
                 if (existingChild == null)
                 {
-                    clanMembers.Add(new ClanMember(childHeir.childName, ClanRelationType.Child, $"Eldest Child (Age {(int)childHeir.age})", (int)childHeir.age, childHeir.relationship, nobleTitle, 0, "Affectionate & Curious", 50f));
+                    clanMembers.Add(new ClanMember(childHeir.childName, ClanRelationType.Child, $"Eldest Child (Age {(int)childHeir.age})", (int)childHeir.age, childHeir.relationship, "Affectionate & Curious", 50f));
                 }
                 else
                 {
@@ -964,18 +1083,18 @@ namespace ArmyLife.Data
         {
             if (isBornInImperialState)
             {
-                if (nobleTitle >= NobleRank.Marquis)
+                if (politicalInfluence >= 70)
                     schoolTier = SchoolTier.ImperialPinnacle;
-                else if (nobleTitle >= NobleRank.Baron)
+                else if (politicalInfluence >= 30)
                     schoolTier = SchoolTier.City1st;
                 else
                     schoolTier = SchoolTier.City2nd;
             }
             else
             {
-                if (nobleTitle >= NobleRank.Viscount)
+                if (politicalInfluence >= 50)
                     schoolTier = SchoolTier.State3rd;
-                else if (nobleTitle >= NobleRank.Baron)
+                else if (politicalInfluence >= 25)
                     schoolTier = SchoolTier.City1st;
                 else
                     schoolTier = SchoolTier.City3rd;
@@ -1072,35 +1191,21 @@ namespace ArmyLife.Data
             activeNemesisName = "";
             activeNemesisTitle = "";
             activeNemesisBounty = 0;
-            health = 100f;
-            physicalFitness = 75f;
-            marksmanshipScore = Mathf.Clamp(rolledTalent / 2f, 30f, 95f);
-            tacticalIntellect = 65f;
-            discipline = 65f;
-            combatReadiness = 60f;
-            combatSkill = 35f;
-            meritRating = 50f;
-            squadRespect = 50f;
-            coFavor = 50f;
+
+            // Roll authentic randomized BitLife 4 core attributes & derived military attributes uniquely for this life
+            RandomizeBitLifeCoreAttributes(rolledTalent);
+
             cashBalance = 1200L;
             failedBreakthroughCount = 0;
             meridianDamage = 0f;
-            talentScore = rolledTalent;
             parentRelationship = 85f;
             siblingRelationship = 50f;
 
             if (initialLineage != null)
             {
-                nobleTitle = initialLineage.startingNobleRank;
                 politicalInfluence = initialLineage.startingInfluence;
-                squadRespect = initialLineage.startingRespect;
-                clanFavor = initialLineage.startingClanFavor;
+                squadRespect = Mathf.Max(squadRespect, initialLineage.startingRespect);
                 cashBalance = initialLineage.startingFamilyWealth;
-                powerTier = initialLineage.startingPowerTier;
-            }
-            else
-            {
-                nobleTitle = NobleRank.Commoner;
             }
 
             isPersonalTalentRevealed = true;

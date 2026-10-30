@@ -35,6 +35,7 @@ namespace ArmyLife.Editor
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.08f, 0.10f, 0.12f); // Tactical Dark Slate
             camObj.transform.position = new Vector3(0, 0, -10);
+            camObj.AddComponent<AudioListener>(); // Required for Unity audio output to speakers/headphones
 
             // 2. Event System (Required for UI Clicks)
             var eventObj = new GameObject("EventSystem");
@@ -57,17 +58,17 @@ namespace ArmyLife.Editor
             var audioManager = coreObj.AddComponent<AudioManager>();
 
             // Auto-populate Game Data into GameManager
-            gm.powerTierDatabase = LoadAllAssets<PowerTierSO>("Assets/GameData/PowerTiers");
             gm.militaryRankDatabase = LoadAllAssets<MilitaryRankSO>("Assets/GameData/Ranks");
             gm.familyLineageDatabase = LoadAllAssets<FamilyLineageSO>("Assets/GameData/Lineages");
 
             // 4. Canvas
+            // 4. Canvas (16:9 PC Widescreen Tactical Command Layout)
             var canvasObj = new GameObject("Canvas");
             var canvas = canvasObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             var scaler = canvasObj.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1080, 1920); // Mobile/Bitlife vertical layout
+            scaler.referenceResolution = new Vector2(1920, 1080); // 16:9 PC Native Widescreen
             scaler.matchWidthOrHeight = 0.5f;
             canvasObj.AddComponent<GraphicRaycaster>();
 
@@ -78,188 +79,253 @@ namespace ArmyLife.Editor
             var rootPanel = CreateUIElement("RootPanel", canvasObj.transform);
             SetFullScreen(rootPanel.GetComponent<RectTransform>());
 
-            // ==========================================
-            // 5. MAIN HUD PANEL (Active Gameplay View)
-            // ==========================================
+            // =========================================================================
+            // 5. MAIN HUD PANEL (16:9 PC TACTICAL WAR ROOM - 3-COLUMN COMMAND DESK)
+            // =========================================================================
             var mainHUDPanel = CreateUIElement("MainHUDPanel", rootPanel.transform);
             SetFullScreen(mainHUDPanel.GetComponent<RectTransform>());
             var hudView = mainHUDPanel.AddComponent<MainHUDView>();
             openingCtrl.mainHUDPanel = mainHUDPanel;
 
-            // --- HEADER PANEL ---
-            var headerPanel = CreateUIElement("HeaderPanel", mainHUDPanel.transform);
-            var headerRect = headerPanel.GetComponent<RectTransform>();
-            headerRect.anchorMin = new Vector2(0, 0.78f);
-            headerRect.anchorMax = new Vector2(1, 1);
-            headerRect.offsetMin = new Vector2(40, 20);
-            headerRect.offsetMax = new Vector2(-40, -20);
-            var headerBg = headerPanel.AddComponent<Image>();
-            headerBg.color = new Color(0.15f, 0.18f, 0.22f);
-            hudView.headerPanelImage = headerBg;
+            // --- TOP COMMAND BAR (Full Width: y: 0.93 to 1.0) ---
+            var topBar = CreateUIElement("TopCommandBar", mainHUDPanel.transform);
+            SetRect(topBar.GetComponent<RectTransform>(), 0.01f, 0.93f, 0.99f, 0.995f);
+            var topBg = topBar.AddComponent<Image>();
+            topBg.color = new Color(0.12f, 0.15f, 0.19f);
+            hudView.headerPanelImage = topBg;
 
-            var nameText = CreateText("NameLabel", headerPanel.transform, "Ethan Vance", 48, TextAlignmentOptions.TopLeft, FontStyles.Bold);
-            SetRect(nameText.GetComponent<RectTransform>(), 0.05f, 0.65f, 0.60f, 0.95f);
-            hudView.nameLabel = nameText;
+            var titleHeader = CreateText("HQHeaderLabel", topBar.transform, "ARMY LIFE SIMULATOR | TACTICAL COMMAND WAR ROOM", 20, TextAlignmentOptions.Left, FontStyles.Bold, new Color(0.95f, 0.85f, 0.35f));
+            SetRect(titleHeader.GetComponent<RectTransform>(), 0.02f, 0.15f, 0.40f, 0.85f);
 
-            // Top Settings Button
-            var settingsBtnObj = CreateButton("SettingsButton", headerPanel.transform, "SETTINGS", new Color(0.20f, 0.28f, 0.38f));
-            var settingsBtnRect = settingsBtnObj.GetComponent<RectTransform>();
-            SetRect(settingsBtnRect, 0.77f, 0.65f, 0.86f, 0.94f);
+            var ageDateText = CreateText("AgeDateLabel", topBar.transform, "Age 18.0 | Year 2026 S1 [GARRISON BASE]", 20, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.85f, 0.90f, 0.95f));
+            SetRect(ageDateText.GetComponent<RectTransform>(), 0.40f, 0.15f, 0.72f, 0.85f);
+            hudView.ageAndCalendarLabel = ageDateText;
+
+            var settingsBtnObj = CreateButton("SettingsButton", topBar.transform, "SETTINGS", new Color(0.20f, 0.28f, 0.38f));
+            SetRect(settingsBtnObj.GetComponent<RectTransform>(), 0.75f, 0.15f, 0.86f, 0.85f);
             hudView.settingsButton = settingsBtnObj.GetComponent<Button>();
 
-            // Top Menu Button
-            var menuBtnObj = CreateButton("MenuButton", headerPanel.transform, "MENU", new Color(0.25f, 0.35f, 0.45f));
-            var menuBtnRect = menuBtnObj.GetComponent<RectTransform>();
-            SetRect(menuBtnRect, 0.88f, 0.65f, 0.98f, 0.94f);
+            var menuBtnObj = CreateButton("MenuButton", topBar.transform, "MAIN MENU", new Color(0.28f, 0.36f, 0.46f));
+            SetRect(menuBtnObj.GetComponent<RectTransform>(), 0.875f, 0.15f, 0.985f, 0.85f);
             hudView.returnToMenuButton = menuBtnObj.GetComponent<Button>();
             openingCtrl.returnToMenuButton = menuBtnObj.GetComponent<Button>();
 
-            var nobleText = CreateText("NobleTitleLabel", headerPanel.transform, "Commoner", 32, TextAlignmentOptions.TopRight, FontStyles.Bold, new Color(1f, 0.85f, 0.3f));
-            SetRect(nobleText.GetComponent<RectTransform>(), 0.45f, 0.65f, 0.75f, 0.95f);
-            hudView.nobleTitleLabel = nobleText;
+            // =========================================================================
+            // COLUMN 1: LEFT PANE — SOLDIER DOSSIER & ATTRIBUTES (x: 0.01 to 0.27)
+            // =========================================================================
+            var leftCol = CreateUIElement("LeftDossierColumn", mainHUDPanel.transform);
+            SetRect(leftCol.GetComponent<RectTransform>(), 0.01f, 0.015f, 0.27f, 0.92f);
+            var leftBg = leftCol.AddComponent<Image>();
+            leftBg.color = new Color(0.10f, 0.12f, 0.16f);
+            hudView.subHeaderPanelImage = leftBg;
 
-            var ageDateText = CreateText("AgeDateLabel", headerPanel.transform, "Age 0.0 | Year 2008 S1 [YOUTH PHASE]", 32, TextAlignmentOptions.Left, FontStyles.Normal, new Color(0.8f, 0.85f, 0.9f));
-            SetRect(ageDateText.GetComponent<RectTransform>(), 0.05f, 0.35f, 0.55f, 0.65f);
-            hudView.ageAndCalendarLabel = ageDateText;
+            // Insignia / Photo card
+            var photoBox = CreateUIElement("InsigniaBox", leftCol.transform);
+            SetRect(photoBox.GetComponent<RectTransform>(), 0.04f, 0.84f, 0.96f, 0.98f);
+            var photoImg = photoBox.AddComponent<Image>();
+            photoImg.color = new Color(0.14f, 0.17f, 0.22f);
 
-            var rankText = CreateText("RankLabel", headerPanel.transform, "Infant", 34, TextAlignmentOptions.Left, FontStyles.Bold, new Color(0.4f, 0.8f, 1f));
-            SetRect(rankText.GetComponent<RectTransform>(), 0.05f, 0.05f, 0.55f, 0.35f);
+            var insigniaImgObj = CreateUIElement("RankInsignia", photoBox.transform);
+            SetRect(insigniaImgObj.GetComponent<RectTransform>(), 0.03f, 0.10f, 0.24f, 0.90f);
+            var rankImg = insigniaImgObj.AddComponent<Image>();
+            rankImg.preserveAspect = true;
+            hudView.rankInsigniaImage = rankImg;
+
+            var crestImgObj = CreateUIElement("BranchCrest", photoBox.transform);
+            SetRect(crestImgObj.GetComponent<RectTransform>(), 0.25f, 0.10f, 0.46f, 0.90f);
+            var crestImg = crestImgObj.AddComponent<Image>();
+            crestImg.preserveAspect = true;
+            hudView.branchCrestImage = crestImg;
+
+            var nameText = CreateText("NameLabel", photoBox.transform, "Ethan Vance", 22, TextAlignmentOptions.Left, FontStyles.Bold, Color.white);
+            SetRect(nameText.GetComponent<RectTransform>(), 0.48f, 0.50f, 0.98f, 0.95f);
+            hudView.nameLabel = nameText;
+
+            var rankText = CreateText("RankLabel", photoBox.transform, "Recruit (E-1)", 17, TextAlignmentOptions.Left, FontStyles.Bold, new Color(0.40f, 0.80f, 1f));
+            SetRect(rankText.GetComponent<RectTransform>(), 0.48f, 0.05f, 0.98f, 0.50f);
             hudView.rankLabel = rankText;
 
-            var payText = CreateText("PayLabel", headerPanel.transform, "Family Dependent ($0/mo)", 32, TextAlignmentOptions.Right, FontStyles.Bold, new Color(0.6f, 0.65f, 0.7f));
-            SetRect(payText.GetComponent<RectTransform>(), 0.55f, 0.05f, 0.95f, 0.35f);
-            hudView.monthlyPayLabel = payText;
+            // Origin / Trait label
+            var nobleText = CreateText("NobleTitleLabel", leftCol.transform, "Origin: Farmhand (Country Grit)", 15, TextAlignmentOptions.Center, FontStyles.Normal, new Color(0.85f, 0.75f, 0.40f));
+            SetRect(nobleText.GetComponent<RectTransform>(), 0.04f, 0.775f, 0.96f, 0.825f);
+            hudView.nobleTitleLabel = nobleText;
 
-            // --- FINANCES & CULTIVATION BAR ---
-            var subHeader = CreateUIElement("SubHeader", mainHUDPanel.transform);
-            var subRect = subHeader.GetComponent<RectTransform>();
-            subRect.anchorMin = new Vector2(0, 0.68f);
-            subRect.anchorMax = new Vector2(1, 0.77f);
-            subRect.offsetMin = new Vector2(40, 10);
-            subRect.offsetMax = new Vector2(-40, -10);
-            var subBg = subHeader.AddComponent<Image>();
-            subBg.color = new Color(0.13f, 0.15f, 0.18f);
-            hudView.subHeaderPanelImage = subBg;
-
-            var cashText = CreateText("CashLabel", subHeader.transform, "$2,000", 36, TextAlignmentOptions.Left, FontStyles.Bold, new Color(0.4f, 1f, 0.6f));
-            SetRect(cashText.GetComponent<RectTransform>(), 0.05f, 0.5f, 0.45f, 0.95f);
-            hudView.cashBalanceLabel = cashText;
-
-            var cmpText = CreateText("CMPLabel", subHeader.transform, "0 CMP", 34, TextAlignmentOptions.Right, FontStyles.Bold, new Color(0.9f, 0.5f, 1f));
-            SetRect(cmpText.GetComponent<RectTransform>(), 0.55f, 0.5f, 0.95f, 0.95f);
-            hudView.cmpBalanceLabel = cmpText;
-
-            var tierText = CreateText("TierLabel", subHeader.transform, "Power Tier: 0 / 12", 30, TextAlignmentOptions.Left, FontStyles.Normal, Color.white);
-            SetRect(tierText.GetComponent<RectTransform>(), 0.05f, 0.05f, 0.50f, 0.48f);
-            hudView.powerTierLabel = tierText;
-
-            var talentText = CreateText("TalentLabel", subHeader.transform, "Talent: [??? / 200] (Requires Rank E-4)", 28, TextAlignmentOptions.Right, FontStyles.Normal, new Color(1f, 0.8f, 0.4f));
-            SetRect(talentText.GetComponent<RectTransform>(), 0.50f, 0.05f, 0.95f, 0.48f);
-            hudView.talentLabel = talentText;
-
-            // --- BITLIFE FEED CONTAINER ---
-            var feedContainer = CreateUIElement("FeedContainer", mainHUDPanel.transform);
-            var feedRect = feedContainer.GetComponent<RectTransform>();
-            feedRect.anchorMin = new Vector2(0, 0.23f);
-            feedRect.anchorMax = new Vector2(1, 0.67f);
-            feedRect.offsetMin = new Vector2(40, 8);
-            feedRect.offsetMax = new Vector2(-40, -8);
-            var feedBg = feedContainer.AddComponent<Image>();
-            feedBg.color = new Color(0.10f, 0.12f, 0.14f);
-            hudView.feedContainerImage = feedBg;
-
-            var scrollRect = feedContainer.AddComponent<ScrollRect>();
-            scrollRect.horizontal = false;
-            scrollRect.vertical = true;
-            scrollRect.movementType = ScrollRect.MovementType.Clamped;
-
-            var feedTextObj = CreateText("FeedContent", feedContainer.transform, "Welcome to the Valerian Empire...\n", 32, TextAlignmentOptions.TopLeft, FontStyles.Normal, Color.white);
-            var feedTextRect = feedTextObj.GetComponent<RectTransform>();
-            SetFullScreen(feedTextRect);
-            scrollRect.content = feedTextRect;
-
-            var feedView = feedContainer.AddComponent<BitLifeFeedView>();
-            feedView.feedContentText = feedTextObj;
-            feedView.feedScrollRect = scrollRect;
-
-            // --- BITLIFE 4-GAUGE STATS BAR PANEL ---
-            var statsPanel = CreateUIElement("StatsBarPanel", mainHUDPanel.transform);
-            var statsPanelRect = statsPanel.GetComponent<RectTransform>();
-            statsPanelRect.anchorMin = new Vector2(0, 0.115f);
-            statsPanelRect.anchorMax = new Vector2(1, 0.22f);
-            statsPanelRect.offsetMin = new Vector2(40, 4);
-            statsPanelRect.offsetMax = new Vector2(-40, -4);
-            var statsBg = statsPanel.AddComponent<Image>();
-            statsBg.color = new Color(0.10f, 0.13f, 0.17f);
-            hudView.statsPanelImage = statsBg;
-
-            // 1. Health Bar (Top Left)
-            var healthBar = CreateStatBar("HealthBar", statsPanel.transform, "Health: 100%", new Color(0.85f, 0.25f, 0.30f), out var healthText);
-            SetRect(healthBar.GetComponent<RectTransform>(), 0.02f, 0.54f, 0.48f, 0.94f);
+            // 4 Core Military Gauges
+            var healthBar = CreateStatBar("HealthBar", leftCol.transform, "Health: 100%", new Color(0.85f, 0.25f, 0.30f), out var healthText);
+            SetRect(healthBar.GetComponent<RectTransform>(), 0.04f, 0.69f, 0.96f, 0.76f);
             hudView.healthSlider = healthBar;
             hudView.healthBarText = healthText;
 
-            // 2. Fitness Bar (Top Right)
-            var fitnessBar = CreateStatBar("FitnessBar", statsPanel.transform, "Fitness: 50%", new Color(0.18f, 0.70f, 0.35f), out var fitnessText);
-            SetRect(fitnessBar.GetComponent<RectTransform>(), 0.52f, 0.54f, 0.98f, 0.94f);
+            var fitnessBar = CreateStatBar("FitnessBar", leftCol.transform, "Morale: 85%", new Color(0.18f, 0.70f, 0.35f), out var fitnessText);
+            SetRect(fitnessBar.GetComponent<RectTransform>(), 0.04f, 0.605f, 0.96f, 0.675f);
             hudView.fitnessSlider = fitnessBar;
             hudView.fitnessBarText = fitnessText;
 
-            // 3. Combat Skill Bar (Bottom Left)
-            var combatBar = CreateStatBar("CombatBar", statsPanel.transform, "Combat: 30%", new Color(0.90f, 0.55f, 0.15f), out var combatText);
-            SetRect(combatBar.GetComponent<RectTransform>(), 0.02f, 0.06f, 0.48f, 0.46f);
+            var combatBar = CreateStatBar("CombatBar", leftCol.transform, "Combat: 50%", new Color(0.90f, 0.55f, 0.15f), out var combatText);
+            SetRect(combatBar.GetComponent<RectTransform>(), 0.04f, 0.52f, 0.96f, 0.59f);
             hudView.combatSkillSlider = combatBar;
             hudView.combatBarText = combatText;
 
-            // 4. Intellect Bar (Bottom Right)
-            var intellectBar = CreateStatBar("IntellectBar", statsPanel.transform, "Intellect: 50%", new Color(0.20f, 0.60f, 0.95f), out var intellectText);
-            SetRect(intellectBar.GetComponent<RectTransform>(), 0.52f, 0.06f, 0.98f, 0.46f);
+            var intellectBar = CreateStatBar("IntellectBar", leftCol.transform, "Discipline: 75%", new Color(0.20f, 0.60f, 0.95f), out var intellectText);
+            SetRect(intellectBar.GetComponent<RectTransform>(), 0.04f, 0.435f, 0.96f, 0.505f);
             hudView.intellectSlider = intellectBar;
             hudView.intellectBarText = intellectText;
 
-            // --- BOTTOM ACTION BUTTONS ---
-            var bottomBar = CreateUIElement("BottomBar", mainHUDPanel.transform);
-            var bottomRect = bottomBar.GetComponent<RectTransform>();
-            bottomRect.anchorMin = new Vector2(0, 0.015f);
-            bottomRect.anchorMax = new Vector2(1, 0.105f);
-            bottomRect.offsetMin = new Vector2(20, 2);
-            bottomRect.offsetMax = new Vector2(-20, -2);
-            var bottomBg = bottomBar.AddComponent<Image>();
-            bottomBg.color = new Color(0.11f, 0.14f, 0.18f);
-            hudView.bottomBarImage = bottomBg;
+            // Compensation & Finance Summary Card
+            var finCard = CreateUIElement("FinancesCard", leftCol.transform);
+            SetRect(finCard.GetComponent<RectTransform>(), 0.04f, 0.22f, 0.96f, 0.42f);
+            var finBg = finCard.AddComponent<Image>();
+            finBg.color = new Color(0.13f, 0.16f, 0.22f);
 
-            // 5 Core Bottom Buttons (BitLife-style navigation layout)
-            // 1. Far Left: LIFE
-            var lifeBtnObj = CreateButton("LifeButton", bottomBar.transform, "LIFE", new Color(0.18f, 0.24f, 0.32f));
-            SetRect(lifeBtnObj.GetComponent<RectTransform>(), 0.01f, 0.10f, 0.19f, 0.90f);
+            var finTitle = CreateText("FinTitle", finCard.transform, "SERVICE COMPENSATION & ASSETS", 14, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.70f, 0.80f, 0.90f));
+            SetRect(finTitle.GetComponent<RectTransform>(), 0.05f, 0.76f, 0.95f, 0.96f);
+
+            var cashLabel = CreateText("CashLabel", finCard.transform, "Bank Balance: $1,450", 17, TextAlignmentOptions.Left, FontStyles.Bold, new Color(0.40f, 1f, 0.60f));
+            SetRect(cashLabel.GetComponent<RectTransform>(), 0.08f, 0.50f, 0.95f, 0.74f);
+            hudView.cashBalanceLabel = cashLabel;
+
+            var payLabel = CreateText("PayLabel", finCard.transform, "Net Pay: +$900 / mo", 15, TextAlignmentOptions.Left, FontStyles.Normal, Color.white);
+            SetRect(payLabel.GetComponent<RectTransform>(), 0.08f, 0.26f, 0.95f, 0.48f);
+            hudView.monthlyPayLabel = payLabel;
+
+            var cmpLabel = CreateText("CMPLabel", finCard.transform, "Combat Merit: 0 CMP", 15, TextAlignmentOptions.Left, FontStyles.Normal, new Color(0.85f, 0.60f, 1f));
+            SetRect(cmpLabel.GetComponent<RectTransform>(), 0.08f, 0.04f, 0.95f, 0.24f);
+            hudView.cmpBalanceLabel = cmpLabel;
+
+            // Left Quick Action Drawers: Dossier & Finance
+            var lifeBtnObj = CreateButton("LifeButton", leftCol.transform, "[DOSSIER & SERVICE RECORD]", new Color(0.20f, 0.28f, 0.38f));
+            SetRect(lifeBtnObj.GetComponent<RectTransform>(), 0.04f, 0.115f, 0.96f, 0.195f);
             hudView.lifeButton = lifeBtnObj.GetComponent<Button>();
 
-            // 2. Mid Left: FINANCE
-            var financeBtnObj = CreateButton("FinanceButton", bottomBar.transform, "FINANCE", new Color(0.18f, 0.24f, 0.32f));
-            SetRect(financeBtnObj.GetComponent<RectTransform>(), 0.205f, 0.10f, 0.385f, 0.90f);
-            hudView.financeButton = financeBtnObj.GetComponent<Button>();
+            var finBtnObj = CreateButton("FinanceButton", leftCol.transform, "[FINANCES & ASSETS]", new Color(0.18f, 0.25f, 0.34f));
+            SetRect(finBtnObj.GetComponent<RectTransform>(), 0.04f, 0.02f, 0.96f, 0.10f);
+            hudView.financeButton = finBtnObj.GetComponent<Button>();
 
-            // 3. Center: AGE / GROW UP (Prominently highlighted center action)
-            var advanceBtnObj = CreateButton("AdvanceSemesterButton", bottomBar.transform, "GROW UP (+)", new Color(0.12f, 0.72f, 0.38f));
-            SetRect(advanceBtnObj.GetComponent<RectTransform>(), 0.40f, 0.04f, 0.60f, 0.96f);
+            // =========================================================================
+            // COLUMN 2: CENTER PANE — FIELD TELETYPE & ACTION CONSOLE (x: 0.28 to 0.72)
+            // =========================================================================
+            var centerCol = CreateUIElement("CenterFeedColumn", mainHUDPanel.transform);
+            SetRect(centerCol.GetComponent<RectTransform>(), 0.28f, 0.015f, 0.72f, 0.92f);
+            var centerBg = centerCol.AddComponent<Image>();
+            centerBg.color = new Color(0.08f, 0.10f, 0.13f);
+            hudView.feedContainerImage = centerBg;
+
+            var feedHeader = CreateText("FeedHeader", centerCol.transform, "OFFICIAL SERVICE RECORD CHRONICLE", 16, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.75f, 0.85f, 0.95f));
+            SetRect(feedHeader.GetComponent<RectTransform>(), 0.02f, 0.955f, 0.98f, 0.99f);
+
+            var feedScrollObj = CreateUIElement("FeedScrollArea", centerCol.transform);
+            SetRect(feedScrollObj.GetComponent<RectTransform>(), 0.02f, 0.135f, 0.98f, 0.95f);
+            var feedScroll = feedScrollObj.AddComponent<ScrollRect>();
+            feedScroll.horizontal = false;
+            feedScroll.vertical = true;
+            feedScroll.movementType = ScrollRect.MovementType.Clamped;
+            feedScroll.scrollSensitivity = 45f;
+
+            var feedViewport = CreateUIElement("Viewport", feedScrollObj.transform);
+            SetFullScreen(feedViewport.GetComponent<RectTransform>());
+            var vpImg = feedViewport.AddComponent<Image>();
+            vpImg.color = new Color(0.06f, 0.08f, 0.10f);
+            feedViewport.AddComponent<Mask>().showMaskGraphic = true;
+            feedScroll.viewport = feedViewport.GetComponent<RectTransform>();
+
+            var feedContent = CreateUIElement("Content", feedViewport.transform);
+            var feedContentRt = feedContent.GetComponent<RectTransform>();
+            feedContentRt.anchorMin = new Vector2(0f, 1f);
+            feedContentRt.anchorMax = new Vector2(1f, 1f);
+            feedContentRt.pivot = new Vector2(0.5f, 1f);
+            feedContentRt.sizeDelta = new Vector2(0f, 1200f);
+            feedScroll.content = feedContentRt;
+
+            var vlg = feedContent.AddComponent<VerticalLayoutGroup>();
+            vlg.childForceExpandHeight = false;
+            vlg.childForceExpandWidth = true;
+            vlg.childControlHeight = true;
+            vlg.childControlWidth = true;
+            vlg.spacing = 8f;
+            vlg.padding = new RectOffset(15, 15, 15, 15);
+
+            var csf = feedContent.AddComponent<ContentSizeFitter>();
+            csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var feedTextObj = CreateText("FeedContentText", feedContent.transform, "Welcome to the Armed Forces.\nEnlistment Day initialized.\n", 18, TextAlignmentOptions.TopLeft, FontStyles.Normal, Color.white);
+            feedTextObj.textWrappingMode = TextWrappingModes.Normal;
+            var feedLe = feedTextObj.gameObject.AddComponent<LayoutElement>();
+            feedLe.flexibleWidth = 1f;
+
+            var feedView = feedScrollObj.AddComponent<BitLifeFeedView>();
+            feedView.feedContentText = feedTextObj;
+            feedView.feedScrollRect = feedScroll;
+
+            // Massive Central Action Button: [ ADVANCE 6-MONTH TOUR ]
+            var advanceBtnObj = CreateButton("AdvanceSemesterButton", centerCol.transform, "[ ADVANCE 6-MONTH TOUR OF DUTY ]", new Color(0.12f, 0.65f, 0.35f));
+            SetRect(advanceBtnObj.GetComponent<RectTransform>(), 0.02f, 0.015f, 0.98f, 0.115f);
+            var advanceBtnText = advanceBtnObj.GetComponentInChildren<TextMeshProUGUI>();
+            if (advanceBtnText != null)
+            {
+                advanceBtnText.fontSize = 22;
+                advanceBtnText.fontStyle = FontStyles.Bold;
+            }
             hudView.advanceSemesterButton = advanceBtnObj.GetComponent<Button>();
 
-            // 4. Mid Right: RELATIONSHIPS
-            var relationsBtnObj = CreateButton("RelationshipsButton", bottomBar.transform, "RELATIONS", new Color(0.18f, 0.24f, 0.32f));
-            SetRect(relationsBtnObj.GetComponent<RectTransform>(), 0.615f, 0.10f, 0.795f, 0.90f);
-            hudView.relationshipsButton = relationsBtnObj.GetComponent<Button>();
+            // =========================================================================
+            // COLUMN 3: RIGHT PANE — TACTICAL FRONT & SQUAD ROSTER (x: 0.73 to 0.99)
+            // =========================================================================
+            var rightCol = CreateUIElement("RightTacticalColumn", mainHUDPanel.transform);
+            SetRect(rightCol.GetComponent<RectTransform>(), 0.73f, 0.015f, 0.99f, 0.92f);
+            var rightBg = rightCol.AddComponent<Image>();
+            rightBg.color = new Color(0.10f, 0.12f, 0.16f);
+            hudView.statsPanelImage = rightBg;
 
-            // 5. Far Right: ACTIVITIES
-            var activitiesBtnObj = CreateButton("ActivitiesButton", bottomBar.transform, "ACTIVITIES", new Color(0.18f, 0.24f, 0.32f));
-            SetRect(activitiesBtnObj.GetComponent<RectTransform>(), 0.81f, 0.10f, 0.99f, 0.90f);
-            hudView.activitiesButton = activitiesBtnObj.GetComponent<Button>();
+            // Section 1: Active Front / Theater Briefing Card
+            var frontCard = CreateUIElement("FrontBriefingCard", rightCol.transform);
+            SetRect(frontCard.GetComponent<RectTransform>(), 0.04f, 0.72f, 0.96f, 0.98f);
+            var frontCardBg = frontCard.AddComponent<Image>();
+            frontCardBg.color = new Color(0.14f, 0.17f, 0.22f);
 
-            // Legacy backward-compatibility aliases
-            hudView.clanButton = relationsBtnObj.GetComponent<Button>();
-            hudView.sendMoneyHomeButton = activitiesBtnObj.GetComponent<Button>();
-            var testBtnObj = CreateButton("TestTalentButton", bottomBar.transform, "TEST (E-4)", new Color(0.25f, 0.50f, 0.85f));
-            hudView.testTalentButton = testBtnObj.GetComponent<Button>();
-            testBtnObj.SetActive(false);
+            var frontTitle = CreateText("FrontTitle", frontCard.transform, "ACTIVE DEPLOYMENT THEATER", 14, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.85f, 0.35f));
+            SetRect(frontTitle.GetComponent<RectTransform>(), 0.05f, 0.78f, 0.95f, 0.96f);
+
+            var frontSitrep = CreateText("FrontSitrep", frontCard.transform, "<b>GARRISON BASE</b>\nWeapons Qualification & Field Drills\nThreat Level: Low (Peacetime Rotation)", 15, TextAlignmentOptions.Center, FontStyles.Normal, Color.white);
+            SetRect(frontSitrep.GetComponent<RectTransform>(), 0.05f, 0.08f, 0.95f, 0.75f);
+
+            // Section 2: Active Fireteam Roster Card
+            var squadCard = CreateUIElement("SquadRosterCard", rightCol.transform);
+            SetRect(squadCard.GetComponent<RectTransform>(), 0.04f, 0.37f, 0.96f, 0.70f);
+            var squadCardBg = squadCard.AddComponent<Image>();
+            squadCardBg.color = new Color(0.12f, 0.15f, 0.20f);
+
+            var squadTitle = CreateText("SquadTitle", squadCard.transform, "FIRETEAM SQUADMATES", 14, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.40f, 0.80f, 1f));
+            SetRect(squadTitle.GetComponent<RectTransform>(), 0.05f, 0.84f, 0.95f, 0.97f);
+
+            var squadListText = CreateText("SquadList", squadCard.transform, 
+                "• Scout: <b>Pvt. Miller</b> (Loyalty: 85%)\n" +
+                "• Gunner: <b>Cpl. Kowalski</b> (Loyalty: 90%)\n" +
+                "• Medic: <b>Pvt. Chen</b> (Trauma Ready)", 
+                15, TextAlignmentOptions.Left, FontStyles.Normal, new Color(0.90f, 0.92f, 0.95f));
+            SetRect(squadListText.GetComponent<RectTransform>(), 0.08f, 0.08f, 0.92f, 0.82f);
+
+            // Section 3: Operational Action Drawers
+            var opsTitle = CreateText("OpsTitle", rightCol.transform, "FIELD & BASE OPERATIONS", 14, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.70f, 0.80f, 0.90f));
+            SetRect(opsTitle.GetComponent<RectTransform>(), 0.05f, 0.295f, 0.95f, 0.355f);
+
+            var squadBtnObj = CreateButton("RelationshipsButton", rightCol.transform, "[SQUAD & BARRACKS]", new Color(0.20f, 0.28f, 0.38f));
+            SetRect(squadBtnObj.GetComponent<RectTransform>(), 0.04f, 0.20f, 0.96f, 0.285f);
+            hudView.relationshipsButton = squadBtnObj.GetComponent<Button>();
+
+            var actBtnObj = CreateButton("ActivitiesButton", rightCol.transform, "[BASE OPERATIONS & PX]", new Color(0.22f, 0.30f, 0.40f));
+            SetRect(actBtnObj.GetComponent<RectTransform>(), 0.04f, 0.105f, 0.96f, 0.19f);
+            hudView.activitiesButton = actBtnObj.GetComponent<Button>();
+
+            var medalsBtnObj = CreateButton("MedalsButton", rightCol.transform, "[SERVICE UNIFORM & MEDALS]", new Color(0.35f, 0.30f, 0.15f));
+            SetRect(medalsBtnObj.GetComponent<RectTransform>(), 0.04f, 0.015f, 0.96f, 0.095f);
+            var medalsBtn = medalsBtnObj.GetComponent<Button>();
+            medalsBtn.onClick.AddListener(() =>
+            {
+                if (hudView.medalRibbonRackModal != null && GameManager.Instance != null && GameManager.Instance.currentSoldier != null)
+                {
+                    hudView.medalRibbonRackModal.OpenModal(GameManager.Instance.currentSoldier);
+                }
+            });
 
             // ==========================================
             // 6. OPENING SCREEN PANEL (Title / Main Menu)
@@ -271,34 +337,34 @@ namespace ArmyLife.Editor
             openingCtrl.openingScreenPanel = openingPanel;
 
             // Title Banner
-            var titleText = CreateText("GameTitle", openingPanel.transform, "VALERIAN VANGUARD", 68, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.95f, 0.80f, 0.30f));
-            SetRect(titleText.GetComponent<RectTransform>(), 0.05f, 0.72f, 0.95f, 0.85f);
+            var titleText = CreateText("GameTitle", openingPanel.transform, "ARMY LIFE SIMULATOR", 64, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.95f, 0.80f, 0.30f));
+            SetRect(titleText.GetComponent<RectTransform>(), 0.10f, 0.72f, 0.90f, 0.85f);
 
-            var subtitleText = CreateText("Subtitle", openingPanel.transform, "A Multi-Generational Military Life Simulation RPG\n<color=#00D4FF>The Great Energy Revival</color>", 32, TextAlignmentOptions.Center, FontStyles.Normal, new Color(0.8f, 0.85f, 0.9f));
-            SetRect(subtitleText.GetComponent<RectTransform>(), 0.05f, 0.62f, 0.95f, 0.71f);
+            var subtitleText = CreateText("Subtitle", openingPanel.transform, "A Gritty Military Life Simulation RPG\n<color=#00D4FF>From Drafted Recruit to 4-Star General</color>", 26, TextAlignmentOptions.Center, FontStyles.Normal, new Color(0.85f, 0.90f, 0.95f));
+            SetRect(subtitleText.GetComponent<RectTransform>(), 0.10f, 0.60f, 0.90f, 0.71f);
 
-            var recordsLabel = CreateText("RecordsLabel", openingPanel.transform, "Active Military Service Records: 0", 28, TextAlignmentOptions.Center, FontStyles.Italic, new Color(0.6f, 0.7f, 0.8f));
-            SetRect(recordsLabel.GetComponent<RectTransform>(), 0.05f, 0.55f, 0.95f, 0.60f);
+            var recordsLabel = CreateText("RecordsLabel", openingPanel.transform, "Active Military Service Records: 0", 22, TextAlignmentOptions.Center, FontStyles.Italic, new Color(0.6f, 0.7f, 0.8f));
+            SetRect(recordsLabel.GetComponent<RectTransform>(), 0.10f, 0.53f, 0.90f, 0.58f);
             openingCtrl.totalLivesCountLabel = recordsLabel;
 
             // Option 1: Create New Life Button
-            var createBtnObj = CreateButton("CreateNewLifeButton", openingPanel.transform, "CREATE NEW LIFE", new Color(0.18f, 0.65f, 0.35f));
-            SetRect(createBtnObj.GetComponent<RectTransform>(), 0.15f, 0.42f, 0.85f, 0.51f);
+            var createBtnObj = CreateButton("CreateNewLifeButton", openingPanel.transform, "ENLIST NEW RECRUIT (START CAREER)", new Color(0.18f, 0.65f, 0.35f));
+            SetRect(createBtnObj.GetComponent<RectTransform>(), 0.30f, 0.40f, 0.70f, 0.49f);
             openingCtrl.createNewLifeButton = createBtnObj.GetComponent<Button>();
 
             // Option 2: Continue or Manage Lives Button (Dynamically switched in code!)
-            var contBtnObj = CreateButton("ContinueOrManageButton", openingPanel.transform, "CONTINUE", new Color(0.20f, 0.45f, 0.75f));
-            SetRect(contBtnObj.GetComponent<RectTransform>(), 0.15f, 0.30f, 0.85f, 0.39f);
+            var contBtnObj = CreateButton("ContinueOrManageButton", openingPanel.transform, "CONTINUE CAREER", new Color(0.20f, 0.45f, 0.75f));
+            SetRect(contBtnObj.GetComponent<RectTransform>(), 0.30f, 0.29f, 0.70f, 0.38f);
             openingCtrl.continueOrManageButton = contBtnObj.GetComponent<Button>();
             openingCtrl.continueOrManageButtonText = contBtnObj.GetComponentInChildren<TextMeshProUGUI>();
 
             // Option 3: Settings Button
             var openingSettingsBtnObj = CreateButton("OpeningSettingsButton", openingPanel.transform, "SETTINGS", new Color(0.24f, 0.32f, 0.42f));
-            SetRect(openingSettingsBtnObj.GetComponent<RectTransform>(), 0.15f, 0.18f, 0.85f, 0.27f);
+            SetRect(openingSettingsBtnObj.GetComponent<RectTransform>(), 0.30f, 0.18f, 0.70f, 0.27f);
             openingCtrl.settingsButton = openingSettingsBtnObj.GetComponent<Button>();
 
             // Footer Lore Hint
-            var footerText = CreateText("FooterHint", openingPanel.transform, "Valerian Empire vs Iron Federation & Ouroboros Dominion\n12 Cultivation Tiers • Nobility Inheritance • Sibling Wars", 24, TextAlignmentOptions.Center, FontStyles.Normal, new Color(0.45f, 0.50f, 0.58f));
+            var footerText = CreateText("FooterHint", openingPanel.transform, "Survive Harrowing Frontline Tours • Forge Unbreakable Squad Bonds • Rise Through the Ranks", 20, TextAlignmentOptions.Center, FontStyles.Normal, new Color(0.55f, 0.60f, 0.68f));
             SetRect(footerText.GetComponent<RectTransform>(), 0.05f, 0.05f, 0.95f, 0.14f);
 
             // ==========================================
@@ -311,17 +377,17 @@ namespace ArmyLife.Editor
             openingCtrl.characterCreationModal = creationModal;
 
             // TOP HEADER BAR (Fixed outside scroll area)
-            var topBar = CreateUIElement("TopHeaderBar", creationModal.transform);
-            var topBarRect = topBar.GetComponent<RectTransform>();
+            var creationTopBar = CreateUIElement("TopHeaderBar", creationModal.transform);
+            var topBarRect = creationTopBar.GetComponent<RectTransform>();
             topBarRect.anchorMin = new Vector2(0f, 1f);
             topBarRect.anchorMax = new Vector2(1f, 1f);
             topBarRect.pivot = new Vector2(0.5f, 1f);
             topBarRect.sizeDelta = new Vector2(0f, 110f);
             topBarRect.anchoredPosition = Vector2.zero;
-            var topBarBg = topBar.AddComponent<Image>();
+            var topBarBg = creationTopBar.AddComponent<Image>();
             topBarBg.color = new Color(0.11f, 0.14f, 0.20f, 1.0f);
 
-            var cancelBtnObj = CreateButton("CancelCreationBtn", topBar.transform, "CANCEL", new Color(0.40f, 0.18f, 0.22f));
+            var cancelBtnObj = CreateButton("CancelCreationBtn", creationTopBar.transform, "CANCEL", new Color(0.40f, 0.18f, 0.22f));
             var cancelBtnRect = cancelBtnObj.GetComponent<RectTransform>();
             cancelBtnRect.anchorMin = new Vector2(0f, 0.5f);
             cancelBtnRect.anchorMax = new Vector2(0f, 0.5f);
@@ -330,7 +396,7 @@ namespace ArmyLife.Editor
             cancelBtnRect.sizeDelta = new Vector2(160f, 64f);
             openingCtrl.cancelCreationButton = cancelBtnObj.GetComponent<Button>();
 
-            var createTitle = CreateText("ModalTitle", topBar.transform, "CUSTOM LIFE", 38, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.95f, 0.82f, 0.35f));
+            var createTitle = CreateText("ModalTitle", creationTopBar.transform, "CUSTOM LIFE", 38, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.95f, 0.82f, 0.35f));
             SetFullScreen(createTitle.GetComponent<RectTransform>());
             createTitle.raycastTarget = false;
 
@@ -345,12 +411,12 @@ namespace ArmyLife.Editor
             var bottomBarBg = creationBottomBar.AddComponent<Image>();
             bottomBarBg.color = new Color(0.10f, 0.13f, 0.18f, 1.0f);
 
-            var confirmBtnObj = CreateButton("ConfirmStartBtn", creationBottomBar.transform, "START NEW LIFE", new Color(0.15f, 0.68f, 0.35f));
+            var confirmBtnObj = CreateButton("ConfirmStartBtn", creationBottomBar.transform, "ENLIST IN ARMED FORCES (START CAREER)", new Color(0.15f, 0.68f, 0.35f));
             var confirmBtnRect = confirmBtnObj.GetComponent<RectTransform>();
             confirmBtnRect.anchorMin = Vector2.zero;
             confirmBtnRect.anchorMax = Vector2.one;
-            confirmBtnRect.offsetMin = new Vector2(30f, 18f);
-            confirmBtnRect.offsetMax = new Vector2(-30f, -18f);
+            confirmBtnRect.offsetMin = new Vector2(480f, 18f);
+            confirmBtnRect.offsetMax = new Vector2(-480f, -18f);
             openingCtrl.confirmStartLifeButton = confirmBtnObj.GetComponent<Button>();
 
             // SCROLL CONTAINER (Bounded between Top Bar and Bottom Bar)
@@ -381,7 +447,7 @@ namespace ArmyLife.Editor
             creationScroll.content = formRect;
 
             var formLayout = formContent.AddComponent<VerticalLayoutGroup>();
-            formLayout.padding = new RectOffset(30, 30, 20, 40);
+            formLayout.padding = new RectOffset(420, 420, 20, 40);
             formLayout.spacing = 16f;
             formLayout.childControlHeight = true;
             formLayout.childControlWidth = true;
@@ -557,18 +623,18 @@ namespace ArmyLife.Editor
             SetLayoutHeight(randLookBtn, 65);
             openingCtrl.randomizeAppearanceButton = randLookBtn.GetComponent<Button>();
 
-            // CARD 10: SOCIAL LINEAGE (FATE OF BIRTH)
+            // CARD 10: MILITARY RECRUIT HERITAGE
             var linCard = CreateUIElement("FateOfBirthBox", formContent.transform);
             var linCardBg = linCard.AddComponent<Image>();
             linCardBg.color = new Color(0.10f, 0.13f, 0.18f);
-            SetLayoutHeight(linCard, 140);
+            SetLayoutHeight(linCard, 120);
 
             var linCardText = CreateText("FateDesc", linCard.transform, 
-                "<b>Social Lineage (Determined Randomly at Birth):</b>\n" +
-                "• <b>80%</b> Commoner Grunt (Self-made climber, hidden talent)\n" +
-                "• <b>14%</b> Baron Lineage  |  • <b>5%</b> Viscount Legend\n" +
-                "• <color=#FFD700><b>1% Grand Duke Dynasty</b> (Ancestral Testing Stone & Ducal Guard!)</color>", 
-                21, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, new Color(0.85f, 0.90f, 0.95f));
+                "<b>Recruit Background & Heritage:</b>\n" +
+                "• <b>Farmhand:</b> High endurance & physical grit (+15% Health, +15% Fitness)\n" +
+                "• <b>Street Tough:</b> Urban brawler instincts (+15% Combat Skill)\n" +
+                "• <b>Military Legacy:</b> Respected soldier heritage (+15% Unit Respect & Standing)", 
+                20, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, new Color(0.85f, 0.90f, 0.95f));
             var lcRect = linCardText.GetComponent<RectTransform>();
             lcRect.anchorMin = Vector2.zero;
             lcRect.anchorMax = Vector2.one;
@@ -697,279 +763,11 @@ namespace ArmyLife.Editor
             dilemmaOverlay.SetActive(false);
             dilemmaModalObj.SetActive(true);
 
-            // ==========================================
-            // 10. YOUTH ACTIVITIES MODAL
-            // ==========================================
-            var youthModalObj = CreateUIElement("YouthActivitiesModal", rootPanel.transform);
-            SetFullScreen(youthModalObj.GetComponent<RectTransform>());
-            var youthCtrl = youthModalObj.AddComponent<YouthActivitiesModal>();
-            hudView.youthActivitiesModal = youthCtrl;
 
-            var youthOverlay = CreateUIElement("YouthOverlay", youthModalObj.transform);
-            SetFullScreen(youthOverlay.GetComponent<RectTransform>());
-            var youthDimBg = youthOverlay.AddComponent<Image>();
-            youthDimBg.color = new Color(0f, 0f, 0f, 0.92f);
-            youthCtrl.modalRoot = youthOverlay;
 
-            var youthBox = CreateUIElement("YouthBox", youthOverlay.transform);
-            var ybRect = youthBox.GetComponent<RectTransform>();
-            ybRect.anchorMin = new Vector2(0.04f, 0.05f);
-            ybRect.anchorMax = new Vector2(0.96f, 0.95f);
-            ybRect.offsetMin = Vector2.zero;
-            ybRect.offsetMax = Vector2.zero;
-            var youthBoxBg = youthBox.AddComponent<Image>();
-            youthBoxBg.color = new Color(0.10f, 0.13f, 0.18f);
 
-            var yTitle = CreateText("YouthTitle", youthBox.transform, "YOUTH ACTIVITIES (AGES 0-18)", 36, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0f, 0.85f, 1f));
-            SetRect(yTitle.GetComponent<RectTransform>(), 0.05f, 0.93f, 0.95f, 0.99f);
-            youthCtrl.titleText = yTitle;
 
-            var ySummary = CreateText("YouthSummary", youthBox.transform, "Stats...", 22, TextAlignmentOptions.Center, FontStyles.Normal, new Color(0.85f, 0.90f, 0.95f));
-            SetRect(ySummary.GetComponent<RectTransform>(), 0.05f, 0.82f, 0.95f, 0.92f);
-            youthCtrl.youthStatsSummaryText = ySummary;
 
-            // Scroll container for Activities
-            var yScrollObj = CreateUIElement("ActivitiesScroll", youthBox.transform);
-            SetRect(yScrollObj.GetComponent<RectTransform>(), 0.04f, 0.09f, 0.96f, 0.81f);
-            var yScroll = yScrollObj.AddComponent<ScrollRect>();
-            yScroll.horizontal = false;
-            yScroll.vertical = true;
-            yScroll.scrollSensitivity = 35f;
-
-            var yViewport = CreateUIElement("Viewport", yScrollObj.transform);
-            SetFullScreen(yViewport.GetComponent<RectTransform>());
-            yViewport.AddComponent<RectMask2D>();
-            yScroll.viewport = yViewport.GetComponent<RectTransform>();
-
-            var yContent = CreateUIElement("Content", yViewport.transform);
-            var yContentRect = yContent.GetComponent<RectTransform>();
-            yContentRect.anchorMin = new Vector2(0f, 1f);
-            yContentRect.anchorMax = new Vector2(1f, 1f);
-            yContentRect.pivot = new Vector2(0.5f, 1f);
-            yContentRect.offsetMin = Vector2.zero;
-            yContentRect.offsetMax = Vector2.zero;
-            yScroll.content = yContentRect;
-
-            var yLayout = yContent.AddComponent<VerticalLayoutGroup>();
-            yLayout.padding = new RectOffset(10, 10, 10, 10);
-            yLayout.spacing = 12f;
-            yLayout.childControlHeight = true;
-            yLayout.childControlWidth = true;
-            yLayout.childForceExpandHeight = false;
-            yLayout.childForceExpandWidth = true;
-
-            var yFitter = yContent.AddComponent<ContentSizeFitter>();
-            yFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            // Activity Buttons (11 Interactive Choices)
-            var yBtn1 = CreateButton("TemperingBtn", yContent.transform, "BODY TEMPERING (+Fitness & Marrow)", new Color(0.18f, 0.60f, 0.35f));
-            SetLayoutHeight(yBtn1, 62);
-            youthCtrl.bodyTemperingButton = yBtn1.GetComponent<Button>();
-
-            var yBtn2 = CreateButton("StudyBtn", yContent.transform, "STUDY STRATEGY & TACTICS (+Intellect)", new Color(0.20f, 0.45f, 0.75f));
-            SetLayoutHeight(yBtn2, 62);
-            youthCtrl.studyTacticsButton = yBtn2.GetComponent<Button>();
-
-            var yBtnRange = CreateButton("RangeBtn", yContent.transform, "CADET FIRING RANGE (+Combat Skill & Marksmanship)", new Color(0.85f, 0.35f, 0.15f));
-            SetLayoutHeight(yBtnRange, 62);
-            youthCtrl.cadetFiringRangeButton = yBtnRange.GetComponent<Button>();
-
-            var yBtnLib = CreateButton("LibraryBtn", yContent.transform, "CLAN MARTIAL ARCHIVE (+Tempering & Qi Insight)", new Color(0.15f, 0.65f, 0.75f));
-            SetLayoutHeight(yBtnLib, 62);
-            youthCtrl.clanLibraryButton = yBtnLib.GetComponent<Button>();
-
-            var yBtnJobs = CreateButton("OddJobsBtn", yContent.transform, "DISTRICT ODD JOBS (+Earn Cash & Fitness)", new Color(0.70f, 0.50f, 0.20f));
-            SetLayoutHeight(yBtnJobs, 62);
-            youthCtrl.oddJobsButton = yBtnJobs.GetComponent<Button>();
-
-            var yBtnHerb = CreateButton("ApothecaryBtn", yContent.transform, "APOTHECARY BONE BROTH (-$30, +Health & Bones)", new Color(0.25f, 0.65f, 0.45f));
-            SetLayoutHeight(yBtnHerb, 62);
-            youthCtrl.apothecaryButton = yBtnHerb.GetComponent<Button>();
-
-            var yBtn3 = CreateButton("FamilyBtn", yContent.transform, "SPEND TIME WITH PARENTS (+Clan Favor)", new Color(0.75f, 0.55f, 0.20f));
-            SetLayoutHeight(yBtn3, 62);
-            youthCtrl.familyTimeButton = yBtn3.GetComponent<Button>();
-
-            var yBtn4 = CreateButton("SiblingBtn", yContent.transform, "SPAR WITH SIBLING LUCIAN (+Combat Skill)", new Color(0.65f, 0.25f, 0.30f));
-            SetLayoutHeight(yBtn4, 62);
-            youthCtrl.siblingSparButton = yBtn4.GetComponent<Button>();
-
-            var yBtn5 = CreateButton("AllowanceBtn", yContent.transform, "ASK PARENTS FOR ALLOWANCE (+Pocket Money)", new Color(0.85f, 0.60f, 0.15f));
-            SetLayoutHeight(yBtn5, 62);
-            youthCtrl.askAllowanceButton = yBtn5.GetComponent<Button>();
-
-            var yBtn6 = CreateButton("MockExamBtn", yContent.transform, "TAKE MOCK MILITARY EXAM (Age 17.5 Check)", new Color(0.25f, 0.55f, 0.85f));
-            SetLayoutHeight(yBtn6, 62);
-            youthCtrl.takeMockExamButton = yBtn6.GetComponent<Button>();
-
-            var yBtn7 = CreateButton("FatherHelpBtn", yContent.transform, "ASK FATHER FOR EXAM TUTORS & CLAN INFLUENCE", new Color(0.55f, 0.30f, 0.65f));
-            SetLayoutHeight(yBtn7, 62);
-            youthCtrl.askFatherExamHelpButton = yBtn7.GetComponent<Button>();
-
-            // Close Button
-            var yCloseBtn = CreateButton("CloseBtn", youthBox.transform, "CLOSE", new Color(0.35f, 0.40f, 0.45f));
-            SetRect(yCloseBtn.GetComponent<RectTransform>(), 0.30f, 0.02f, 0.70f, 0.075f);
-            youthCtrl.closeButton = yCloseBtn.GetComponent<Button>();
-
-            youthOverlay.SetActive(false);
-            youthModalObj.SetActive(true);
-
-            // ==========================================
-            // 11. CLAN MODAL (Dynastic Family & Feudal Relations)
-            // ==========================================
-            var clanModalObj = CreateUIElement("ClanModal", rootPanel.transform);
-            SetFullScreen(clanModalObj.GetComponent<RectTransform>());
-            var clanCtrl = clanModalObj.AddComponent<ClanModal>();
-            hudView.clanModal = clanCtrl;
-
-            var clanOverlay = CreateUIElement("ClanOverlay", clanModalObj.transform);
-            SetFullScreen(clanOverlay.GetComponent<RectTransform>());
-            var clanDimBg = clanOverlay.AddComponent<Image>();
-            clanDimBg.color = new Color(0f, 0f, 0f, 0.92f);
-            clanCtrl.modalRoot = clanOverlay;
-
-            var clanBox = CreateUIElement("ClanBox", clanOverlay.transform);
-            var cbRect = clanBox.GetComponent<RectTransform>();
-            cbRect.anchorMin = new Vector2(0.04f, 0.05f);
-            cbRect.anchorMax = new Vector2(0.96f, 0.95f);
-            cbRect.offsetMin = Vector2.zero;
-            cbRect.offsetMax = Vector2.zero;
-            var clanBoxBg = clanBox.AddComponent<Image>();
-            clanBoxBg.color = new Color(0.10f, 0.13f, 0.18f);
-
-            var cTitle = CreateText("ClanTitle", clanBox.transform, "ANCESTRAL CLAN & DYNASTIC LINEAGE", 34, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.85f, 0.2f));
-            SetRect(cTitle.GetComponent<RectTransform>(), 0.05f, 0.92f, 0.95f, 0.985f);
-            clanCtrl.titleText = cTitle;
-
-            var cSummary = CreateText("ClanSummary", clanBox.transform, "Clan standings...", 20, TextAlignmentOptions.Center, FontStyles.Normal, new Color(0.85f, 0.90f, 0.95f));
-            SetRect(cSummary.GetComponent<RectTransform>(), 0.05f, 0.83f, 0.95f, 0.91f);
-            clanCtrl.clanSummaryText = cSummary;
-
-            var cScrollObj = CreateUIElement("MembersScroll", clanBox.transform);
-            SetRect(cScrollObj.GetComponent<RectTransform>(), 0.04f, 0.09f, 0.96f, 0.82f);
-            var cScroll = cScrollObj.AddComponent<ScrollRect>();
-            cScroll.horizontal = false;
-            cScroll.vertical = true;
-            cScroll.scrollSensitivity = 35f;
-
-            var cViewport = CreateUIElement("Viewport", cScrollObj.transform);
-            SetFullScreen(cViewport.GetComponent<RectTransform>());
-            cViewport.AddComponent<RectMask2D>();
-            cScroll.viewport = cViewport.GetComponent<RectTransform>();
-
-            var cContent = CreateUIElement("Content", cViewport.transform);
-            var cContentRect = cContent.GetComponent<RectTransform>();
-            cContentRect.anchorMin = new Vector2(0f, 1f);
-            cContentRect.anchorMax = new Vector2(1f, 1f);
-            cContentRect.pivot = new Vector2(0.5f, 1f);
-            cContentRect.offsetMin = Vector2.zero;
-            cContentRect.offsetMax = Vector2.zero;
-            cScroll.content = cContentRect;
-
-            var clanListLayout = cContent.AddComponent<VerticalLayoutGroup>();
-            clanListLayout.padding = new RectOffset(10, 10, 10, 10);
-            clanListLayout.spacing = 10f;
-            clanListLayout.childControlHeight = true;
-            clanListLayout.childControlWidth = true;
-            clanListLayout.childForceExpandHeight = false;
-            clanListLayout.childForceExpandWidth = true;
-
-            var cFitter = cContent.AddComponent<ContentSizeFitter>();
-            cFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            clanCtrl.membersContainer = cContent.transform;
-
-            var cCloseBtn = CreateButton("CloseBtn", clanBox.transform, "◄ CLOSE", new Color(0.35f, 0.40f, 0.45f));
-            SetRect(cCloseBtn.GetComponent<RectTransform>(), 0.30f, 0.02f, 0.70f, 0.075f);
-            clanCtrl.closeButton = cCloseBtn.GetComponent<Button>();
-
-            clanOverlay.SetActive(false);
-            clanModalObj.SetActive(true);
-
-            // ==========================================
-            // 12. SCHOOL MODAL (Academy & Peers System)
-            // ==========================================
-            var schoolModalObj = CreateUIElement("SchoolModal", rootPanel.transform);
-            SetFullScreen(schoolModalObj.GetComponent<RectTransform>());
-            var schoolCtrl = schoolModalObj.AddComponent<SchoolModal>();
-            hudView.schoolModal = schoolCtrl;
-
-            var schoolOverlay = CreateUIElement("SchoolOverlay", schoolModalObj.transform);
-            SetFullScreen(schoolOverlay.GetComponent<RectTransform>());
-            var schoolDimBg = schoolOverlay.AddComponent<Image>();
-            schoolDimBg.color = new Color(0f, 0f, 0f, 0.92f);
-            schoolCtrl.modalRoot = schoolOverlay;
-
-            var schoolBox = CreateUIElement("SchoolBox", schoolOverlay.transform);
-            var sbRect = schoolBox.GetComponent<RectTransform>();
-            sbRect.anchorMin = new Vector2(0.04f, 0.05f);
-            sbRect.anchorMax = new Vector2(0.96f, 0.95f);
-            sbRect.offsetMin = Vector2.zero;
-            sbRect.offsetMax = Vector2.zero;
-            var schoolBoxBg = schoolBox.AddComponent<Image>();
-            schoolBoxBg.color = new Color(0.10f, 0.13f, 0.18f);
-
-            var sTitle = CreateText("SchoolTitle", schoolBox.transform, "ACADEMY & CLASSMATES", 34, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.2f, 0.85f, 1f));
-            SetRect(sTitle.GetComponent<RectTransform>(), 0.05f, 0.92f, 0.95f, 0.985f);
-            schoolCtrl.titleText = sTitle;
-
-            var sSummary = CreateText("SchoolSummary", schoolBox.transform, "Performance & Club...", 20, TextAlignmentOptions.Center, FontStyles.Normal, new Color(0.85f, 0.90f, 0.95f));
-            SetRect(sSummary.GetComponent<RectTransform>(), 0.05f, 0.83f, 0.95f, 0.91f);
-            schoolCtrl.schoolSummaryText = sSummary;
-
-            var sActionsRow = CreateUIElement("SchoolActionsRow", schoolBox.transform);
-            SetRect(sActionsRow.GetComponent<RectTransform>(), 0.05f, 0.74f, 0.95f, 0.82f);
-            var saLayout = sActionsRow.AddComponent<HorizontalLayoutGroup>();
-            saLayout.spacing = 14;
-            saLayout.childControlWidth = true;
-            saLayout.childControlHeight = true;
-            saLayout.childForceExpandWidth = true;
-            saLayout.childForceExpandHeight = true;
-
-            var studyBtn = CreateButton("StudyHarderBtn", sActionsRow.transform, "STUDY HARDER (+Performance)", new Color(0.18f, 0.55f, 0.35f));
-            schoolCtrl.studyHarderButton = studyBtn.GetComponent<Button>();
-
-            var clubBtn = CreateButton("JoinClubBtn", sActionsRow.transform, "EXTRACURRICULAR CLUB", new Color(0.20f, 0.45f, 0.75f));
-            schoolCtrl.joinClubButton = clubBtn.GetComponent<Button>();
-
-            var sScrollObj = CreateUIElement("PeersScroll", schoolBox.transform);
-            SetRect(sScrollObj.GetComponent<RectTransform>(), 0.04f, 0.09f, 0.96f, 0.73f);
-            var sScroll = sScrollObj.AddComponent<ScrollRect>();
-            sScroll.horizontal = false;
-            sScroll.vertical = true;
-            sScroll.scrollSensitivity = 35f;
-
-            var sViewport = CreateUIElement("Viewport", sScrollObj.transform);
-            SetFullScreen(sViewport.GetComponent<RectTransform>());
-            sViewport.AddComponent<RectMask2D>();
-            sScroll.viewport = sViewport.GetComponent<RectTransform>();
-
-            var sContent = CreateUIElement("Content", sViewport.transform);
-            var sContentRect = sContent.GetComponent<RectTransform>();
-            sContentRect.anchorMin = new Vector2(0f, 1f);
-            sContentRect.anchorMax = new Vector2(1f, 1f);
-            sContentRect.pivot = new Vector2(0.5f, 1f);
-            sContentRect.offsetMin = Vector2.zero;
-            sContentRect.offsetMax = Vector2.zero;
-            sScroll.content = sContentRect;
-
-            var sLayout = sContent.AddComponent<VerticalLayoutGroup>();
-            sLayout.padding = new RectOffset(10, 10, 10, 10);
-            sLayout.spacing = 10f;
-            sLayout.childControlHeight = true;
-            sLayout.childControlWidth = true;
-            sLayout.childForceExpandHeight = false;
-            sLayout.childForceExpandWidth = true;
-
-            var sFitter = sContent.AddComponent<ContentSizeFitter>();
-            sFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            schoolCtrl.peersContainer = sContent.transform;
-
-            var sCloseBtn = CreateButton("CloseBtn", schoolBox.transform, "◄ CLOSE", new Color(0.35f, 0.40f, 0.45f));
-            SetRect(sCloseBtn.GetComponent<RectTransform>(), 0.30f, 0.02f, 0.70f, 0.075f);
-            schoolCtrl.closeButton = sCloseBtn.GetComponent<Button>();
-
-            schoolOverlay.SetActive(false);
-            schoolModalObj.SetActive(true);
 
             // ==========================================
             // 11. NEW HUD MODALS (5-BUTTON ECOSYSTEM)
@@ -982,7 +780,6 @@ namespace ArmyLife.Editor
             CreateCareerDossierModal(rootPanel.transform, hudView);
             CreateMailCallModal(rootPanel.transform, hudView);
             CreateMedalRibbonRackModal(rootPanel.transform, hudView);
-            CreateTacticalMinigamesModal(rootPanel.transform, hudView);
 
             // Initial view states: Opening screen active, HUD hidden
             openingPanel.SetActive(true);
@@ -1468,15 +1265,15 @@ namespace ArmyLife.Editor
             ctrl.fitnessSlider = CreateStatBar("FitnessBar", content.transform, "Fitness: 50%", new Color(0.18f, 0.70f, 0.35f), out ctrl.fitnessText);
             SetLayoutHeight(ctrl.fitnessSlider.gameObject, 36);
 
-            // Power Realm
-            var pRealm = CreateText("PowerRealmText", content.transform, "Cultivation Realm...", 22, TextAlignmentOptions.Left, FontStyles.Bold, new Color(1f, 0.85f, 0.25f));
+            // Military Rank & Department
+            var pRealm = CreateText("MilitaryRankStandingText", content.transform, "Military Rank & Department...", 22, TextAlignmentOptions.Left, FontStyles.Bold, new Color(0.95f, 0.85f, 0.35f));
             SetLayoutHeight(pRealm.gameObject, 55);
             ctrl.powerRealmText = pRealm;
 
-            ctrl.qiProgressSlider = CreateStatBar("QiBar", content.transform, "Qi Condensation: 0%", new Color(0.65f, 0.30f, 0.95f), out ctrl.qiProgressText);
+            ctrl.qiProgressSlider = CreateStatBar("CombatReadinessBar", content.transform, "Combat Readiness Index: 100%", new Color(0.25f, 0.65f, 0.40f), out ctrl.qiProgressText);
             SetLayoutHeight(ctrl.qiProgressSlider.gameObject, 36);
 
-            var talent = CreateText("TalentText", content.transform, "Talent Score: [Hidden]", 21, TextAlignmentOptions.Left, FontStyles.Normal, new Color(1f, 0.8f, 0.4f));
+            var talent = CreateText("TacticalAptitudeText", content.transform, "Technical Aptitude (AFQT): 85/100", 21, TextAlignmentOptions.Left, FontStyles.Normal, new Color(0.85f, 0.90f, 0.95f));
             SetLayoutHeight(talent.gameObject, 30);
             ctrl.talentScoreText = talent;
 
@@ -1985,16 +1782,6 @@ namespace ArmyLife.Editor
             modalObj.SetActive(true);
         }
 
-        private static void CreateTacticalMinigamesModal(Transform parent, MainHUDView hudView)
-        {
-            var modalObj = CreateUIElement("TacticalMinigamesModal", parent);
-            SetFullScreen(modalObj.GetComponent<RectTransform>());
-            var ctrl = modalObj.AddComponent<TacticalMinigamesModal>();
-            hudView.tacticalMinigamesModal = ctrl;
-            ctrl.EnsureUIHierarchy();
-            if (ctrl.modalRoot != null) ctrl.modalRoot.SetActive(false);
-            modalObj.SetActive(true);
-        }
 
         private static Slider CreateSlider(string name, Transform parent, float minVal, float maxVal, float initialVal, Color fillColor)
         {

@@ -68,13 +68,12 @@ namespace ArmyLife.Data
             return Empires["The Valerian Empire"];
         }
 
-        public static (string state, string city, bool isImperial) RollBirthLocation(string empireName, NobleRank nobleRank)
+        public static (string state, string city, bool isImperial) RollBirthLocation(string empireName, int familyInfluence = 0)
         {
             var empire = GetEmpire(empireName);
 
-            // High Nobility (Duke / Marquis) have an 80% chance to be born in the Imperial Crown State!
-            // Viscounts/Barons have a 30% chance. Commoners have a 3% chance.
-            float imperialChance = (nobleRank >= NobleRank.Marquis) ? 0.80f : ((nobleRank >= NobleRank.Baron) ? 0.30f : 0.03f);
+            // High Military Influence families (General / Officer dynasties) have high chance to be stationed in the Capital!
+            float imperialChance = (familyInfluence >= 70) ? 0.80f : ((familyInfluence >= 30) ? 0.30f : 0.05f);
 
             if (UnityEngine.Random.value < imperialChance && empire.imperialState != null)
             {

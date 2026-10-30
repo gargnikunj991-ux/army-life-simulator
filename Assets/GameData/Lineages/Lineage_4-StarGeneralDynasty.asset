@@ -14,14 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmyLife.Data.FamilyLineageSO
   archetypeName: 4-Star General Dynasty
   fatherTitle: General Vance, Chief of Army Staff
-  description: Born with a silver spoon and iron connections. High Command protects
-    you from minor infractions, but expectations are suffocating.
-  startingNobleRank: 5
+  description: Born with deep military connections and expectations. High Command
+    observes your career closely, but expectations are high.
   startingInfluence: 85
   startingRespect: 90
-  startingClanFavor: 75
   startingFamilyWealth: 50000
-  startingPowerTier: 2
-  startingFoundationalTempering: 50
   hasWestPointFastTrack: 1
   hasSecretBranchInvitation: 1

@@ -25,14 +25,33 @@ namespace ArmyLife.Systems
             if (rankDatabase == null || rankDatabase.Length == 0) return;
 
             // 1. Earn promotion points from military service this semester
-            float ptPoints = (soldier.fitness / 100f) * 45f;         // 0-45 pts from physical fitness (PT test)
-            float combatPoints = (soldier.combatSkill / 100f) * 55f; // 0-55 pts from weapon qualification
-            float meritPoints = (soldier.meritRating / 100f) * 70f;  // 0-70 pts from official NCO evaluation
-            float timePoints = 35f;                                  // 35 pts for 6 months time-in-grade
-            float influenceBonus = (soldier.politicalInfluence / 100f) * 25f; // Lineage leverage
+            float ptPoints = (soldier.fitness / 100f) * 35f;         // 0-35 pts from physical fitness (PT test)
+            float combatPoints = (soldier.combatSkill / 100f) * 40f; // 0-40 pts from weapon qualification
+            float meritPoints = (soldier.meritRating / 100f) * 50f;  // 0-50 pts from official NCO evaluation
+            float timePoints = 25f;                                  // 25 pts for 6 months time-in-grade
+            float influenceBonus = (soldier.politicalInfluence / 100f) * 15f; // Lineage leverage
 
             int semesterPoints = Mathf.RoundToInt(ptPoints + combatPoints + meritPoints + timePoints + influenceBonus);
             
+            // Disciplinary consequences: Demerits, Article 15, and Brig records heavily penalize promotion points!
+            int demeritCount = (soldier.disciplinaryRecords != null) ? soldier.disciplinaryRecords.Count : 0;
+            demeritCount += soldier.article15PunishmentsCount;
+            if (demeritCount > 0)
+            {
+                int demeritPenalty = demeritCount * 60;
+                semesterPoints = Mathf.Max(0, semesterPoints - demeritPenalty);
+                GameEvents.OnFeedEventLogged?.Invoke("DISCIPLINE",
+                    $"<color=#FF5555><b>[PROMOTION BOARD PENALTY]</b></color> UCMJ disciplinary records ({demeritCount} demerits) deducted -{demeritPenalty} promotion points from your board review!");
+            }
+
+            // Pay forfeiture or barracks restriction freezes points
+            if (soldier.hasForfeitedPayThisSemester || soldier.isBarracksRestricted)
+            {
+                semesterPoints = 0;
+                GameEvents.OnFeedEventLogged?.Invoke("DISCIPLINE",
+                    "<color=#FF4444><b>[PROMOTION PACKET FROZEN]</b></color> Active UCMJ non-judicial punishment froze your promotion packet (0 points earned this semester).");
+            }
+
             // Special Forces operators gain accelerated tactical experience as they rank up
             if (soldier.isSpecialForces)
             {
@@ -45,6 +64,44 @@ namespace ArmyLife.Systems
             MilitaryRankSO currentRank = soldier.currentRank;
             int currentOrder = (currentRank != null) ? currentRank.rankOrder : 0;
             MilitaryRankSO nextRank = GetNextRank(rankDatabase, currentOrder);
+
+            // Check E-5 Automatic CO Recommendation for Officer School:
+            // If the soldier is an E-5 Sergeant and made the right choices (clean discipline, high merit, smarts, fitness, respect)
+            if (currentRank != null && currentRank.paygrade == "E-5" && !soldier.hasOfficerCandidateSchoolRecommendation)
+            {
+                bool cleanDiscipline = demeritCount == 0 && !soldier.hasFelonyDischargeRecord;
+                bool exemplaryRecord = soldier.meritRating >= 75f && soldier.intellect >= 60f && soldier.fitness >= 65f && soldier.squadRespect >= 60f;
+                bool eligibleAge = soldier.age <= 35.0f;
+
+                if (cleanDiscipline && exemplaryRecord && eligibleAge)
+                {
+                    soldier.hasOfficerCandidateSchoolRecommendation = true;
+                    soldier.AddTrait("CO Endorsement: Officer Candidate School (OCS)");
+                    GameEvents.OnFeedEventLogged?.Invoke("CO RECOMMENDATION",
+                        $"<color=#FFD700><b>[CO RECOMMENDATION • OFFICER CANDIDATE SCHOOL]</b></color> " +
+                        $"By virtue of your spotless disciplinary record, tactical intellect, and fireteam leadership as an E-5 Sergeant, " +
+                        $"your Company Commander has officially submitted a <b>Command Recommendation for Officer Candidate School (OCS)</b>! " +
+                        $"Guaranteed board admission and 50% command tuition sponsorship unlocked.");
+                }
+            }
+
+            // Check Great Merit: Direct Brevet / Merit Promotion or Exceptional Merit Pay Rise
+            bool hasMonumentalMerit = (soldier.meritRating >= 95f && (soldier.combatMeritPoints >= 400 || soldier.HasTopValorMedal())) || soldier.combatMeritPoints >= 800;
+            if (hasMonumentalMerit && nextRank != null && !soldier.isOfficer && nextRank.type == PaygradeType.Enlisted)
+            {
+                soldier.accumulatedPromotionPoints = 0;
+                soldier.timeInCurrentRankSemesters = 0;
+                GameEvents.OnFeedEventLogged?.Invoke("DIRECT PROMOTION",
+                    $"<color=#FFD700><b>[DIRECT MERIT PROMOTION • MONUMENTAL BATTLEFIELD MERIT]</b></color> " +
+                    $"In recognition of extraordinary combat merit ({soldier.meritRating:F0}% Merit Rating, {soldier.combatMeritPoints} CMP), " +
+                    $"the High Military Council has bypassed all standard board wait times and awarded you a <b>Direct Merit Promotion</b> to {nextRank.rankName} ({nextRank.paygrade})!");
+
+                if (GameManager.Instance != null)
+                {
+                    GameManager.Instance.PromoteSoldier(nextRank);
+                }
+                return;
+            }
 
             if (nextRank == null) return; // Reached highest military rank (General)
 
@@ -79,18 +136,48 @@ namespace ArmyLife.Systems
                     GameEvents.OnFeedEventLogged?.Invoke("CAREER APEX",
                         $"<color=#00FFAA><b>[ENLISTED CAREER APEX • {currentRank?.rankName?.ToUpper() ?? "COMMAND SERGEANT MAJOR"}]</b></color> " +
                         "You have reached the apex of the enlisted paygrades! To earn an Officer Commission (O-1+), " +
-                        "regulations require completing the Imperial War Academy or earning a Battlefield Commission through valorous medals (Silver Cross / Bronze Star / Life Saver) at E-5+.");
+                        "regulations require completing the Imperial War Academy, having a CO Recommendation, or earning a Battlefield Commission through valorous medals (Silver Cross / Bronze Star / Life Saver) at E-5+.");
                     return;
                 }
             }
 
-            // 3. Time-in-Grade and Board Criteria Check
+            // 3. Time-in-Grade and Board Criteria Check (Scaled by Game Difficulty)
             int reqTime = (currentRank != null) ? GetRequiredTimeInGradeSemesters(currentRank.paygrade) : 1;
             bool meetsTimeInGrade = soldier.timeInCurrentRankSemesters >= reqTime;
-            bool meetsPoints = soldier.accumulatedPromotionPoints >= nextRank.requiredMeritPoints;
-            bool meetsFitness = soldier.fitness >= nextRank.requiredFitness;
+            int scaledReqPoints = Mathf.RoundToInt(nextRank.requiredMeritPoints * DifficultySettings.PromotionPointsMultiplier);
+            float scaledReqFitness = Mathf.Clamp(nextRank.requiredFitness + DifficultySettings.PromotionFitnessModifier, 35f, 95f);
+            bool meetsPoints = soldier.accumulatedPromotionPoints >= scaledReqPoints;
+            bool meetsFitness = soldier.fitness >= scaledReqFitness;
 
-            if (meetsPoints && meetsFitness && meetsTimeInGrade)
+            // In Ironclad mode, zero tolerance: any demerit freezes promotion packet completely
+            if (DifficultySettings.IsPermadeathForced && soldier.disciplinaryDemerits > 0)
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("PROMOTION PACKET FROZEN",
+                    $"<color=#FF4444><b>[IRONCLAD BOARD • PACKET FROZEN]</b></color> Ironclad regulations enforce zero tolerance on military discipline. " +
+                    $"Your {soldier.disciplinaryDemerits} disciplinary demerit(s) disqualified your packet from board review.");
+                return;
+            }
+
+            // Leadership and Discipline board standards: player choices have consequences!
+            bool meetsDisciplineAndRespect = true;
+            string leadershipDeficiency = "";
+            if (nextRank.paygrade == "E-5")
+            {
+                if (soldier.squadRespect < 50f) { meetsDisciplineAndRespect = false; leadershipDeficiency += $"Squad Respect ({soldier.squadRespect:F0}/50% min) "; }
+                if (soldier.discipline < 50f) { meetsDisciplineAndRespect = false; leadershipDeficiency += $"Discipline ({soldier.discipline:F0}/50% min) "; }
+            }
+            else if (nextRank.paygrade == "E-6")
+            {
+                if (soldier.squadRespect < 60f) { meetsDisciplineAndRespect = false; leadershipDeficiency += $"Squad Respect ({soldier.squadRespect:F0}/60% min) "; }
+                if (soldier.discipline < 60f) { meetsDisciplineAndRespect = false; leadershipDeficiency += $"Discipline ({soldier.discipline:F0}/60% min) "; }
+            }
+            else if (nextRank.paygrade.StartsWith("E-7") || nextRank.paygrade.StartsWith("E-8") || nextRank.paygrade.StartsWith("E-9"))
+            {
+                if (soldier.squadRespect < 65f) { meetsDisciplineAndRespect = false; leadershipDeficiency += $"Squad Respect ({soldier.squadRespect:F0}/65% min) "; }
+                if (soldier.discipline < 65f) { meetsDisciplineAndRespect = false; leadershipDeficiency += $"Discipline ({soldier.discipline:F0}/65% min) "; }
+            }
+
+            if (meetsPoints && meetsFitness && meetsTimeInGrade && meetsDisciplineAndRespect)
             {
                 // CONVENE PROMOTION BOARD & PROMOTE!
                 GameEvents.OnFeedEventLogged?.Invoke("PROMOTION BOARD",
@@ -103,6 +190,13 @@ namespace ArmyLife.Systems
                 soldier.timeInCurrentRankSemesters = 0;
 
                 GameManager.Instance.PromoteSoldier(nextRank);
+            }
+            else if (meetsPoints && meetsFitness && meetsTimeInGrade && !meetsDisciplineAndRespect)
+            {
+                GameEvents.OnFeedEventLogged?.Invoke("CAREER",
+                    $"<color=#FF5555><b>[PROMOTION BOARD DENIED • LEADERSHIP REVIEW]</b></color> You had enough merit points and time, " +
+                    $"but the board noted serious leadership deficiencies: <b>{leadershipDeficiency}</b>! " +
+                    $"Barracks and field choices matter. Improve your squad relations and discipline to earn command authority.");
             }
             else if (meetsPoints && meetsFitness && !meetsTimeInGrade)
             {

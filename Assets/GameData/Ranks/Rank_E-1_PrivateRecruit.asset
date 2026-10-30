@@ -16,9 +16,7 @@ MonoBehaviour:
   paygrade: E-1
   type: 0
   rankOrder: 1
-  baseMonthlySalary: 1800
+  baseMonthlySalary: 0
   requiredMeritPoints: 0
   requiredFitness: 40
   requiredCombatSkill: 0
-  unlocksSelfTalentTesting: 0
-  unlocksFamilyTalentTesting: 0
